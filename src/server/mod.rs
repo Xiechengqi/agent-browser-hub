@@ -2,8 +2,9 @@ use axum::{
     Router, Json,
     extract::{Path, State, Request},
     http::{StatusCode, header},
-    response::{IntoResponse, Response},
-    routing::{post},
+    middleware::{self, Next},
+    response::{Html, IntoResponse, Response},
+    routing::{get, post},
 };
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
@@ -439,13 +440,6 @@ async fn list_scripts() -> Json<Vec<Value>> {
                                 .or_else(|| yaml["strategy"].as_str())
                                 .unwrap_or("PUBLIC")
                                 .to_string();
-                            let params = if yaml["params"].is_array() {
-                                yaml["params"].as_array().map(|v| v.len()).unwrap_or(0)
-                            } else if yaml["args"].is_object() {
-                                0
-                            } else {
-                                0
-                            };
 
                             scripts.push(serde_json::json!({
                                 "site": site,
@@ -470,408 +464,8 @@ async fn list_scripts() -> Json<Vec<Value>> {
 }
 
 // ============================================================================
-// HTML Pages
+// Static File Serving
 // ============================================================================
-
-async fn page_login() -> Html<String> {
-    Html(format!(r##"<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>登录 - Agent Browser Hub</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}}
-.card{{background:#fff;border-radius:12px;padding:40px;width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}}
-h1{{font-size:24px;margin-bottom:8px;text-align:center;color:#0f172a}}
-.subtitle{{color:#64748b;text-align:center;margin-bottom:32px;font-size:14px}}
-label{{display:block;font-size:13px;color:#64748b;margin-bottom:6px}}
-input{{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#1e293b;font-size:14px;outline:none;transition:border .2s}}
-input:focus{{border-color:#3b82f6}}
-.btn{{width:100%;padding:10px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:20px;transition:background .2s}}
-.btn:hover{{background:#2563eb}}
-.btn:disabled{{background:#cbd5e1;cursor:not-allowed}}
-.error{{color:#ef4444;font-size:13px;margin-top:12px;text-align:center;display:none}}
-.version{{color:#94a3b8;font-size:12px;text-align:center;margin-top:24px}}
-.version a{{color:#3b82f6;text-decoration:none}}
-</style>
-</head>
-<body>
-<div class="card">
-  <h1>Agent Browser Hub</h1>
-  <p class="subtitle">浏览器自动化脚本管理平台</p>
-  <form id="loginForm">
-    <label for="password">密码</label>
-    <input type="password" id="password" placeholder="默认密码 admin123" autofocus>
-    <button type="submit" class="btn" id="submitBtn">登录</button>
-    <p class="error" id="errorMsg"></p>
-  </form>
-  <p class="version">v{version} &middot; <a href="/about">版本信息</a></p>
-</div>
-<script>
-const form=document.getElementById('loginForm');
-const errorMsg=document.getElementById('errorMsg');
-const submitBtn=document.getElementById('submitBtn');
-
-form.addEventListener('submit',async(e)=>{{
-  e.preventDefault();
-  errorMsg.style.display='none';
-  submitBtn.disabled=true;
-  submitBtn.textContent='登录中...';
-  try{{
-    const res=await fetch('/api/login',{{
-      method:'POST',
-      headers:{{'Content-Type':'application/json'}},
-      body:JSON.stringify({{password:document.getElementById('password').value}})
-    }});
-    const data=await res.json();
-    if(data.success){{
-      localStorage.setItem('hub_token',data.data.token);
-      window.location.href='/dashboard';
-    }}else{{
-      errorMsg.textContent=data.message;
-      errorMsg.style.display='block';
-    }}
-  }}catch(err){{
-    errorMsg.textContent='网络错误';
-    errorMsg.style.display='block';
-  }}
-  submitBtn.disabled=false;
-  submitBtn.textContent='登录';
-}});
-
-if(localStorage.getItem('hub_token'))window.location.href='/dashboard';
-</script>
-</body>
-</html>"##, version = VERSION))
-}
-
-async fn page_dashboard() -> Html<String> {
-    Html(format!(r##"<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>控制台 - Agent Browser Hub</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b}}
-.topbar{{background:#fff;border-bottom:1px solid #e2e8f0;padding:12px 24px;display:flex;justify-content:space-between;align-items:center}}
-.topbar h1{{font-size:18px;color:#0f172a}}
-.topbar .actions{{display:flex;gap:12px;align-items:center}}
-.topbar a,.topbar button{{color:#64748b;text-decoration:none;font-size:13px;background:none;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;transition:all .2s}}
-.topbar a:hover,.topbar button:hover{{color:#1e293b;background:#f1f5f9}}
-.logout-btn{{color:#ef4444!important}}
-.logout-btn:hover{{background:#fef2f2!important;color:#dc2626!important}}
-.container{{max-width:900px;margin:40px auto;padding:0 24px}}
-.section{{background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
-.section h2{{font-size:16px;margin-bottom:16px;color:#64748b}}
-.script-list{{list-style:none}}
-.script-list li{{padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}}
-.script-list li:hover{{border-color:#3b82f6}}
-.script-name{{font-weight:600;color:#0f172a}}
-.script-desc{{color:#64748b;font-size:13px}}
-.badge{{background:#eff6ff;color:#3b82f6;padding:2px 8px;border-radius:4px;font-size:12px}}
-</style>
-</head>
-<body>
-<div class="topbar">
-  <h1>Agent Browser Hub</h1>
-  <div class="actions">
-    <a href="/about">版本信息</a>
-    <a href="/settings">设置</a>
-    <button class="logout-btn" onclick="logout()">退出登录</button>
-  </div>
-</div>
-<div class="container">
-  <div class="section">
-    <h2>脚本列表</h2>
-    <ul class="script-list" id="scriptList">
-      <li><span>加载中...</span></li>
-    </ul>
-  </div>
-</div>
-<script>
-const token=localStorage.getItem('hub_token');
-if(!token)window.location.href='/login';
-
-function logout(){{
-  localStorage.removeItem('hub_token');
-  window.location.href='/login';
-}}
-
-async function apiFetch(url){{
-  const res=await fetch(url,{{headers:{{'Authorization':'Bearer '+token}}}});
-  if(res.status===401){{logout();return null;}}
-  return res.json();
-}}
-
-(async()=>{{
-  const data=await apiFetch('/api/scripts');
-  if(!data)return;
-  const list=document.getElementById('scriptList');
-  list.innerHTML='';
-  if(data.success&&data.data.length>0){{
-    data.data.forEach(s=>{{
-      const li=document.createElement('li');
-      const div=document.createElement('div');
-      const name=document.createElement('span');
-      name.className='script-name';
-      name.textContent=s.site+'/'+s.command;
-      const desc=document.createElement('span');
-      desc.className='script-desc';
-      desc.textContent=' - '+s.description;
-      div.appendChild(name);
-      div.appendChild(desc);
-      const badge=document.createElement('span');
-      badge.className='badge';
-      badge.textContent=s.site;
-      li.appendChild(div);
-      li.appendChild(badge);
-      list.appendChild(li);
-    }});
-  }}else{{
-    const li=document.createElement('li');
-    li.textContent='暂无脚本';
-    list.appendChild(li);
-  }}
-}})();
-</script>
-</body>
-</html>"##))
-}
-
-async fn page_about() -> Html<String> {
-    Html(format!(r##"<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>版本信息 - Agent Browser Hub</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}}
-.card{{background:#fff;border-radius:12px;padding:40px;width:520px;box-shadow:0 4px 24px rgba(0,0,0,.08)}}
-h1{{font-size:22px;margin-bottom:24px;display:flex;align-items:center;gap:10px;color:#0f172a}}
-.icon{{width:28px;height:28px;background:#3b82f6;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff}}
-.info-grid{{display:grid;gap:16px}}
-.info-row{{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f8fafc;border-radius:8px}}
-.info-label{{color:#64748b;font-size:13px}}
-.info-value{{font-size:14px;font-weight:500;word-break:break-all;text-align:right;max-width:60%;color:#0f172a}}
-.info-value a{{color:#3b82f6;text-decoration:none}}
-.info-value a:hover{{text-decoration:underline}}
-.update-section{{margin-top:24px;padding:16px;background:#f8fafc;border-radius:8px;text-align:center}}
-.update-section .latest{{font-size:13px;color:#64748b;margin-bottom:12px}}
-.update-section .latest span{{color:#059669;font-weight:600}}
-.btn{{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}}
-.btn-primary{{background:#3b82f6;color:#fff}}
-.btn-primary:hover{{background:#2563eb}}
-.btn-primary:disabled{{background:#cbd5e1;cursor:not-allowed}}
-.btn-back{{background:#e2e8f0;color:#64748b}}
-.btn-back:hover{{background:#cbd5e1;color:#1e293b}}
-.actions{{margin-top:24px;display:flex;justify-content:center;gap:8px}}
-.status{{font-size:13px;color:#64748b;margin-top:8px}}
-</style>
-</head>
-<body>
-<div class="card">
-  <h1><span class="icon">i</span> 版本信息</h1>
-  <div class="info-grid">
-    <div class="info-row">
-      <span class="info-label">版本</span>
-      <span class="info-value">v{version}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">提交</span>
-      <span class="info-value"><a href="https://github.com/{repo}/commit/{commit}" target="_blank">{commit}</a></span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">提交日期</span>
-      <span class="info-value">{commit_date}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">提交信息</span>
-      <span class="info-value">{commit_msg}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">构建时间</span>
-      <span class="info-value">{build_time}</span>
-    </div>
-  </div>
-  <div class="update-section">
-    <p class="latest" id="latestInfo">正在检查更新...</p>
-    <button class="btn btn-primary" id="upgradeBtn" style="display:none" onclick="doUpgrade()">升级</button>
-    <p class="status" id="upgradeStatus"></p>
-  </div>
-  <div class="actions">
-    <button class="btn btn-back" onclick="history.back()">返回</button>
-  </div>
-</div>
-<script>
-const token=localStorage.getItem('hub_token');
-
-async function apiFetch(url,opts={{}}){{
-  const headers={{}};
-  if(token)headers['Authorization']='Bearer '+token;
-  return fetch(url,{{...opts,headers:{{...headers,...(opts.headers||{{}})}}}});
-}}
-
-(async()=>{{
-  try{{
-    const res=await fetch('/api/version');
-    const data=await res.json();
-    const info=document.getElementById('latestInfo');
-    if(data.success&&data.data){{
-      const v=data.data;
-      if(v.latest){{
-        if(v.latest!=='v'+'{version}'&&v.latest!=='{version}'){{
-          info.textContent='最新版本: '+v.latest+' (有新版本可用)';
-          info.style.color='#d97706';
-          document.getElementById('upgradeBtn').style.display='inline-block';
-        }}else{{
-          info.textContent='最新版本: '+v.latest+' (已是最新)';
-        }}
-      }}else{{
-        info.textContent='无法检查更新';
-      }}
-    }}
-  }}catch(e){{
-    document.getElementById('latestInfo').textContent='检查更新失败';
-  }}
-}})();
-
-async function doUpgrade(){{
-  if(!token){{window.location.href='/login';return;}}
-  const btn=document.getElementById('upgradeBtn');
-  const status=document.getElementById('upgradeStatus');
-  btn.disabled=true;
-  btn.textContent='升级中...';
-  status.textContent='正在下载并安装...';
-  try{{
-    const res=await apiFetch('/api/upgrade',{{method:'POST'}});
-    const data=await res.json();
-    if(data.success){{
-      status.style.color='#059669';
-      status.textContent='升级完成！正在重启... 3秒后刷新页面';
-      setTimeout(()=>window.location.reload(),3000);
-    }}else{{
-      status.style.color='#ef4444';
-      status.textContent='升级失败: '+data.message;
-      btn.disabled=false;
-      btn.textContent='重试升级';
-    }}
-  }}catch(e){{
-    status.style.color='#ef4444';
-    status.textContent='网络错误: '+e.message;
-    btn.disabled=false;
-    btn.textContent='重试升级';
-  }}
-}}
-</script>
-</body>
-</html>"##,
-        version = VERSION,
-        repo = GITHUB_REPO,
-        commit = GIT_COMMIT,
-        commit_date = GIT_COMMIT_DATE,
-        commit_msg = GIT_COMMIT_MSG,
-        build_time = BUILD_TIME,
-    ))
-}
-
-async fn page_settings() -> Html<String> {
-    Html(r##"<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>设置 - Agent Browser Hub</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.card{background:#fff;border-radius:12px;padding:40px;width:420px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-h1{font-size:22px;margin-bottom:24px;color:#0f172a}
-.section{margin-bottom:24px}
-.section h2{font-size:15px;color:#64748b;margin-bottom:12px}
-label{display:block;font-size:13px;color:#64748b;margin-bottom:6px}
-input{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#1e293b;font-size:14px;outline:none;transition:border .2s;margin-bottom:12px}
-input:focus{border-color:#3b82f6}
-.btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
-.btn-primary{background:#3b82f6;color:#fff}
-.btn-primary:hover{background:#2563eb}
-.btn-back{background:#e2e8f0;color:#64748b}
-.btn-back:hover{background:#cbd5e1;color:#1e293b}
-.btn-danger{background:#fef2f2;color:#ef4444;border:1px solid #fecaca}
-.btn-danger:hover{background:#fee2e2}
-.msg{font-size:13px;margin-top:8px}
-.msg.ok{color:#059669}
-.msg.err{color:#ef4444}
-.actions{display:flex;justify-content:space-between;margin-top:24px}
-hr{border:none;border-top:1px solid #e2e8f0;margin:24px 0}
-</style>
-</head>
-<body>
-<div class="card">
-  <h1>设置</h1>
-  <div class="section">
-    <h2>修改密码</h2>
-    <label>新密码</label>
-    <input type="password" id="newPassword" placeholder="至少 4 个字符">
-    <label>确认密码</label>
-    <input type="password" id="confirmPassword" placeholder="再次输入新密码">
-    <button class="btn btn-primary" onclick="changePassword()">更新密码</button>
-    <p class="msg" id="pwMsg"></p>
-  </div>
-  <hr>
-  <div class="section">
-    <h2>账户</h2>
-    <button class="btn btn-danger" onclick="logout()">退出登录</button>
-  </div>
-  <div class="actions">
-    <button class="btn btn-back" onclick="history.back()">返回</button>
-  </div>
-</div>
-<script>
-const token=localStorage.getItem('hub_token');
-if(!token)window.location.href='/login';
-
-function logout(){
-  localStorage.removeItem('hub_token');
-  window.location.href='/login';
-}
-
-async function changePassword(){
-  const pw=document.getElementById('newPassword').value;
-  const confirm=document.getElementById('confirmPassword').value;
-  const msg=document.getElementById('pwMsg');
-  msg.className='msg';
-  if(pw.length<4){msg.className='msg err';msg.textContent='密码至少 4 个字符';return;}
-  if(pw!==confirm){msg.className='msg err';msg.textContent='两次密码不一致';return;}
-  try{
-    const res=await fetch('/api/password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({password:pw})
-    });
-    const data=await res.json();
-    if(data.success){
-      msg.className='msg ok';
-      msg.textContent='密码已更新，请重新登录';
-      setTimeout(()=>{localStorage.removeItem('hub_token');window.location.href='/login';},1500);
-    }else{
-      msg.className='msg err';msg.textContent=data.message;
-    }
-  }catch(e){msg.className='msg err';msg.textContent='网络错误';}
-}
-</script>
-</body>
-</html>"##.to_string())
-}
-
-async fn page_root() -> Response {
-    serve_static("index.html").await
-}
 
 async fn serve_static(path: &str) -> Response {
     #[cfg(feature = "embed-frontend")]
@@ -884,8 +478,12 @@ async fn serve_static(path: &str) -> Response {
                 ([(header::CONTENT_TYPE, mime.as_ref())], content.data).into_response()
             }
             None => {
-                if path != "index.html" && !path.contains('.') {
-                    return serve_static("index.html").await;
+                // SPA fallback: non-file paths serve index.html
+                if !path.contains('.') {
+                    if let Some(index) = Assets::get("index.html") {
+                        let mime = mime_guess::from_path("index.html").first_or_octet_stream();
+                        return ([(header::CONTENT_TYPE, mime.as_ref())], index.data).into_response();
+                    }
                 }
                 StatusCode::NOT_FOUND.into_response()
             }
@@ -899,8 +497,7 @@ async fn serve_static(path: &str) -> Response {
 }
 
 async fn static_handler(req: Request) -> Response {
-    let path = req.uri().path();
-    serve_static(path).await
+    serve_static(req.uri().path()).await
 }
 
 // ============================================================================
@@ -912,17 +509,23 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
         password: Arc::new(Mutex::new(DEFAULT_PASSWORD.to_string())),
     };
 
-    let api_routes = Router::new()
+    // Public routes (no auth)
+    let public_routes = Router::new()
         .route("/api/login", post(login))
-        .route("/api/version", get(get_version))
+        .route("/api/version", get(get_version));
+
+    // Protected routes (require auth)
+    let protected_routes = Router::new()
         .route("/api/password", post(update_password))
         .route("/api/upgrade", post(upgrade))
         .route("/api/commands", get(list_scripts))
-        .route("/api/execute/:site/:name", post(execute_script))
-        .with_state(state);
+        .route("/api/execute/{site}/{command}", post(execute_script))
+        .route_layer(middleware::from_fn(auth_middleware));
 
     let app = Router::new()
-        .nest("/api", api_routes)
+        .merge(public_routes)
+        .merge(protected_routes)
+        .with_state(state)
         .fallback(static_handler);
 
     let addr = format!("0.0.0.0:{}", port);
