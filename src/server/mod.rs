@@ -1,18 +1,23 @@
 use axum::{
     Router, Json,
     extract::{Path, State, Request},
-    http::StatusCode,
+    http::{StatusCode, header},
     middleware::{self, Next},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
 };
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 use tokio::sync::Mutex;
+
+#[derive(RustEmbed)]
+#[folder = "web/out"]
+struct Assets;
 
 static JWT_SECRET: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ABH_JWT_SECRET").unwrap_or_else(|_| "agent_browser_hub_jwt_secret".to_string())
@@ -364,42 +369,46 @@ async fn upgrade() -> Json<ApiResponse<String>> {
 // ============================================================================
 
 async fn execute_script(
-    Path((site, command)): Path<(String, String)>,
-    Json(params): Json<HashMap<String, Value>>,
-) -> Json<ApiResponse<Value>> {
+    Path((site, name)): Path<(String, String)>,
+    Json(req): Json<HashMap<String, Value>>,
+) -> Json<Value> {
     if !site.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-        || !command.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
-        return Json(ApiResponse::error("无效的脚本路径"));
+        return Json(serde_json::json!({"success": false, "error": "Invalid script path"}));
     }
 
-    let script_path = format!("scripts/{}/{}.yaml", site, command);
+    let script_path = format!("scripts/{}/{}.yaml", site, name);
     if !std::path::Path::new(&script_path).exists() {
-        return Json(ApiResponse::error(format!("脚本不存在: {}/{}", site, command)));
+        return Json(serde_json::json!({"success": false, "error": format!("Script not found: {}/{}", site, name)}));
     }
 
     let yaml_content = match std::fs::read_to_string(&script_path) {
         Ok(c) => c,
-        Err(e) => return Json(ApiResponse::error(format!("读取脚本失败: {}", e))),
+        Err(e) => return Json(serde_json::json!({"success": false, "error": format!("Read failed: {}", e)})),
     };
 
     let script: crate::core::Script = match serde_yaml::from_str(&yaml_content) {
         Ok(s) => s,
-        Err(e) => return Json(ApiResponse::error(format!("解析脚本失败: {}", e))),
+        Err(e) => return Json(serde_json::json!({"success": false, "error": format!("Parse failed: {}", e)})),
     };
 
     let executor = match crate::core::Executor::new().await {
         Ok(e) => e,
-        Err(e) => return Json(ApiResponse::error(format!("创建执行器失败: {}", e))),
+        Err(e) => return Json(serde_json::json!({"success": false, "error": format!("Executor failed: {}", e)})),
     };
 
+    let params = req.get("params").and_then(|v| v.as_object()).map(|m| {
+        m.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+    }).unwrap_or_default();
+
     match executor.execute(&script, params).await {
-        Ok(result) => Json(ApiResponse::success("执行成功", serde_json::to_value(result).unwrap())),
-        Err(e) => Json(ApiResponse::error(format!("执行失败: {}", e))),
+        Ok(result) => Json(serde_json::json!({"success": true, "data": result})),
+        Err(e) => Json(serde_json::json!({"success": false, "error": format!("Execution failed: {}", e)})),
     }
 }
 
-async fn list_scripts() -> Json<ApiResponse<Vec<Value>>> {
+async fn list_scripts() -> Json<Vec<Value>> {
     let mut scripts = Vec::new();
     let scripts_dir = std::path::Path::new("scripts");
 
@@ -413,37 +422,46 @@ async fn list_scripts() -> Json<ApiResponse<Vec<Value>>> {
                     let path = file_entry.path();
                     if path.extension().and_then(|e| e.to_str()) != Some("yaml") { continue; }
 
-                    let command = path.file_stem()
+                    let name = path.file_stem()
                         .and_then(|s| s.to_str())
                         .unwrap_or("")
                         .to_string();
 
-                    let description = std::fs::read_to_string(&path)
-                        .ok()
-                        .and_then(|content| {
-                            serde_yaml::from_str::<Value>(&content).ok()
-                        })
-                        .and_then(|v| {
-                            v["meta"]["description"].as_str().map(|s| s.to_string())
-                        })
-                        .unwrap_or_default();
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        if let Ok(yaml) = serde_yaml::from_str::<Value>(&content) {
+                            let description = yaml["meta"]["description"].as_str()
+                                .or_else(|| yaml["description"].as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            let strategy = yaml["config"]["strategy"].as_str()
+                                .or_else(|| yaml["strategy"].as_str())
+                                .unwrap_or("PUBLIC")
+                                .to_string();
+                            let params = yaml["params"].as_sequence()
+                                .or_else(|| yaml["args"].as_mapping().map(|_| &vec![]))
+                                .map(|v| v.len())
+                                .unwrap_or(0);
 
-                    scripts.push(serde_json::json!({
-                        "site": site,
-                        "command": command,
-                        "description": description,
-                    }));
+                            scripts.push(serde_json::json!({
+                                "site": site,
+                                "name": name,
+                                "description": description,
+                                "strategy": strategy,
+                                "params": [],
+                            }));
+                        }
+                    }
                 }
             }
         }
     }
 
     scripts.sort_by(|a, b| {
-        let key = |v: &Value| format!("{}/{}", v["site"].as_str().unwrap_or(""), v["command"].as_str().unwrap_or(""));
+        let key = |v: &Value| format!("{}/{}", v["site"].as_str().unwrap_or(""), v["name"].as_str().unwrap_or(""));
         key(a).cmp(&key(b))
     });
 
-    Json(ApiResponse::success("ok", scripts))
+    Json(scripts)
 }
 
 // ============================================================================
@@ -847,7 +865,30 @@ async function changePassword(){
 }
 
 async fn page_root() -> Response {
-    axum::response::Redirect::to("/login").into_response()
+    serve_static("index.html").await
+}
+
+async fn serve_static(path: &str) -> Response {
+    let path = path.trim_start_matches('/');
+    let path = if path.is_empty() { "index.html" } else { path };
+
+    match Assets::get(path) {
+        Some(content) => {
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+            ([(header::CONTENT_TYPE, mime.as_ref())], content.data).into_response()
+        }
+        None => {
+            if path != "index.html" && !path.contains('.') {
+                return serve_static("index.html").await;
+            }
+            StatusCode::NOT_FOUND.into_response()
+        }
+    }
+}
+
+async fn static_handler(req: Request) -> Response {
+    let path = req.uri().path();
+    serve_static(path).await
 }
 
 // ============================================================================
@@ -859,32 +900,18 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
         password: Arc::new(Mutex::new(DEFAULT_PASSWORD.to_string())),
     };
 
-    // Public routes (no auth)
-    let public_routes = Router::new()
+    let api_routes = Router::new()
         .route("/api/login", post(login))
         .route("/api/version", get(get_version))
-        .route("/", get(page_root))
-        .route("/login", get(page_login))
-        .route("/about", get(page_about));
-
-    // Protected routes (require auth)
-    let protected_routes = Router::new()
         .route("/api/password", post(update_password))
         .route("/api/upgrade", post(upgrade))
-        .route("/api/scripts", get(list_scripts))
-        .route("/api/execute/{site}/{command}", post(execute_script))
-        .route_layer(middleware::from_fn(auth_middleware));
-
-    // HTML pages (client-side auth check via JS)
-    let page_routes = Router::new()
-        .route("/dashboard", get(page_dashboard))
-        .route("/settings", get(page_settings));
+        .route("/api/commands", get(list_scripts))
+        .route("/api/execute/:site/:name", post(execute_script))
+        .with_state(state);
 
     let app = Router::new()
-        .merge(public_routes)
-        .merge(protected_routes)
-        .merge(page_routes)
-        .with_state(state);
+        .nest("/api", api_routes)
+        .fallback(static_handler);
 
     let addr = format!("0.0.0.0:{}", port);
     eprintln!("Server running on http://{}", addr);

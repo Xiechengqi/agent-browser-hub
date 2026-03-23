@@ -19,6 +19,8 @@ regex = "1"
 comfy-table = "7"
 md-5 = "0.10"
 urlencoding = "2"
+rust-embed = "8.0"
+mime_guess = "2.0"
 
 [build-dependencies]
 chrono = "0.4"
