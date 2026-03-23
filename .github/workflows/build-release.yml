@@ -1,0 +1,133 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [amd64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@1.88.0
+
+      - name: Install Zig for cross-compilation
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild
+
+      - name: Add musl targets
+        run: |
+          rustup target add x86_64-unknown-linux-musl
+          rustup target add aarch64-unknown-linux-musl
+
+      - name: Build for ${{ matrix.target }}
+        run: ./build-ci.sh ${{ matrix.target }}
+
+      - name: Prepare release asset
+        run: |
+          if [ "${{ matrix.target }}" = "arm64" ]; then
+            mv target/aarch64-unknown-linux-musl/release/agent-browser-hub agent-browser-hub-linux-arm64
+            echo "RELEASE_ASSET=agent-browser-hub-linux-arm64" >> $GITHUB_ENV
+          else
+            mv target/x86_64-unknown-linux-musl/release/agent-browser-hub agent-browser-hub-linux-amd64
+            echo "RELEASE_ASSET=agent-browser-hub-linux-amd64" >> $GITHUB_ENV
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-browser-hub-${{ matrix.target }}
+          path: ${{ env.RELEASE_ASSET }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          cp artifacts/agent-browser-hub-amd64/agent-browser-hub-linux-amd64 release-files/
+          cp artifacts/agent-browser-hub-arm64/agent-browser-hub-linux-arm64 release-files/
+          ls -lh release-files/
+
+      - name: Get version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "Current version: v${VERSION}"
+
+      - name: Delete existing latest release and tag
+        run: |
+          gh release delete latest --yes || true
+          git push origin :refs/tags/latest || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create latest tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f latest
+          git push -f origin latest
+
+      - name: Create or Update Latest Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest Build (${{ steps.version.outputs.version }})"
+          body: |
+            ## Latest Build
+
+            **Version**: ${{ steps.version.outputs.version }}
+            **Commit**: ${{ github.sha }}
+            **Branch**: ${{ github.ref_name }}
+            **Build Time**: ${{ github.event.head_commit.timestamp }}
+
+            ### Changes
+
+            ${{ github.event.head_commit.message }}
+
+            ---
+
+            ### Download
+
+            - **Linux AMD64**: `agent-browser-hub-linux-amd64`
+            - **Linux ARM64**: `agent-browser-hub-linux-arm64`
+
+            ### Quick Install
+
+            ```bash
+            # AMD64
+            wget https://github.com/${{ github.repository }}/releases/download/latest/agent-browser-hub-linux-amd64 -O agent-browser-hub && chmod +x agent-browser-hub
+
+            # ARM64
+            wget https://github.com/${{ github.repository }}/releases/download/latest/agent-browser-hub-linux-arm64 -O agent-browser-hub && chmod +x agent-browser-hub
+            ```
+          files: release-files/*
+          prerelease: false
+          draft: false
