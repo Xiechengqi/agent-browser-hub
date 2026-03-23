@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Command, ExecuteRequest } from '@/types/command';
-import { useExecute } from '@/lib/hooks/useExecute';
+import { useExecute } from '@/lib/hooks/useCommands';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ParamForm from './ParamForm';
 import FormatSelector from './FormatSelector';
