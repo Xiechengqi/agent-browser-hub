@@ -11,17 +11,20 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tokio::sync::Mutex;
 
-const JWT_SECRET: &str = "agent_browser_hub_jwt_secret";
+static JWT_SECRET: LazyLock<String> = LazyLock::new(|| {
+    std::env::var("ABH_JWT_SECRET").unwrap_or_else(|_| "agent_browser_hub_jwt_secret".to_string())
+});
 const DEFAULT_PASSWORD: &str = "admin123";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_COMMIT: &str = env!("GIT_COMMIT");
 const GIT_COMMIT_DATE: &str = env!("GIT_COMMIT_DATE");
 const GIT_COMMIT_MSG: &str = env!("GIT_COMMIT_MSG");
 const BUILD_TIME: &str = env!("BUILD_TIME");
-const GITHUB_REPO: &str = "Xiechengqi/agent-browser-hub";
+
+use crate::GITHUB_REPO;
 
 // ============================================================================
 // Data Structures
@@ -108,11 +111,11 @@ fn generate_token() -> Result<String, jsonwebtoken::errors::Error> {
         .timestamp() as usize;
 
     let claims = Claims { sub: "admin".to_string(), exp };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET.as_ref()))
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET.as_bytes()))
 }
 
 fn verify_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    decode::<Claims>(token, &DecodingKey::from_secret(JWT_SECRET.as_ref()), &Validation::default())
+    decode::<Claims>(token, &DecodingKey::from_secret(JWT_SECRET.as_bytes()), &Validation::default())
         .map(|data| data.claims)
 }
 
@@ -364,17 +367,82 @@ async fn execute_script(
     Path((site, command)): Path<(String, String)>,
     Json(params): Json<HashMap<String, Value>>,
 ) -> Json<ApiResponse<Value>> {
-    Json(ApiResponse::success(
-        format!("Executed {}/{}", site, command),
-        serde_json::json!({ "site": site, "command": command, "params": params }),
-    ))
+    if !site.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        || !command.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Json(ApiResponse::error("无效的脚本路径"));
+    }
+
+    let script_path = format!("scripts/{}/{}.yaml", site, command);
+    if !std::path::Path::new(&script_path).exists() {
+        return Json(ApiResponse::error(format!("脚本不存在: {}/{}", site, command)));
+    }
+
+    let yaml_content = match std::fs::read_to_string(&script_path) {
+        Ok(c) => c,
+        Err(e) => return Json(ApiResponse::error(format!("读取脚本失败: {}", e))),
+    };
+
+    let script: crate::core::Script = match serde_yaml::from_str(&yaml_content) {
+        Ok(s) => s,
+        Err(e) => return Json(ApiResponse::error(format!("解析脚本失败: {}", e))),
+    };
+
+    let executor = match crate::core::Executor::new().await {
+        Ok(e) => e,
+        Err(e) => return Json(ApiResponse::error(format!("创建执行器失败: {}", e))),
+    };
+
+    match executor.execute(&script, params).await {
+        Ok(result) => Json(ApiResponse::success("执行成功", serde_json::to_value(result).unwrap())),
+        Err(e) => Json(ApiResponse::error(format!("执行失败: {}", e))),
+    }
 }
 
 async fn list_scripts() -> Json<ApiResponse<Vec<Value>>> {
-    let scripts = vec![
-        serde_json::json!({"site": "google", "command": "search", "description": "Search Google"}),
-        serde_json::json!({"site": "hackernews", "command": "top", "description": "Hacker News top stories"}),
-    ];
+    let mut scripts = Vec::new();
+    let scripts_dir = std::path::Path::new("scripts");
+
+    if let Ok(sites) = std::fs::read_dir(scripts_dir) {
+        for site_entry in sites.flatten() {
+            if !site_entry.path().is_dir() { continue; }
+            let site = site_entry.file_name().to_string_lossy().to_string();
+
+            if let Ok(files) = std::fs::read_dir(site_entry.path()) {
+                for file_entry in files.flatten() {
+                    let path = file_entry.path();
+                    if path.extension().and_then(|e| e.to_str()) != Some("yaml") { continue; }
+
+                    let command = path.file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("")
+                        .to_string();
+
+                    let description = std::fs::read_to_string(&path)
+                        .ok()
+                        .and_then(|content| {
+                            serde_yaml::from_str::<Value>(&content).ok()
+                        })
+                        .and_then(|v| {
+                            v["meta"]["description"].as_str().map(|s| s.to_string())
+                        })
+                        .unwrap_or_default();
+
+                    scripts.push(serde_json::json!({
+                        "site": site,
+                        "command": command,
+                        "description": description,
+                    }));
+                }
+            }
+        }
+    }
+
+    scripts.sort_by(|a, b| {
+        let key = |v: &Value| format!("{}/{}", v["site"].as_str().unwrap_or(""), v["command"].as_str().unwrap_or(""));
+        key(a).cmp(&key(b))
+    });
+
     Json(ApiResponse::success("ok", scripts))
 }
 
@@ -384,39 +452,39 @@ async fn list_scripts() -> Json<ApiResponse<Vec<Value>>> {
 
 async fn page_login() -> Html<String> {
     Html(format!(r##"<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login - Agent Browser Hub</title>
+<title>登录 - Agent Browser Hub</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}}
-.card{{background:#1e293b;border-radius:12px;padding:40px;width:380px;box-shadow:0 25px 50px rgba(0,0,0,.3)}}
-h1{{font-size:24px;margin-bottom:8px;text-align:center}}
-.subtitle{{color:#94a3b8;text-align:center;margin-bottom:32px;font-size:14px}}
-label{{display:block;font-size:13px;color:#94a3b8;margin-bottom:6px}}
-input{{width:100%;padding:10px 14px;border:1px solid #334155;border-radius:8px;background:#0f172a;color:#e2e8f0;font-size:14px;outline:none;transition:border .2s}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}}
+.card{{background:#fff;border-radius:12px;padding:40px;width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}}
+h1{{font-size:24px;margin-bottom:8px;text-align:center;color:#0f172a}}
+.subtitle{{color:#64748b;text-align:center;margin-bottom:32px;font-size:14px}}
+label{{display:block;font-size:13px;color:#64748b;margin-bottom:6px}}
+input{{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#1e293b;font-size:14px;outline:none;transition:border .2s}}
 input:focus{{border-color:#3b82f6}}
 .btn{{width:100%;padding:10px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:20px;transition:background .2s}}
 .btn:hover{{background:#2563eb}}
-.btn:disabled{{background:#334155;cursor:not-allowed}}
-.error{{color:#f87171;font-size:13px;margin-top:12px;text-align:center;display:none}}
-.version{{color:#475569;font-size:12px;text-align:center;margin-top:24px}}
+.btn:disabled{{background:#cbd5e1;cursor:not-allowed}}
+.error{{color:#ef4444;font-size:13px;margin-top:12px;text-align:center;display:none}}
+.version{{color:#94a3b8;font-size:12px;text-align:center;margin-top:24px}}
 .version a{{color:#3b82f6;text-decoration:none}}
 </style>
 </head>
 <body>
 <div class="card">
   <h1>Agent Browser Hub</h1>
-  <p class="subtitle">Browser automation scripts hub</p>
+  <p class="subtitle">浏览器自动化脚本管理平台</p>
   <form id="loginForm">
-    <label for="password">Password</label>
-    <input type="password" id="password" placeholder="Enter password" autofocus>
-    <button type="submit" class="btn" id="submitBtn">Login</button>
+    <label for="password">密码</label>
+    <input type="password" id="password" placeholder="默认密码 admin123" autofocus>
+    <button type="submit" class="btn" id="submitBtn">登录</button>
     <p class="error" id="errorMsg"></p>
   </form>
-  <p class="version">v{version} &middot; <a href="/about">Version Info</a></p>
+  <p class="version">v{version} &middot; <a href="/about">版本信息</a></p>
 </div>
 <script>
 const form=document.getElementById('loginForm');
@@ -427,7 +495,7 @@ form.addEventListener('submit',async(e)=>{{
   e.preventDefault();
   errorMsg.style.display='none';
   submitBtn.disabled=true;
-  submitBtn.textContent='Logging in...';
+  submitBtn.textContent='登录中...';
   try{{
     const res=await fetch('/api/login',{{
       method:'POST',
@@ -443,11 +511,11 @@ form.addEventListener('submit',async(e)=>{{
       errorMsg.style.display='block';
     }}
   }}catch(err){{
-    errorMsg.textContent='Network error';
+    errorMsg.textContent='网络错误';
     errorMsg.style.display='block';
   }}
   submitBtn.disabled=false;
-  submitBtn.textContent='Login';
+  submitBtn.textContent='登录';
 }});
 
 if(localStorage.getItem('hub_token'))window.location.href='/dashboard';
@@ -458,46 +526,46 @@ if(localStorage.getItem('hub_token'))window.location.href='/dashboard';
 
 async fn page_dashboard() -> Html<String> {
     Html(format!(r##"<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard - Agent Browser Hub</title>
+<title>控制台 - Agent Browser Hub</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0}}
-.topbar{{background:#1e293b;border-bottom:1px solid #334155;padding:12px 24px;display:flex;justify-content:space-between;align-items:center}}
-.topbar h1{{font-size:18px}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b}}
+.topbar{{background:#fff;border-bottom:1px solid #e2e8f0;padding:12px 24px;display:flex;justify-content:space-between;align-items:center}}
+.topbar h1{{font-size:18px;color:#0f172a}}
 .topbar .actions{{display:flex;gap:12px;align-items:center}}
-.topbar a,.topbar button{{color:#94a3b8;text-decoration:none;font-size:13px;background:none;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;transition:all .2s}}
-.topbar a:hover,.topbar button:hover{{color:#e2e8f0;background:#334155}}
-.logout-btn{{color:#f87171!important}}
-.logout-btn:hover{{background:#451a1a!important;color:#fca5a5!important}}
+.topbar a,.topbar button{{color:#64748b;text-decoration:none;font-size:13px;background:none;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;transition:all .2s}}
+.topbar a:hover,.topbar button:hover{{color:#1e293b;background:#f1f5f9}}
+.logout-btn{{color:#ef4444!important}}
+.logout-btn:hover{{background:#fef2f2!important;color:#dc2626!important}}
 .container{{max-width:900px;margin:40px auto;padding:0 24px}}
-.section{{background:#1e293b;border-radius:12px;padding:24px;margin-bottom:24px}}
-.section h2{{font-size:16px;margin-bottom:16px;color:#94a3b8}}
+.section{{background:#fff;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
+.section h2{{font-size:16px;margin-bottom:16px;color:#64748b}}
 .script-list{{list-style:none}}
-.script-list li{{padding:12px 16px;border:1px solid #334155;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}}
+.script-list li{{padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}}
 .script-list li:hover{{border-color:#3b82f6}}
-.script-name{{font-weight:600}}
-.script-desc{{color:#94a3b8;font-size:13px}}
-.badge{{background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:4px;font-size:12px}}
+.script-name{{font-weight:600;color:#0f172a}}
+.script-desc{{color:#64748b;font-size:13px}}
+.badge{{background:#eff6ff;color:#3b82f6;padding:2px 8px;border-radius:4px;font-size:12px}}
 </style>
 </head>
 <body>
 <div class="topbar">
   <h1>Agent Browser Hub</h1>
   <div class="actions">
-    <a href="/about">Version Info</a>
-    <a href="/settings">Settings</a>
-    <button class="logout-btn" onclick="logout()">Logout</button>
+    <a href="/about">版本信息</a>
+    <a href="/settings">设置</a>
+    <button class="logout-btn" onclick="logout()">退出登录</button>
   </div>
 </div>
 <div class="container">
   <div class="section">
-    <h2>Scripts</h2>
+    <h2>脚本列表</h2>
     <ul class="script-list" id="scriptList">
-      <li><span>Loading...</span></li>
+      <li><span>加载中...</span></li>
     </ul>
   </div>
 </div>
@@ -520,18 +588,30 @@ async function apiFetch(url){{
   const data=await apiFetch('/api/scripts');
   if(!data)return;
   const list=document.getElementById('scriptList');
+  list.innerHTML='';
   if(data.success&&data.data.length>0){{
-    list.innerHTML=data.data.map(s=>`
-      <li>
-        <div>
-          <span class="script-name">${{s.site}}/${{s.command}}</span>
-          <span class="script-desc"> - ${{s.description}}</span>
-        </div>
-        <span class="badge">${{s.site}}</span>
-      </li>
-    `).join('');
+    data.data.forEach(s=>{{
+      const li=document.createElement('li');
+      const div=document.createElement('div');
+      const name=document.createElement('span');
+      name.className='script-name';
+      name.textContent=s.site+'/'+s.command;
+      const desc=document.createElement('span');
+      desc.className='script-desc';
+      desc.textContent=' - '+s.description;
+      div.appendChild(name);
+      div.appendChild(desc);
+      const badge=document.createElement('span');
+      badge.className='badge';
+      badge.textContent=s.site;
+      li.appendChild(div);
+      li.appendChild(badge);
+      list.appendChild(li);
+    }});
   }}else{{
-    list.innerHTML='<li>No scripts found</li>';
+    const li=document.createElement('li');
+    li.textContent='暂无脚本';
+    list.appendChild(li);
   }}
 }})();
 </script>
@@ -541,68 +621,68 @@ async function apiFetch(url){{
 
 async fn page_about() -> Html<String> {
     Html(format!(r##"<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Version Info - Agent Browser Hub</title>
+<title>版本信息 - Agent Browser Hub</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}}
-.card{{background:#1e293b;border-radius:12px;padding:40px;width:520px;box-shadow:0 25px 50px rgba(0,0,0,.3)}}
-h1{{font-size:22px;margin-bottom:24px;display:flex;align-items:center;gap:10px}}
-.icon{{width:28px;height:28px;background:#3b82f6;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}}
+.card{{background:#fff;border-radius:12px;padding:40px;width:520px;box-shadow:0 4px 24px rgba(0,0,0,.08)}}
+h1{{font-size:22px;margin-bottom:24px;display:flex;align-items:center;gap:10px;color:#0f172a}}
+.icon{{width:28px;height:28px;background:#3b82f6;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff}}
 .info-grid{{display:grid;gap:16px}}
-.info-row{{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;border-radius:8px}}
-.info-label{{color:#94a3b8;font-size:13px}}
-.info-value{{font-size:14px;font-weight:500;word-break:break-all;text-align:right;max-width:60%}}
+.info-row{{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f8fafc;border-radius:8px}}
+.info-label{{color:#64748b;font-size:13px}}
+.info-value{{font-size:14px;font-weight:500;word-break:break-all;text-align:right;max-width:60%;color:#0f172a}}
 .info-value a{{color:#3b82f6;text-decoration:none}}
 .info-value a:hover{{text-decoration:underline}}
-.update-section{{margin-top:24px;padding:16px;background:#0f172a;border-radius:8px;text-align:center}}
-.update-section .latest{{font-size:13px;color:#94a3b8;margin-bottom:12px}}
-.update-section .latest span{{color:#34d399;font-weight:600}}
+.update-section{{margin-top:24px;padding:16px;background:#f8fafc;border-radius:8px;text-align:center}}
+.update-section .latest{{font-size:13px;color:#64748b;margin-bottom:12px}}
+.update-section .latest span{{color:#059669;font-weight:600}}
 .btn{{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}}
 .btn-primary{{background:#3b82f6;color:#fff}}
 .btn-primary:hover{{background:#2563eb}}
-.btn-primary:disabled{{background:#334155;cursor:not-allowed}}
-.btn-back{{background:#334155;color:#94a3b8;margin-right:8px}}
-.btn-back:hover{{background:#475569;color:#e2e8f0}}
+.btn-primary:disabled{{background:#cbd5e1;cursor:not-allowed}}
+.btn-back{{background:#e2e8f0;color:#64748b}}
+.btn-back:hover{{background:#cbd5e1;color:#1e293b}}
 .actions{{margin-top:24px;display:flex;justify-content:center;gap:8px}}
-.status{{font-size:13px;color:#94a3b8;margin-top:8px}}
+.status{{font-size:13px;color:#64748b;margin-top:8px}}
 </style>
 </head>
 <body>
 <div class="card">
-  <h1><span class="icon">i</span> Version Info</h1>
+  <h1><span class="icon">i</span> 版本信息</h1>
   <div class="info-grid">
     <div class="info-row">
-      <span class="info-label">Version</span>
+      <span class="info-label">版本</span>
       <span class="info-value">v{version}</span>
     </div>
     <div class="info-row">
-      <span class="info-label">Commit</span>
+      <span class="info-label">提交</span>
       <span class="info-value"><a href="https://github.com/{repo}/commit/{commit}" target="_blank">{commit}</a></span>
     </div>
     <div class="info-row">
-      <span class="info-label">Commit Date</span>
+      <span class="info-label">提交日期</span>
       <span class="info-value">{commit_date}</span>
     </div>
     <div class="info-row">
-      <span class="info-label">Commit Message</span>
+      <span class="info-label">提交信息</span>
       <span class="info-value">{commit_msg}</span>
     </div>
     <div class="info-row">
-      <span class="info-label">Build Time</span>
+      <span class="info-label">构建时间</span>
       <span class="info-value">{build_time}</span>
     </div>
   </div>
   <div class="update-section">
-    <p class="latest" id="latestInfo">Checking for updates...</p>
-    <button class="btn btn-primary" id="upgradeBtn" style="display:none" onclick="doUpgrade()">Upgrade</button>
+    <p class="latest" id="latestInfo">正在检查更新...</p>
+    <button class="btn btn-primary" id="upgradeBtn" style="display:none" onclick="doUpgrade()">升级</button>
     <p class="status" id="upgradeStatus"></p>
   </div>
   <div class="actions">
-    <button class="btn btn-back" onclick="history.back()">Back</button>
+    <button class="btn btn-back" onclick="history.back()">返回</button>
   </div>
 </div>
 <script>
@@ -623,17 +703,18 @@ async function apiFetch(url,opts={{}}){{
       const v=data.data;
       if(v.latest){{
         if(v.latest!=='v'+'{version}'&&v.latest!=='{version}'){{
-          info.innerHTML='Latest: <span style="color:#fbbf24">'+v.latest+'</span> (update available)';
+          info.textContent='最新版本: '+v.latest+' (有新版本可用)';
+          info.style.color='#d97706';
           document.getElementById('upgradeBtn').style.display='inline-block';
         }}else{{
-          info.innerHTML='Latest: <span>'+v.latest+'</span> (up to date)';
+          info.textContent='最新版本: '+v.latest+' (已是最新)';
         }}
       }}else{{
-        info.textContent='Could not check for updates';
+        info.textContent='无法检查更新';
       }}
     }}
   }}catch(e){{
-    document.getElementById('latestInfo').textContent='Failed to check updates';
+    document.getElementById('latestInfo').textContent='检查更新失败';
   }}
 }})();
 
@@ -642,26 +723,26 @@ async function doUpgrade(){{
   const btn=document.getElementById('upgradeBtn');
   const status=document.getElementById('upgradeStatus');
   btn.disabled=true;
-  btn.textContent='Upgrading...';
-  status.textContent='Downloading and installing...';
+  btn.textContent='升级中...';
+  status.textContent='正在下载并安装...';
   try{{
     const res=await apiFetch('/api/upgrade',{{method:'POST'}});
     const data=await res.json();
     if(data.success){{
-      status.style.color='#34d399';
-      status.textContent='Upgrade complete! Restarting... Refreshing in 3s.';
+      status.style.color='#059669';
+      status.textContent='升级完成！正在重启... 3秒后刷新页面';
       setTimeout(()=>window.location.reload(),3000);
     }}else{{
-      status.style.color='#f87171';
-      status.textContent='Upgrade failed: '+data.message;
+      status.style.color='#ef4444';
+      status.textContent='升级失败: '+data.message;
       btn.disabled=false;
-      btn.textContent='Retry Upgrade';
+      btn.textContent='重试升级';
     }}
   }}catch(e){{
-    status.style.color='#f87171';
-    status.textContent='Network error: '+e.message;
+    status.style.color='#ef4444';
+    status.textContent='网络错误: '+e.message;
     btn.disabled=false;
-    btn.textContent='Retry Upgrade';
+    btn.textContent='重试升级';
   }}
 }}
 </script>
@@ -678,54 +759,54 @@ async function doUpgrade(){{
 
 async fn page_settings() -> Html<String> {
     Html(r##"<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Settings - Agent Browser Hub</title>
+<title>设置 - Agent Browser Hub</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.card{background:#1e293b;border-radius:12px;padding:40px;width:420px;box-shadow:0 25px 50px rgba(0,0,0,.3)}
-h1{font-size:22px;margin-bottom:24px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:#fff;border-radius:12px;padding:40px;width:420px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+h1{font-size:22px;margin-bottom:24px;color:#0f172a}
 .section{margin-bottom:24px}
-.section h2{font-size:15px;color:#94a3b8;margin-bottom:12px}
-label{display:block;font-size:13px;color:#94a3b8;margin-bottom:6px}
-input{width:100%;padding:10px 14px;border:1px solid #334155;border-radius:8px;background:#0f172a;color:#e2e8f0;font-size:14px;outline:none;transition:border .2s;margin-bottom:12px}
+.section h2{font-size:15px;color:#64748b;margin-bottom:12px}
+label{display:block;font-size:13px;color:#64748b;margin-bottom:6px}
+input{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#1e293b;font-size:14px;outline:none;transition:border .2s;margin-bottom:12px}
 input:focus{border-color:#3b82f6}
 .btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
 .btn-primary{background:#3b82f6;color:#fff}
 .btn-primary:hover{background:#2563eb}
-.btn-back{background:#334155;color:#94a3b8}
-.btn-back:hover{background:#475569;color:#e2e8f0}
-.btn-danger{background:#7f1d1d;color:#fca5a5}
-.btn-danger:hover{background:#991b1b}
+.btn-back{background:#e2e8f0;color:#64748b}
+.btn-back:hover{background:#cbd5e1;color:#1e293b}
+.btn-danger{background:#fef2f2;color:#ef4444;border:1px solid #fecaca}
+.btn-danger:hover{background:#fee2e2}
 .msg{font-size:13px;margin-top:8px}
-.msg.ok{color:#34d399}
-.msg.err{color:#f87171}
+.msg.ok{color:#059669}
+.msg.err{color:#ef4444}
 .actions{display:flex;justify-content:space-between;margin-top:24px}
-hr{border:none;border-top:1px solid #334155;margin:24px 0}
+hr{border:none;border-top:1px solid #e2e8f0;margin:24px 0}
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>Settings</h1>
+  <h1>设置</h1>
   <div class="section">
-    <h2>Change Password</h2>
-    <label>New Password</label>
-    <input type="password" id="newPassword" placeholder="At least 4 characters">
-    <label>Confirm Password</label>
-    <input type="password" id="confirmPassword" placeholder="Confirm new password">
-    <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+    <h2>修改密码</h2>
+    <label>新密码</label>
+    <input type="password" id="newPassword" placeholder="至少 4 个字符">
+    <label>确认密码</label>
+    <input type="password" id="confirmPassword" placeholder="再次输入新密码">
+    <button class="btn btn-primary" onclick="changePassword()">更新密码</button>
     <p class="msg" id="pwMsg"></p>
   </div>
   <hr>
   <div class="section">
-    <h2>Account</h2>
-    <button class="btn btn-danger" onclick="logout()">Logout</button>
+    <h2>账户</h2>
+    <button class="btn btn-danger" onclick="logout()">退出登录</button>
   </div>
   <div class="actions">
-    <button class="btn btn-back" onclick="history.back()">Back</button>
+    <button class="btn btn-back" onclick="history.back()">返回</button>
   </div>
 </div>
 <script>
@@ -742,8 +823,8 @@ async function changePassword(){
   const confirm=document.getElementById('confirmPassword').value;
   const msg=document.getElementById('pwMsg');
   msg.className='msg';
-  if(pw.length<4){msg.className='msg err';msg.textContent='Password must be at least 4 characters';return;}
-  if(pw!==confirm){msg.className='msg err';msg.textContent='Passwords do not match';return;}
+  if(pw.length<4){msg.className='msg err';msg.textContent='密码至少 4 个字符';return;}
+  if(pw!==confirm){msg.className='msg err';msg.textContent='两次密码不一致';return;}
   try{
     const res=await fetch('/api/password',{
       method:'POST',
@@ -753,12 +834,12 @@ async function changePassword(){
     const data=await res.json();
     if(data.success){
       msg.className='msg ok';
-      msg.textContent='Password updated. Please login again.';
+      msg.textContent='密码已更新，请重新登录';
       setTimeout(()=>{localStorage.removeItem('hub_token');window.location.href='/login';},1500);
     }else{
       msg.className='msg err';msg.textContent=data.message;
     }
-  }catch(e){msg.className='msg err';msg.textContent='Network error';}
+  }catch(e){msg.className='msg err';msg.textContent='网络错误';}
 }
 </script>
 </body>

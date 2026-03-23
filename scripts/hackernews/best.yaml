@@ -1,0 +1,27 @@
+site: hackernews
+name: best
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://news.ycombinator.com/best
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        const rows = document.querySelectorAll('.athing');
+        rows.forEach(row => {
+          const titleEl = row.querySelector('.titleline > a');
+          const scoreEl = row.nextElementSibling?.querySelector('.score');
+          const authorEl = row.nextElementSibling?.querySelector('.hnuser');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent,
+              url: titleEl.href,
+              score: scoreEl ? parseInt(scoreEl.textContent) : 0,
+              author: authorEl ? authorEl.textContent : ''
+            });
+          }
+        });
+        return items;
+      })()

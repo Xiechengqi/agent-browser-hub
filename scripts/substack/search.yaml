@@ -1,0 +1,27 @@
+site: substack
+name: search
+strategy: PUBLIC
+browser: false
+args:
+  query:
+    type: string
+    required: true
+
+pipeline:
+  - navigate: https://substack.com/search/${{ args.query }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('article').forEach(article => {
+          const titleEl = article.querySelector('h3, h2');
+          const linkEl = article.querySelector('a');
+          if (titleEl && linkEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: linkEl.href
+            });
+          }
+        });
+        return items;
+      })()

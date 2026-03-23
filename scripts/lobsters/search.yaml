@@ -1,0 +1,26 @@
+site: lobsters
+name: search
+strategy: PUBLIC
+browser: false
+args:
+  query:
+    type: string
+    required: true
+
+pipeline:
+  - navigate: https://lobste.rs/search?q=${{ args.query }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.story').forEach(story => {
+          const titleEl = story.querySelector('.u-url');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: titleEl.href
+            });
+          }
+        });
+        return items;
+      })()

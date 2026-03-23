@@ -1,0 +1,23 @@
+site: medium
+name: feed
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://medium.com/
+  - wait: 3000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('article').forEach(article => {
+          const titleEl = article.querySelector('h2, h3');
+          const linkEl = article.querySelector('a');
+          if (titleEl && linkEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: linkEl.href
+            });
+          }
+        });
+        return items;
+      })()

@@ -1,0 +1,24 @@
+site: lobsters
+name: hot
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://lobste.rs/
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.story').forEach(story => {
+          const titleEl = story.querySelector('.u-url');
+          const scoreEl = story.querySelector('.score');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: titleEl.href,
+              score: scoreEl ? parseInt(scoreEl.textContent) : 0
+            });
+          }
+        });
+        return items;
+      })()

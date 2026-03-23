@@ -1,0 +1,24 @@
+site: arxiv
+name: paper
+strategy: PUBLIC
+browser: false
+args:
+  id:
+    type: string
+    required: true
+
+pipeline:
+  - navigate: https://arxiv.org/abs/${{ args.id }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const titleEl = document.querySelector('.title');
+        const authorsEl = document.querySelector('.authors');
+        const abstractEl = document.querySelector('.abstract');
+        return {
+          title: titleEl ? titleEl.textContent.replace('Title:', '').trim() : '',
+          authors: authorsEl ? authorsEl.textContent.replace('Authors:', '').trim() : '',
+          abstract: abstractEl ? abstractEl.textContent.replace('Abstract:', '').trim() : '',
+          url: window.location.href
+        };
+      })()

@@ -1,0 +1,25 @@
+site: reddit
+name: read
+strategy: COOKIE
+browser: true
+args:
+  subreddit:
+    type: string
+    default: all
+
+pipeline:
+  - navigate: https://www.reddit.com/r/${{ args.subreddit }}
+  - wait: 3000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('[data-testid="post-container"]').forEach(post => {
+          const titleEl = post.querySelector('h3');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim()
+            });
+          }
+        });
+        return items;
+      })()

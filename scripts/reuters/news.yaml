@@ -1,0 +1,22 @@
+site: reuters
+name: news
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://www.reuters.com/
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('[data-testid="Heading"]').forEach(el => {
+          const link = el.closest('a');
+          if (link) {
+            items.push({
+              title: el.textContent.trim(),
+              url: link.href.startsWith('http') ? link.href : 'https://www.reuters.com' + link.href
+            });
+          }
+        });
+        return items;
+      })()

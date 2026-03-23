@@ -1,2 +1,5 @@
 /target
 *.bak
+.claude/*.log
+.claude/*.local.md
+reviews/

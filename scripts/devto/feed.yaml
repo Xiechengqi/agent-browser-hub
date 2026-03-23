@@ -1,0 +1,22 @@
+site: devto
+name: feed
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://dev.to/
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.crayons-story').forEach(story => {
+          const titleEl = story.querySelector('h2 a, h3 a');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: 'https://dev.to' + titleEl.getAttribute('href')
+            });
+          }
+        });
+        return items;
+      })()

@@ -1,9 +1,10 @@
 use agent_browser_hub::cli::{Cli, Commands};
 use agent_browser_hub::server;
+use agent_browser_hub::registry::Registry;
+use agent_browser_hub::GITHUB_REPO;
 use clap::Parser;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const GITHUB_REPO: &str = "Xiechengqi/agent-browser-hub";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -14,9 +15,7 @@ async fn main() -> anyhow::Result<()> {
             server::start(port).await?;
         }
         Some(Commands::List) => {
-            println!("Available scripts:");
-            println!("  google/search     - Search Google");
-            println!("  hackernews/top    - Hacker News top stories");
+            cli_list()?;
         }
         Some(Commands::Version) => {
             println!("agent-browser-hub v{}", VERSION);
@@ -24,12 +23,72 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Upgrade) => {
             cli_upgrade().await?;
         }
+        Some(Commands::Run { script, format, params }) => {
+            cli_run(&script, &format, params).await?;
+        }
         None => {
             println!("agent-browser-hub v{}", VERSION);
             println!("Use --help for usage");
         }
     }
 
+    Ok(())
+}
+
+fn cli_list() -> anyhow::Result<()> {
+    let mut registry = Registry::new();
+    registry.discover_yaml_scripts("scripts")?;
+    agent_browser_hub::commands::register_all(&mut registry);
+
+    println!("Available scripts:");
+    let commands = registry.list();
+    if commands.is_empty() {
+        println!("  (no scripts found)");
+    } else {
+        for cmd in commands {
+            println!("  {}/{:<20} - {}", cmd.site, cmd.name, cmd.description);
+        }
+    }
+    Ok(())
+}
+
+async fn cli_run(script: &str, format: &str, params: Vec<String>) -> anyhow::Result<()> {
+    let parts: Vec<&str> = script.split('/').collect();
+    if parts.len() != 2 {
+        anyhow::bail!("Invalid script format. Use: site/command");
+    }
+    let (site, command) = (parts[0], parts[1]);
+
+    let script_path = format!("scripts/{}/{}.yaml", site, command);
+    if !std::path::Path::new(&script_path).exists() {
+        anyhow::bail!("Script not found: {}", script_path);
+    }
+
+    let yaml_content = std::fs::read_to_string(&script_path)?;
+    let script: agent_browser_hub::core::Script = serde_yaml::from_str(&yaml_content)?;
+
+    let mut param_map = std::collections::HashMap::new();
+    let mut i = 0;
+    while i < params.len() {
+        if params[i].starts_with("--") {
+            let key = params[i].trim_start_matches("--");
+            if i + 1 < params.len() {
+                param_map.insert(key.to_string(), serde_json::Value::String(params[i + 1].clone()));
+                i += 2;
+            } else {
+                i += 1;
+            }
+        } else {
+            i += 1;
+        }
+    }
+
+    let executor = agent_browser_hub::core::Executor::new().await?;
+    let result = executor.execute(&script, param_map).await?;
+
+    let output_format = agent_browser_hub::core::OutputFormat::from_str(format);
+    let formatted = agent_browser_hub::core::output::format_output(&result.result, &output_format)?;
+    println!("{}", formatted);
     Ok(())
 }
 

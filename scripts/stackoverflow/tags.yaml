@@ -1,0 +1,19 @@
+site: stackoverflow
+name: tags
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://stackoverflow.com/tags
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.s-tag').forEach(tag => {
+          items.push({
+            name: tag.textContent.trim(),
+            url: 'https://stackoverflow.com/questions/tagged/' + tag.textContent.trim()
+          });
+        });
+        return items;
+      })()

@@ -1,0 +1,21 @@
+site: sinafinance
+name: news
+strategy: COOKIE
+browser: true
+
+pipeline:
+  - navigate: https://finance.sina.com.cn/
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.feed-card-item').forEach(item => {
+          const titleEl = item.querySelector('h2, .title');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim()
+            });
+          }
+        });
+        return items;
+      })()

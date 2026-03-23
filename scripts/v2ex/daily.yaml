@@ -1,0 +1,22 @@
+site: v2ex
+name: daily
+strategy: COOKIE
+browser: true
+
+pipeline:
+  - navigate: https://www.v2ex.com/?tab=tech
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.cell.item').forEach(item => {
+          const titleEl = item.querySelector('.item_title a');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: 'https://www.v2ex.com' + titleEl.getAttribute('href')
+            });
+          }
+        });
+        return items;
+      })()

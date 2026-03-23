@@ -1,0 +1,26 @@
+site: hackernews
+name: search
+strategy: PUBLIC
+browser: false
+args:
+  query:
+    type: string
+    required: true
+
+pipeline:
+  - navigate: https://hn.algolia.com/api/v1/search?query=${{ args.query }}
+  - wait: 1000
+  - evaluate: |
+      (() => {
+        const pre = document.querySelector('pre');
+        if (pre) {
+          const data = JSON.parse(pre.textContent);
+          return data.hits.map(hit => ({
+            title: hit.title,
+            url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+            author: hit.author,
+            points: hit.points
+          }));
+        }
+        return [];
+      })()

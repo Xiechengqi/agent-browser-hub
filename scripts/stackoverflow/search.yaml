@@ -1,0 +1,26 @@
+site: stackoverflow
+name: search
+strategy: PUBLIC
+browser: false
+args:
+  query:
+    type: string
+    required: true
+
+pipeline:
+  - navigate: https://stackoverflow.com/search?q=${{ args.query }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.search-result').forEach(result => {
+          const titleEl = result.querySelector('.result-link a');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: 'https://stackoverflow.com' + titleEl.getAttribute('href')
+            });
+          }
+        });
+        return items;
+      })()

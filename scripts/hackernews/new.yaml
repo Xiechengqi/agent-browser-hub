@@ -1,0 +1,22 @@
+site: hackernews
+name: new
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://news.ycombinator.com/newest
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.athing').forEach(row => {
+          const titleEl = row.querySelector('.titleline > a');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent,
+              url: titleEl.href
+            });
+          }
+        });
+        return items;
+      })()

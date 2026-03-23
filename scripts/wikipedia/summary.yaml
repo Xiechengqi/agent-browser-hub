@@ -1,0 +1,20 @@
+site: wikipedia
+name: summary
+strategy: PUBLIC
+browser: false
+args:
+  title:
+    type: string
+    required: true
+
+pipeline:
+  - navigate: https://en.wikipedia.org/api/rest_v1/page/summary/${{ args.title }}
+  - wait: 1000
+  - evaluate: |
+      (() => {
+        const pre = document.querySelector('pre');
+        if (pre) {
+          return JSON.parse(pre.textContent);
+        }
+        return null;
+      })()

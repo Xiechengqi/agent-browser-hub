@@ -1,10 +1,19 @@
 # Agent Browser Hub
 
-Browser automation scripts hub. Single binary, built with Rust + [agent-browser](https://github.com/vercel-labs/agent-browser).
+Browser automation scripts hub powered by Rust + [agent-browser](https://github.com/vercel-labs/agent-browser).
 
-## Install
+**Features:**
+- 🚀 Single binary, no dependencies
+- 🎯 38+ built-in commands across 20+ sites
+- 📝 YAML-based script definitions
+- 🔧 Template engine with filters
+- 📊 Multiple output formats (JSON, YAML, Table, CSV, Markdown)
+- 🌐 Web UI + REST API
+- 🔐 JWT authentication
 
-### Quick Install
+## Quick Start
+
+### Install
 
 ```bash
 # AMD64
@@ -14,16 +23,24 @@ wget https://github.com/Xiechengqi/agent-browser-hub/releases/download/latest/ag
 wget https://github.com/Xiechengqi/agent-browser-hub/releases/download/latest/agent-browser-hub-linux-arm64 -O agent-browser-hub && chmod +x agent-browser-hub
 ```
 
-### Build from Source
+### CLI Usage
 
 ```bash
-git clone https://github.com/Xiechengqi/agent-browser-hub.git
-cd agent-browser-hub
-./build.sh
-# Binary: target/release/agent-browser-hub
-```
+# List all commands
+agent-browser-hub list
 
-## Usage
+# Run command (JSON output)
+agent-browser-hub run hackernews/top --limit 10
+
+# Table output
+agent-browser-hub run hackernews/top --format table
+
+# CSV output
+agent-browser-hub run wikipedia/search --query rust --format csv
+
+# Markdown output
+agent-browser-hub run stackoverflow/search --query async --format md
+```
 
 ### Web Server
 
@@ -34,85 +51,219 @@ agent-browser-hub serve --port 8080  # custom port
 
 Default password: `admin123`
 
-### CLI
+## Available Commands
+
+### HackerNews (7)
+- `hackernews/top` - Top stories
+- `hackernews/best` - Best stories
+- `hackernews/new` - Newest stories
+- `hackernews/ask` - Ask HN
+- `hackernews/show` - Show HN
+- `hackernews/jobs` - Jobs
+- `hackernews/search` - Search stories
+
+### Wikipedia (3)
+- `wikipedia/search` - Search articles
+- `wikipedia/summary` - Get article summary
+- `wikipedia/random` - Random article
+
+### StackOverflow (2)
+- `stackoverflow/search` - Search questions
+- `stackoverflow/tags` - Browse tags
+
+### Medium (2)
+- `medium/search` - Search articles
+- `medium/feed` - Latest feed
+
+### DevTo (2)
+- `devto/search` - Search articles
+- `devto/feed` - Latest feed
+
+### Arxiv (2)
+- `arxiv/search` - Search papers
+- `arxiv/paper` - Get paper details
+
+### Lobsters (3)
+- `lobsters/hot` - Hot stories
+- `lobsters/newest` - Newest stories
+- `lobsters/search` - Search stories
+
+### Bloomberg (3)
+- `bloomberg/markets` - Markets news
+- `bloomberg/opinions` - Opinion articles
+- `bloomberg/economics` - Economics news
+
+### Substack (2)
+- `substack/search` - Search newsletters
+- `substack/feed` - Latest posts
+
+### Others
+- `google/search` - Google search
+- `reuters/news` - Reuters news
+- `bbc/news` - BBC news
+- `hf/top` - HuggingFace top models
+- `apple-podcasts/search` - Search podcasts
+- `v2ex/daily` - V2EX daily (requires cookies)
+- `weibo/hot` - Weibo hot topics (requires cookies)
+- `reddit/read` - Reddit posts (requires cookies)
+- `douban/search` - Douban search (requires cookies)
+- `xueqiu/hot` - Xueqiu hot (requires cookies)
+- `sinafinance/news` - Sina Finance news (requires cookies)
+- `weread/search` - WeRead search (requires cookies)
+
+## Output Formats
 
 ```bash
-agent-browser-hub list       # list scripts
-agent-browser-hub version    # show version
-agent-browser-hub upgrade    # upgrade to latest release
+--format json      # JSON (default, pretty-printed)
+--format yaml      # YAML
+--format table     # ASCII table
+--format csv       # CSV with proper escaping
+--format md        # Markdown table
 ```
 
-### API
+## API Reference
 
-All protected endpoints require `Authorization: Bearer <token>` header.
+### Authentication
 
 ```bash
 # Login
 curl -X POST http://localhost:3133/api/login \
   -H "Content-Type: application/json" \
   -d '{"password": "admin123"}'
-
-# Execute script
-curl -X POST http://localhost:3133/api/execute/google/search \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d '{"keyword": "rust", "limit": 10}'
-
-# List scripts
-curl -H "Authorization: Bearer <token>" http://localhost:3133/api/scripts
-
-# Version info
-curl http://localhost:3133/api/version
-
-# Change password
-curl -X POST http://localhost:3133/api/password \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d '{"password": "newpass"}'
-
-# Upgrade
-curl -X POST http://localhost:3133/api/upgrade \
-  -H "Authorization: Bearer <token>"
 ```
 
-## Web Pages
+### Execute Command
 
-| Route | Description |
-|-------|-------------|
-| `/login` | Login page |
-| `/dashboard` | Script list, logout |
-| `/about` | Version info, upgrade |
-| `/settings` | Change password, logout |
+```bash
+curl -X POST http://localhost:3133/api/execute/hackernews/top \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"limit": 10}'
+```
 
-## API Endpoints
+### List Commands
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/login` | No | Login, returns JWT |
-| GET | `/api/version` | No | Version and build info |
-| POST | `/api/password` | Yes | Change password |
-| POST | `/api/upgrade` | Yes | Upgrade from GitHub release |
-| GET | `/api/scripts` | Yes | List scripts |
-| POST | `/api/execute/{site}/{command}` | Yes | Execute script |
+```bash
+curl -H "Authorization: Bearer <token>" \
+  http://localhost:3133/api/scripts
+```
 
-## Project Structure
+## Creating Custom Scripts
+
+Create a YAML file in `scripts/{site}/{command}.yaml`:
+
+```yaml
+site: mysite
+name: mycommand
+strategy: PUBLIC
+browser: false
+args:
+  query:
+    type: string
+    required: true
+  limit:
+    type: int
+    default: 10
+
+pipeline:
+  - navigate: https://example.com/search?q=${{ args.query }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.result').forEach(el => {
+          items.push({
+            title: el.textContent.trim()
+          });
+        });
+        return items;
+      })()
+  - limit: ${{ args.limit }}
+```
+
+### Template Engine
+
+Use `${{ expr }}` for dynamic values:
+
+```yaml
+# Variable access
+${{ args.query }}
+${{ item.title }}
+${{ data.0.name }}
+
+# Filters
+${{ args.query | upper }}
+${{ item.title | truncate(50) }}
+${{ items | join(', ') }}
+${{ value | default('N/A') }}
+
+# Arithmetic
+${{ index + 1 }}
+
+# Fallback
+${{ item.count || 0 }}
+```
+
+### Available Filters
+
+- `default(val)` - Default value if empty
+- `join(sep)` - Join array
+- `upper` / `lower` - Case conversion
+- `trim` - Trim whitespace
+- `truncate(n)` - Truncate to n chars
+- `replace(old,new)` - Replace text
+- `length` - Get length
+- `first` / `last` - Array access
+- `json` - JSON stringify
+- `urlencode` - URL encode
+
+### Pipeline Steps
+
+**Browser:**
+- `navigate: url` - Navigate to URL
+- `evaluate: js` - Execute JavaScript
+- `click: selector` - Click element
+- `type: {selector, text}` - Type text
+- `wait: ms` - Wait milliseconds
+- `press: key` - Press key
+- `scroll` - Scroll down
+- `snapshot` - Capture page snapshot
+
+**Transform:**
+- `select: path` - Extract data path
+- `map: {key: template}` - Transform array
+- `filter: expr` - Filter array
+- `sort: key` - Sort by key
+- `limit: n` - Take first n items
+
+## Build from Source
+
+```bash
+git clone https://github.com/Xiechengqi/agent-browser-hub.git
+cd agent-browser-hub
+cargo build --release
+# Binary: target/release/agent-browser-hub
+```
+
+## Architecture
 
 ```
-├── build.sh                           # Local build
-├── build-ci.sh                        # CI cross-compilation
-├── build.rs                           # Compile-time git info injection
-├── .github/workflows/build-release.yml
-├── scripts/
-│   └── google/search.yaml             # Script definitions
-└── src/
-    ├── main.rs                        # Entry, CLI commands, CLI upgrade
-    ├── lib.rs
-    ├── cli/mod.rs                     # CLI argument parsing
-    ├── core/
-    │   ├── browser.rs                 # agent-browser wrapper
-    │   ├── executor.rs                # Script execution engine
-    │   └── script.rs                  # Data models
-    └── server/mod.rs                  # Web server, API, auth, HTML pages
+src/
+├── core/
+│   ├── browser.rs      # 30+ browser operations
+│   ├── strategy.rs     # 5 auth strategies
+│   ├── template.rs     # Template engine
+│   ├── pipeline.rs     # Pipeline processor
+│   ├── executor.rs     # Script executor
+│   ├── validation.rs   # Param validation
+│   ├── output.rs       # Output formatters
+│   └── script.rs       # Data models
+├── commands/
+│   └── bilibili/       # Native commands
+├── registry.rs         # Command registry
+└── server/mod.rs       # Web server + API
+
+scripts/                # YAML scripts (38+)
 ```
 
 ## License

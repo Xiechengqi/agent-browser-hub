@@ -1,0 +1,21 @@
+site: xueqiu
+name: hot
+strategy: COOKIE
+browser: true
+
+pipeline:
+  - navigate: https://xueqiu.com/
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.timeline__item').forEach(item => {
+          const titleEl = item.querySelector('.timeline__item__title');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim()
+            });
+          }
+        });
+        return items;
+      })()

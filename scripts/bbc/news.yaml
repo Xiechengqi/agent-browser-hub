@@ -1,0 +1,22 @@
+site: bbc
+name: news
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://www.bbc.com/news
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('[data-testid="card-headline"]').forEach(el => {
+          const link = el.closest('a');
+          if (link) {
+            items.push({
+              title: el.textContent.trim(),
+              url: link.href.startsWith('http') ? link.href : 'https://www.bbc.com' + link.href
+            });
+          }
+        });
+        return items;
+      })()

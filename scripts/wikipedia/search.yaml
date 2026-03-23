@@ -1,0 +1,33 @@
+site: wikipedia
+name: search
+strategy: PUBLIC
+browser: false
+args:
+  query:
+    type: string
+    required: true
+    description: Search query
+  limit:
+    type: int
+    default: 10
+
+pipeline:
+  - navigate: https://en.wikipedia.org/w/api.php?action=opensearch&search=${{ args.query }}&limit=${{ args.limit }}&format=json
+  - wait: 1000
+  - evaluate: |
+      (() => {
+        const pre = document.querySelector('pre');
+        if (pre) {
+          const data = JSON.parse(pre.textContent);
+          const results = [];
+          for (let i = 0; i < data[1].length; i++) {
+            results.push({
+              title: data[1][i],
+              description: data[2][i],
+              url: data[3][i]
+            });
+          }
+          return results;
+        }
+        return [];
+      })()

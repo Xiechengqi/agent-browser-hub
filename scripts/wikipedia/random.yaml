@@ -1,0 +1,16 @@
+site: wikipedia
+name: random
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://en.wikipedia.org/wiki/Special:Random
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const titleEl = document.querySelector('#firstHeading');
+        return {
+          title: titleEl ? titleEl.textContent : '',
+          url: window.location.href
+        };
+      })()

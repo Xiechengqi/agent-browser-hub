@@ -1,0 +1,33 @@
+site: hackernews
+name: top
+strategy: PUBLIC
+browser: false
+args:
+  limit:
+    type: int
+    default: 30
+    description: Number of stories to fetch
+
+pipeline:
+  - navigate: https://news.ycombinator.com/
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        const rows = document.querySelectorAll('.athing');
+        rows.forEach(row => {
+          const titleEl = row.querySelector('.titleline > a');
+          const scoreEl = row.nextElementSibling?.querySelector('.score');
+          const authorEl = row.nextElementSibling?.querySelector('.hnuser');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent,
+              url: titleEl.href,
+              score: scoreEl ? parseInt(scoreEl.textContent) : 0,
+              author: authorEl ? authorEl.textContent : ''
+            });
+          }
+        });
+        return items;
+      })()
+  - limit: ${{ args.limit }}

@@ -1,0 +1,25 @@
+site: weread
+name: search
+strategy: COOKIE
+browser: true
+args:
+  query:
+    type: string
+    required: true
+
+pipeline:
+  - navigate: https://weread.qq.com/web/search/global?keyword=${{ args.query }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('.wr_bookListItem').forEach(item => {
+          const titleEl = item.querySelector('.wr_bookListItem_title');
+          if (titleEl) {
+            items.push({
+              title: titleEl.textContent.trim()
+            });
+          }
+        });
+        return items;
+      })()

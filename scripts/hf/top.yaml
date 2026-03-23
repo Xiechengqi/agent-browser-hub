@@ -1,0 +1,23 @@
+site: hf
+name: top
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - navigate: https://huggingface.co/models
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('article').forEach(article => {
+          const titleEl = article.querySelector('h4');
+          const linkEl = article.querySelector('a');
+          if (titleEl && linkEl) {
+            items.push({
+              title: titleEl.textContent.trim(),
+              url: 'https://huggingface.co' + linkEl.getAttribute('href')
+            });
+          }
+        });
+        return items;
+      })()
