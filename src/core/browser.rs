@@ -9,13 +9,12 @@ pub struct AgentBrowser {
 impl AgentBrowser {
     pub async fn new() -> Result<Self> {
         Ok(Self {
-            agent_browser_path: "/data/projects/agent-browser/bin/agent-browser.js".to_string(),
+            agent_browser_path: "agent-browser".to_string(),
         })
     }
 
     async fn run_command(&self, args: &[&str]) -> Result<String> {
-        let mut cmd = Command::new("node");
-        cmd.arg(&self.agent_browser_path);
+        let mut cmd = Command::new(&self.agent_browser_path);
         for arg in args {
             cmd.arg(arg);
         }
