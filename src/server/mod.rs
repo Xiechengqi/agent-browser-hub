@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, State, Request},
     http::StatusCode,
     middleware::{self, Next},
-    response::{Html, Response},
+    response::{Html, IntoResponse, Response},
     routing::{get, post},
 };
 use chrono::Utc;
@@ -21,7 +21,7 @@ const GIT_COMMIT: &str = env!("GIT_COMMIT");
 const GIT_COMMIT_DATE: &str = env!("GIT_COMMIT_DATE");
 const GIT_COMMIT_MSG: &str = env!("GIT_COMMIT_MSG");
 const BUILD_TIME: &str = env!("BUILD_TIME");
-const GITHUB_REPO: &str = "Xiechengqi/agent-browser-cli";
+const GITHUB_REPO: &str = "Xiechengqi/agent-browser-hub";
 
 // ============================================================================
 // Data Structures

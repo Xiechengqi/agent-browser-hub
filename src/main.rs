@@ -3,7 +3,7 @@ use agent_browser_hub::server;
 use clap::Parser;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const GITHUB_REPO: &str = "Xiechengqi/agent-browser-cli";
+const GITHUB_REPO: &str = "Xiechengqi/agent-browser-hub";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

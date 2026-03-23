@@ -8,17 +8,17 @@ Browser automation scripts hub. Single binary, built with Rust + [agent-browser]
 
 ```bash
 # AMD64
-wget https://github.com/Xiechengqi/agent-browser-cli/releases/download/latest/agent-browser-hub-linux-amd64 -O agent-browser-hub && chmod +x agent-browser-hub
+wget https://github.com/Xiechengqi/agent-browser-hub/releases/download/latest/agent-browser-hub-linux-amd64 -O agent-browser-hub && chmod +x agent-browser-hub
 
 # ARM64
-wget https://github.com/Xiechengqi/agent-browser-cli/releases/download/latest/agent-browser-hub-linux-arm64 -O agent-browser-hub && chmod +x agent-browser-hub
+wget https://github.com/Xiechengqi/agent-browser-hub/releases/download/latest/agent-browser-hub-linux-arm64 -O agent-browser-hub && chmod +x agent-browser-hub
 ```
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/Xiechengqi/agent-browser-cli.git
-cd agent-browser-cli
+git clone https://github.com/Xiechengqi/agent-browser-hub.git
+cd agent-browser-hub
 ./build.sh
 # Binary: target/release/agent-browser-hub
 ```
