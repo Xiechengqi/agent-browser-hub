@@ -10,7 +10,7 @@ npm run build
 cd ..
 
 # Build Rust binary (embeds frontend static files)
-cargo build --release
+cargo build --release --features embed-frontend
 
 ls -lh target/release/agent-browser-hub
 echo "Binary: target/release/agent-browser-hub"

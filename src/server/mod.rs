@@ -2,19 +2,21 @@ use axum::{
     Router, Json,
     extract::{Path, State, Request},
     http::{StatusCode, header},
-    middleware::{self, Next},
-    response::{Html, IntoResponse, Response},
-    routing::{get, post},
+    response::{IntoResponse, Response},
+    routing::{post},
 };
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 use tokio::sync::Mutex;
 
+#[cfg(feature = "embed-frontend")]
+use rust_embed::RustEmbed;
+
+#[cfg(feature = "embed-frontend")]
 #[derive(RustEmbed)]
 #[folder = "web/out"]
 struct Assets;
@@ -437,10 +439,13 @@ async fn list_scripts() -> Json<Vec<Value>> {
                                 .or_else(|| yaml["strategy"].as_str())
                                 .unwrap_or("PUBLIC")
                                 .to_string();
-                            let params = yaml["params"].as_sequence()
-                                .or_else(|| yaml["args"].as_mapping().map(|_| &vec![]))
-                                .map(|v| v.len())
-                                .unwrap_or(0);
+                            let params = if yaml["params"].is_array() {
+                                yaml["params"].as_array().map(|v| v.len()).unwrap_or(0)
+                            } else if yaml["args"].is_object() {
+                                0
+                            } else {
+                                0
+                            };
 
                             scripts.push(serde_json::json!({
                                 "site": site,
@@ -869,20 +874,27 @@ async fn page_root() -> Response {
 }
 
 async fn serve_static(path: &str) -> Response {
-    let path = path.trim_start_matches('/');
-    let path = if path.is_empty() { "index.html" } else { path };
-
-    match Assets::get(path) {
-        Some(content) => {
-            let mime = mime_guess::from_path(path).first_or_octet_stream();
-            ([(header::CONTENT_TYPE, mime.as_ref())], content.data).into_response()
-        }
-        None => {
-            if path != "index.html" && !path.contains('.') {
-                return serve_static("index.html").await;
+    #[cfg(feature = "embed-frontend")]
+    {
+        let path = path.trim_start_matches('/');
+        let path = if path.is_empty() { "index.html" } else { path };
+        match Assets::get(path) {
+            Some(content) => {
+                let mime = mime_guess::from_path(path).first_or_octet_stream();
+                ([(header::CONTENT_TYPE, mime.as_ref())], content.data).into_response()
             }
-            StatusCode::NOT_FOUND.into_response()
+            None => {
+                if path != "index.html" && !path.contains('.') {
+                    return serve_static("index.html").await;
+                }
+                StatusCode::NOT_FOUND.into_response()
+            }
         }
+    }
+    #[cfg(not(feature = "embed-frontend"))]
+    {
+        let _ = path;
+        StatusCode::NOT_FOUND.into_response()
     }
 }
 

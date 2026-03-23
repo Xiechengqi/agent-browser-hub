@@ -46,13 +46,13 @@ echo ""
 echo "==> Building Rust binary for ${TARGET}..."
 
 if [ "$TARGET" = "arm64" ]; then
-    cargo zigbuild --release --target aarch64-unknown-linux-musl
+    cargo zigbuild --release --target aarch64-unknown-linux-musl --features embed-frontend
     ls -alht target/aarch64-unknown-linux-musl/release/agent-browser-hub
     echo ""
     echo "==> Build completed successfully!"
     echo "Binary location: target/aarch64-unknown-linux-musl/release/agent-browser-hub"
 else
-    cargo zigbuild --release --target x86_64-unknown-linux-musl
+    cargo zigbuild --release --target x86_64-unknown-linux-musl --features embed-frontend
     ls -alht target/x86_64-unknown-linux-musl/release/agent-browser-hub
     echo ""
     echo "==> Build completed successfully!"
