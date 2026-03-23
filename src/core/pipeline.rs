@@ -46,11 +46,11 @@ impl<'a> PipelineExecutor<'a> {
                 "press" => self.step_press(step_obj, args, data).await,
                 "scroll" => self.step_scroll(step_obj, args, data).await,
                 "snapshot" => self.step_snapshot(step_obj, args, data).await,
-                "select" => self.step_select(step_obj, args, data).await,
-                "map" => self.step_map(step_obj, args, data).await,
-                "filter" => self.step_filter(step_obj, args, data).await,
-                "sort" => self.step_sort(step_obj, args, data).await,
-                "limit" => self.step_limit(step_obj, args, data).await,
+                "select" => self.step_select(step_obj, args, data),
+                "map" => self.step_map(step_obj, args, data),
+                "filter" => self.step_filter(step_obj, args, data),
+                "sort" => self.step_sort(step_obj, args, data),
+                "limit" => self.step_limit(step_obj, args, data),
                 _ => Ok(data.clone()),
             }
         } else {
@@ -78,7 +78,7 @@ impl<'a> PipelineExecutor<'a> {
         Ok(data.clone())
     }
 
-    async fn step_evaluate(&self, step: &serde_json::Map<String, Value>, args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
+    async fn step_evaluate(&self, step: &serde_json::Map<String, Value>, _args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
         if let Some(js) = step.get("evaluate").and_then(|v| v.as_str()) {
             let result = self.browser.eval(js).await?;
             return Ok(result);
@@ -111,7 +111,7 @@ impl<'a> PipelineExecutor<'a> {
         Ok(data.clone())
     }
 
-    async fn step_wait(&self, step: &serde_json::Map<String, Value>, args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
+    async fn step_wait(&self, step: &serde_json::Map<String, Value>, _args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
         if let Some(wait_val) = step.get("wait") {
             if let Some(ms) = wait_val.as_u64() {
                 self.browser.wait(ms).await?;
@@ -122,7 +122,7 @@ impl<'a> PipelineExecutor<'a> {
         Ok(data.clone())
     }
 
-    async fn step_press(&self, step: &serde_json::Map<String, Value>, args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
+    async fn step_press(&self, step: &serde_json::Map<String, Value>, _args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
         if let Some(key) = step.get("press").and_then(|v| v.as_str()) {
             self.browser.press(key).await?;
         }
@@ -143,7 +143,7 @@ impl<'a> PipelineExecutor<'a> {
         Ok(Value::Null)
     }
 
-    fn step_select(&self, step: &serde_json::Map<String, Value>, args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
+    fn step_select(&self, step: &serde_json::Map<String, Value>, _args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
         if let Some(path) = step.get("select").and_then(|v| v.as_str()) {
             let parts: Vec<&str> = path.split('.').collect();
             let mut current = data.clone();
@@ -170,7 +170,7 @@ impl<'a> PipelineExecutor<'a> {
             if let Value::Array(arr) = data {
                 let mut results = Vec::new();
                 for (idx, item) in arr.iter().enumerate() {
-                    let mut ctx = RenderContext {
+                    let ctx = RenderContext {
                         args: args.clone(),
                         data: Some(data.clone()),
                         item: Some(item.clone()),

@@ -1,4 +1,4 @@
-use crate::core::{Script, Step, AgentBrowser, ExecutionResult, CommandConfig};
+use crate::core::{Script, Step, AgentBrowser, ExecutionResult};
 use crate::core::template::{render, RenderContext};
 use crate::core::validation::validate_and_coerce;
 use crate::core::pipeline::PipelineExecutor;
