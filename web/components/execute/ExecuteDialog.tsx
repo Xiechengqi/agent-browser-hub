@@ -16,6 +16,8 @@ interface Props {
   onClose: () => void;
   debugMode?: boolean;
   vncUrl?: string;
+  vncUsername?: string;
+  vncPassword?: string;
 }
 
 function buildCurlCommand(site: string, name: string, params: Record<string, any>, format: string): string {
@@ -25,7 +27,14 @@ function buildCurlCommand(site: string, name: string, params: Record<string, any
   return `curl -X POST '${origin}/api/execute/${site}/${name}' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -d '${body}'`;
 }
 
-export default function ExecuteDialog({ command, open, onClose, debugMode = false, vncUrl = 'http://localhost:6080' }: Props) {
+export default function ExecuteDialog({ command, open, onClose, debugMode = false, vncUrl = 'http://localhost:6080', vncUsername = '', vncPassword = '' }: Props) {
+  const buildVncUrl = () => {
+    if (!vncUsername || !vncPassword) return vncUrl;
+    const url = new URL(vncUrl);
+    url.searchParams.set('username', vncUsername);
+    url.searchParams.set('password', vncPassword);
+    return url.toString();
+  };
   const [params, setParams] = useState<Record<string, any>>({});
   const [format, setFormat] = useState<'json' | 'yaml' | 'table' | 'csv' | 'md'>('json');
   const [curlCommand, setCurlCommand] = useState('');
@@ -68,7 +77,7 @@ export default function ExecuteDialog({ command, open, onClose, debugMode = fals
           {debugMode && (
             <div className="border border-slate-200 rounded-lg overflow-hidden">
               <div className="bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">VNC 调试窗口</div>
-              <iframe src={vncUrl} className="w-full h-[500px] border-0" />
+              <iframe src={buildVncUrl()} className="w-full h-[500px] border-0" />
             </div>
           )}
           <ParamForm params={command.params} values={params} onChange={setParams} />

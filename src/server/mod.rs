@@ -82,6 +82,8 @@ impl LogBuffer {
 pub struct AppState {
     pub password: Arc<Mutex<String>>,
     pub vnc_url: Arc<Mutex<String>>,
+    pub vnc_username: Arc<Mutex<Option<String>>>,
+    pub vnc_password: Arc<Mutex<Option<String>>>,
     pub logs: LogBuffer,
 }
 
@@ -279,9 +281,13 @@ async fn get_version() -> Json<ApiResponse<VersionInfo>> {
 async fn get_settings(State(state): State<AppState>) -> Json<ApiResponse<serde_json::Value>> {
     let password = state.password.lock().await.clone();
     let vnc_url = state.vnc_url.lock().await.clone();
+    let vnc_username = state.vnc_username.lock().await.clone();
+    let vnc_password = state.vnc_password.lock().await.clone();
     Json(ApiResponse::success("ok", serde_json::json!({
         "password": password,
-        "vnc_url": vnc_url
+        "vnc_url": vnc_url,
+        "vnc_username": vnc_username,
+        "vnc_password": vnc_password
     })))
 }
 
@@ -292,10 +298,18 @@ async fn update_settings(State(state): State<AppState>, Json(req): Json<serde_js
     if let Some(vnc_url) = req.get("vnc_url").and_then(|v| v.as_str()) {
         *state.vnc_url.lock().await = vnc_url.to_string();
     }
+    if let Some(vnc_username) = req.get("vnc_username") {
+        *state.vnc_username.lock().await = vnc_username.as_str().map(|s| s.to_string());
+    }
+    if let Some(vnc_password) = req.get("vnc_password") {
+        *state.vnc_password.lock().await = vnc_password.as_str().map(|s| s.to_string());
+    }
 
     let config = crate::config::Config {
         password: state.password.lock().await.clone(),
         vnc_url: state.vnc_url.lock().await.clone(),
+        vnc_username: state.vnc_username.lock().await.clone(),
+        vnc_password: state.vnc_password.lock().await.clone(),
     };
 
     if let Err(e) = crate::config::save_config(&config) {
@@ -790,6 +804,8 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
     let state = AppState {
         password: Arc::new(Mutex::new(config.password.clone())),
         vnc_url: Arc::new(Mutex::new(config.vnc_url.clone())),
+        vnc_username: Arc::new(Mutex::new(config.vnc_username.clone())),
+        vnc_password: Arc::new(Mutex::new(config.vnc_password.clone())),
         logs: LogBuffer::default(),
     };
 

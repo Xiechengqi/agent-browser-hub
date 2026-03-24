@@ -12,7 +12,7 @@ interface Props {
 
 export default function CommandCard({ command }: Props) {
   const [showDialog, setShowDialog] = useState(false);
-  const { debugMode, vncUrl } = useDebug();
+  const { debugMode, vncUrl, vncUsername, vncPassword } = useDebug();
 
   const strategyColor: Record<string, string> = {
     PUBLIC: 'bg-emerald-100 text-emerald-700',
@@ -48,7 +48,7 @@ export default function CommandCard({ command }: Props) {
           </button>
         </div>
       </div>
-      <ExecuteDialog command={command} open={showDialog} onClose={() => setShowDialog(false)} debugMode={debugMode} vncUrl={vncUrl} />
+      <ExecuteDialog command={command} open={showDialog} onClose={() => setShowDialog(false)} debugMode={debugMode} vncUrl={vncUrl} vncUsername={vncUsername} vncPassword={vncPassword} />
     </>
   );
 }

@@ -13,16 +13,20 @@ interface Props {
 
 export default function SettingsDialog({ open, onClose }: Props) {
   const { logout } = useAuth();
-  const { vncUrl: contextVncUrl, setVncUrl: setContextVncUrl } = useDebug();
+  const { vncUrl: contextVncUrl, vncUsername: contextVncUsername, vncPassword: contextVncPassword, setVncUrl: setContextVncUrl, setVncAuth } = useDebug();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [vncUrl, setVncUrl] = useState('http://localhost:6080');
+  const [vncUsername, setVncUsername] = useState('');
+  const [vncPassword, setVncPassword] = useState('');
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'ok' | 'err'>('ok');
 
   useEffect(() => {
     if (open) {
       setVncUrl(contextVncUrl);
+      setVncUsername(contextVncUsername);
+      setVncPassword(contextVncPassword);
       const token = localStorage.getItem('hub_token');
       fetch('/api/settings', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
@@ -31,11 +35,13 @@ export default function SettingsDialog({ open, onClose }: Props) {
         .then(data => {
           if (data.success && data.data) {
             setVncUrl(data.data.vnc_url || 'http://localhost:6080');
+            setVncUsername(data.data.vnc_username || '');
+            setVncPassword(data.data.vnc_password || '');
           }
         })
         .catch(() => {});
     }
-  }, [open, contextVncUrl]);
+  }, [open, contextVncUrl, contextVncUsername, contextVncPassword]);
 
   const handleClose = () => {
     setNewPassword('');
@@ -54,11 +60,16 @@ export default function SettingsDialog({ open, onClose }: Props) {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ vnc_url: vncUrl })
+        body: JSON.stringify({
+          vnc_url: vncUrl,
+          vnc_username: vncUsername || null,
+          vnc_password: vncPassword || null
+        })
       });
       const data = await res.json();
       if (data.success) {
         setContextVncUrl(vncUrl);
+        setVncAuth(vncUsername, vncPassword);
         setMsg('设置已保存');
         setMsgType('ok');
       } else {
@@ -117,6 +128,22 @@ export default function SettingsDialog({ open, onClose }: Props) {
               value={vncUrl}
               onChange={(e) => setVncUrl(e.target.value)}
               placeholder="http://localhost:6080"
+              className="w-full px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
+            />
+            <label className="block text-xs text-gray-500 mb-1">VNC 用户名（可选）</label>
+            <input
+              type="text"
+              value={vncUsername}
+              onChange={(e) => setVncUsername(e.target.value)}
+              placeholder="留空表示无需认证"
+              className="w-full px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
+            />
+            <label className="block text-xs text-gray-500 mb-1">VNC 密码（可选）</label>
+            <input
+              type="password"
+              value={vncPassword}
+              onChange={(e) => setVncPassword(e.target.value)}
+              placeholder="留空表示无需认证"
               className="w-full px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 text-sm"
             />
             <button

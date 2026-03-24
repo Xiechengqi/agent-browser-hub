@@ -6,6 +6,8 @@ use anyhow::Result;
 pub struct Config {
     pub password: String,
     pub vnc_url: String,
+    pub vnc_username: Option<String>,
+    pub vnc_password: Option<String>,
 }
 
 impl Default for Config {
@@ -13,6 +15,8 @@ impl Default for Config {
         Self {
             password: "admin123".to_string(),
             vnc_url: "http://localhost:6080".to_string(),
+            vnc_username: None,
+            vnc_password: None,
         }
     }
 }
