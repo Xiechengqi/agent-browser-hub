@@ -32,9 +32,10 @@ export default function UpgradeDialog({ open, onClose }: Props) {
     for (const name of items) {
       try {
         const res = await systemApi.upgradeComponent(name);
-        setResults((prev) => [...prev, { name, ok: res.success, msg: res.success ? '升级成功' : res.message }]);
-      } catch {
-        setResults((prev) => [...prev, { name, ok: false, msg: '网络错误' }]);
+        setResults((prev) => [...prev, { name, ok: res.success, msg: res.success ? '升级成功' : (res.message || '未知错误') }]);
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || '网络错误';
+        setResults((prev) => [...prev, { name, ok: false, msg }]);
       }
     }
 
