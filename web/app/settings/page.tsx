@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api/commands';
-import { useAuth } from '@/lib/store/auth';
 
 export default function SettingsPage() {
-  const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -14,10 +12,10 @@ export default function SettingsPage() {
   const [msgType, setMsgType] = useState<'ok' | 'err'>('ok');
 
   useEffect(() => {
-    if (!isAuthenticated && !localStorage.getItem('hub_token')) {
+    if (!localStorage.getItem('hub_token')) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [router]);
 
   const handleChangePassword = async () => {
     setMsg('');
@@ -36,7 +34,10 @@ export default function SettingsPage() {
       if (res.success) {
         setMsg('密码已更新，请重新登录');
         setMsgType('ok');
-        setTimeout(() => logout(), 1500);
+        setTimeout(() => {
+          localStorage.removeItem('hub_token');
+          router.push('/login');
+        }, 1500);
       } else {
         setMsg(res.message);
         setMsgType('err');
@@ -79,18 +80,6 @@ export default function SettingsPage() {
           {msg && (
             <p className={`text-sm mt-2 ${msgType === 'ok' ? 'text-green-600' : 'text-red-500'}`}>{msg}</p>
           )}
-        </div>
-
-        <hr className="my-6" />
-
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 mb-3">账户</h2>
-          <button
-            onClick={logout}
-            className="px-5 py-2 bg-red-50 text-red-500 border border-red-200 rounded text-sm font-semibold hover:bg-red-100"
-          >
-            退出登录
-          </button>
         </div>
 
         <div className="flex justify-end">

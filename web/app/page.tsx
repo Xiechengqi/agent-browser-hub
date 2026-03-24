@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCommands } from '@/lib/hooks/useCommands';
 import { useCommandsStore } from '@/lib/store/commands';
 import { useAuth } from '@/lib/store/auth';
+import { systemApi } from '@/lib/api/commands';
 import CommandSearch from '@/components/command/CommandSearch';
 import CommandList from '@/components/command/CommandList';
 
@@ -14,6 +15,7 @@ export default function Page() {
   const router = useRouter();
   const { data: commands, isLoading } = useCommands();
   const setCommands = useCommandsStore((state) => state.setCommands);
+  const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -26,6 +28,24 @@ export default function Page() {
     if (commands) setCommands(commands);
   }, [commands, setCommands]);
 
+  const handleUpgrade = async () => {
+    if (!confirm('确认强制升级到最新版本？')) return;
+    setUpgrading(true);
+    try {
+      const res = await systemApi.upgrade();
+      if (res.success) {
+        alert('升级完成，3秒后刷新页面');
+        setTimeout(() => window.location.reload(), 3000);
+      } else {
+        alert('升级失败: ' + res.message);
+        setUpgrading(false);
+      }
+    } catch {
+      alert('网络错误');
+      setUpgrading(false);
+    }
+  };
+
   if (!isAuthenticated) return null;
 
   return (
@@ -35,13 +55,15 @@ export default function Page() {
           <h1 className="text-2xl font-bold">Agent Browser Hub</h1>
           <div className="flex items-center gap-4">
             <Link href="/about" className="text-sm text-gray-500 hover:text-gray-800">版本信息</Link>
-            <Link href="/settings" className="text-sm text-gray-500 hover:text-gray-800">设置</Link>
             <button
-              onClick={logout}
-              className="text-sm text-red-400 hover:text-red-600"
+              onClick={handleUpgrade}
+              disabled={upgrading}
+              className="text-sm text-orange-500 hover:text-orange-700 disabled:text-gray-300"
             >
-              退出登录
+              {upgrading ? '升级中...' : '强制升级'}
             </button>
+            <Link href="/settings" className="text-sm text-gray-500 hover:text-gray-800">设置</Link>
+            <button onClick={logout} className="text-sm text-red-400 hover:text-red-600">退出登录</button>
           </div>
         </div>
       </header>
