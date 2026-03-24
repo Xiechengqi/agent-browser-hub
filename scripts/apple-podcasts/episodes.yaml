@@ -1,0 +1,49 @@
+site: apple-podcasts
+name: episodes
+description: List recent episodes of an Apple Podcast (use ID from search)
+strategy: PUBLIC
+browser: false
+args:
+  id:
+    type: str
+    required: true
+    positional: true
+    description: Podcast ID (collectionId from search output)
+  limit:
+    type: int
+    default: 15
+    description: Max episodes to show
+
+pipeline:
+  - fetch:
+      url: https://itunes.apple.com/lookup
+      params:
+        id: ${{ args.id }}
+        entity: podcastEpisode
+        limit: ${{ args.limit }}
+
+  - evaluate: |
+      (() => {
+        const data = ${{ response }};
+        const episodes = (data.results || []).filter(r => r.kind === 'podcast-episode');
+        function formatDuration(ms) {
+          if (!ms || !Number.isFinite(ms)) return '-';
+          const totalSec = Math.round(ms / 1000);
+          const m = Math.floor(totalSec / 60);
+          const s = totalSec % 60;
+          return m + ':' + String(s).padStart(2, '0');
+        }
+        function formatDate(iso) {
+          if (!iso) return '-';
+          return iso.slice(0, 10);
+        }
+        return episodes.map(ep => ({
+          title: ep.trackName,
+          duration: formatDuration(ep.trackTimeMillis),
+          date: formatDate(ep.releaseDate)
+        }));
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [title, duration, date]

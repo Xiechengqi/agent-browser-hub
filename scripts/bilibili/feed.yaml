@@ -1,0 +1,81 @@
+site: bilibili
+name: feed
+description: Feed timeline from followed users
+domain: www.bilibili.com
+strategy: COOKIE
+browser: true
+
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of results
+  type:
+    type: str
+    default: all
+    description: "Filter: all, video, article"
+
+pipeline:
+  - navigate: https://www.bilibili.com
+
+  - evaluate: |
+      (async () => {
+        const typeMap = { all: 'all', video: 'video', article: 'article' };
+        const filterType = typeMap['${{ args.type }}'] || 'all';
+        const params = new URLSearchParams({
+          timezone_offset: '-480',
+          type: filterType,
+          page: '1',
+        });
+        const res = await fetch('https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all?' + params.toString(), {
+          credentials: 'include'
+        });
+        const payload = await res.json();
+        const items = payload?.data?.items || [];
+        const rows = [];
+
+        function stripHtml(s) {
+          return s.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
+        }
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const modules = item.modules || {};
+          const authorModule = modules.module_author || {};
+          const dynamicModule = modules.module_dynamic || {};
+          const major = dynamicModule.major || {};
+
+          let title = '';
+          let url = '';
+          let itemType = item.type || '';
+
+          if (major.archive) {
+            title = major.archive.title || '';
+            url = major.archive.jump_url ? 'https:' + major.archive.jump_url : '';
+            itemType = 'video';
+          } else if (major.article) {
+            title = major.article.title || '';
+            url = major.article.jump_url ? 'https:' + major.article.jump_url : '';
+            itemType = 'article';
+          } else if (dynamicModule.desc) {
+            title = stripHtml(dynamicModule.desc.text || '').slice(0, 60);
+            url = item.id_str ? 'https://t.bilibili.com/' + item.id_str : '';
+            itemType = 'dynamic';
+          }
+
+          if (!title) continue;
+
+          rows.push({
+            rank: rows.length + 1,
+            author: authorModule.name || '',
+            title: title,
+            type: itemType,
+            url: url,
+          });
+        }
+        return rows;
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [rank, author, title, type, url]

@@ -1,0 +1,31 @@
+site: google
+name: suggest
+description: Get Google search suggestions
+domain: suggestqueries.google.com
+strategy: PUBLIC
+browser: false
+args:
+  keyword:
+    type: str
+    required: true
+    positional: true
+    description: Search query
+  lang:
+    type: str
+    default: zh-CN
+    description: Language code
+
+pipeline:
+  - fetch:
+      url: https://suggestqueries.google.com/complete/search
+      params:
+        client: firefox
+        q: ${{ args.keyword }}
+        hl: ${{ args.lang }}
+
+  - select: "1"
+
+  - map:
+      suggestion: ${{ item }}
+
+columns: [suggestion]

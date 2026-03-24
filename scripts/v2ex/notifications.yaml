@@ -1,0 +1,49 @@
+site: v2ex
+name: notifications
+strategy: COOKIE
+browser: true
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of notifications
+
+pipeline:
+  - navigate: https://www.v2ex.com/notifications
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = Array.from(document.querySelectorAll('#Main .box .cell[id^="n_"]'));
+        return items.map(item => {
+          let type = '通知';
+          let time = '';
+
+          const text = item.textContent || '';
+          if (text.includes('回复了你')) type = '回复';
+          else if (text.includes('感谢了你')) type = '感谢';
+          else if (text.includes('收藏了你')) type = '收藏';
+          else if (text.includes('提及你')) type = '提及';
+
+          const timeEl = item.querySelector('.snow');
+          if (timeEl) {
+            time = timeEl.textContent?.trim() || '';
+          }
+
+          let payload = '';
+          const payloadEl = item.querySelector('.payload');
+          if (payloadEl) {
+            payload = payloadEl.textContent?.trim() || '';
+          }
+
+          let content = payload;
+          if (!content) {
+            content = text.replace(/\s+/g, ' ').trim();
+            if (time && content.includes(time)) {
+              content = content.replace(time, '').trim();
+            }
+          }
+
+          return { type, content, time };
+        });
+      })()
+  - limit: ${{ args.limit }}

@@ -1,0 +1,64 @@
+site: douban
+name: reviews
+strategy: COOKIE
+browser: true
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of reviews to export
+  uid:
+    type: string
+    required: true
+    description: Douban user ID
+
+pipeline:
+  - navigate: https://movie.douban.com/people/${{ args.uid }}/reviews?start=0&sort=time
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const reviews = [];
+
+        document.querySelectorAll('.tlst').forEach(el => {
+          const movieLinkEl = el.querySelector('.ilst a');
+          const reviewTitleEl = el.querySelector('.nlst a[title]');
+          const ratingEl = el.querySelector('.clst span[class*="allstar"]');
+          const contentEl = el.querySelector('.review-short span');
+          const votesEl = el.querySelector('.review-short .pl span');
+
+          const movieHref = movieLinkEl?.href || '';
+          const movieId = movieHref.match(/subject\/(\d+)/)?.[1] || '';
+          const movieTitle = movieLinkEl?.getAttribute('title') || movieLinkEl?.textContent?.trim() || '';
+
+          const reviewHref = reviewTitleEl?.href || '';
+          const reviewId = reviewHref.match(/reviews\/(\d+)/)?.[1] || '';
+          const title = reviewTitleEl?.textContent?.trim() || '';
+
+          let myRating = 0;
+          if (ratingEl) {
+            const cls = ratingEl.className || '';
+            const ratingMatch = cls.match(/allstar(\d)0/);
+            if (ratingMatch) {
+              myRating = parseInt(ratingMatch[1], 10) * 2;
+            }
+          }
+
+          const votesText = votesEl?.textContent || '';
+          const votesMatch = votesText.match(/(\d+)/);
+          const votes = votesMatch ? parseInt(votesMatch[1], 10) : 0;
+
+          reviews.push({
+            reviewId,
+            movieId,
+            movieTitle,
+            title,
+            content: contentEl?.textContent?.trim() || '',
+            myRating,
+            votes,
+            url: reviewHref,
+          });
+        });
+
+        return reviews;
+      })()
+  - limit: ${{ args.limit }}

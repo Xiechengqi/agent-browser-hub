@@ -1,0 +1,33 @@
+site: google
+name: trends
+description: Get Google Trends daily trending searches via RSS feed
+domain: trends.google.com
+strategy: PUBLIC
+browser: true
+args:
+  region:
+    type: str
+    default: US
+    description: Region code (e.g. US, CN, JP)
+  limit:
+    type: int
+    default: 20
+    description: Number of results
+
+pipeline:
+  - navigate: "https://trends.google.com/trending/rss?geo=${{ args.region }}"
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('item').forEach(el => {
+          const title = el.querySelector('title')?.textContent?.trim() || '';
+          const pubDate = el.querySelector('pubDate')?.textContent?.trim() || '';
+          const traffic = el.getElementsByTagName('ht:approx_traffic')[0]?.textContent?.trim() || '';
+          items.push({ title, traffic, date: pubDate });
+        });
+        return items;
+      })()
+  - limit: ${{ args.limit }}
+
+columns: [title, traffic, date]

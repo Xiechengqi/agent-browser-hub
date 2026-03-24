@@ -1,0 +1,48 @@
+site: weread
+name: notes
+description: List your notes (thoughts) on a book
+strategy: COOKIE
+browser: true
+args:
+  bookId:
+    type: str
+    required: true
+    positional: true
+    description: Book ID (from shelf or search results)
+  limit:
+    type: int
+    default: 20
+    description: Max results
+
+pipeline:
+  - navigate: https://weread.qq.com
+  - wait: 2000
+  - evaluate: |
+      (async () => {
+        const params = new URLSearchParams({
+          bookId: '${{ args.bookId }}',
+          listType: '11',
+          mine: '1',
+          synckey: '0'
+        });
+        const url = 'https://i.weread.qq.com/review/list?' + params.toString();
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const items = data.reviews || [];
+        function formatDate(ts) {
+          if (!Number.isFinite(ts) || ts <= 0) return '-';
+          const d = new Date(ts * 1000 + 8 * 3600000);
+          return d.toISOString().slice(0, 10);
+        }
+        return items.map(item => {
+          const r = item.review || {};
+          return {
+            chapter: r.chapterName || '',
+            text: r.abstract || '',
+            review: r.content || '',
+            createTime: formatDate(r.createTime)
+          };
+        });
+      })()
+  - limit: ${{ args.limit }}

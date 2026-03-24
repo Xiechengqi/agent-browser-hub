@@ -1,0 +1,35 @@
+site: bilibili
+name: ranking
+description: Bilibili video ranking board
+domain: www.bilibili.com
+strategy: COOKIE
+browser: true
+
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of results
+
+pipeline:
+  - navigate: https://www.bilibili.com
+
+  - evaluate: |
+      (async () => {
+        const res = await fetch('https://api.bilibili.com/x/web-interface/ranking/v2?rid=0&type=all', {
+          credentials: 'include'
+        });
+        const payload = await res.json();
+        const list = payload?.data?.list || [];
+        return list.map((item, i) => ({
+          rank: i + 1,
+          title: item.title || '',
+          author: item.owner?.name || '',
+          score: item.stat?.view || 0,
+          url: item.bvid ? 'https://www.bilibili.com/video/' + item.bvid : '',
+        }));
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [rank, title, author, score, url]

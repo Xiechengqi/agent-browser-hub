@@ -1,0 +1,40 @@
+site: weread
+name: ranking
+description: WeRead book rankings by category
+strategy: PUBLIC
+browser: true
+args:
+  category:
+    type: str
+    positional: true
+    default: all
+    description: "Category: all (default), rising, or numeric category ID"
+  limit:
+    type: int
+    default: 20
+    description: Max results
+
+pipeline:
+  - navigate: https://weread.qq.com
+  - wait: 2000
+  - evaluate: |
+      (async () => {
+        const cat = encodeURIComponent('${{ args.category }}');
+        const url = 'https://weread.qq.com/web/bookListInCategory/' + cat + '?rank=1';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const books = data.books || [];
+        return books.map((item, i) => {
+          const info = item.bookInfo || {};
+          return {
+            rank: i + 1,
+            title: info.title || '',
+            author: info.author || '',
+            category: info.category || '',
+            readingCount: item.readingCount || 0,
+            bookId: info.bookId || ''
+          };
+        });
+      })()
+  - limit: ${{ args.limit }}

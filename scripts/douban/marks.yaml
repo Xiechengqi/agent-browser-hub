@@ -1,0 +1,79 @@
+site: douban
+name: marks
+strategy: COOKIE
+browser: true
+args:
+  status:
+    type: string
+    default: collect
+    description: "Mark type: collect (watched), wish (want to watch), do (watching)"
+  limit:
+    type: int
+    default: 50
+    description: Number of marks to export (0 for all)
+  uid:
+    type: string
+    required: true
+    description: Douban user ID
+
+pipeline:
+  - navigate: https://movie.douban.com/people/${{ args.uid }}/${{ args.status }}?start=0&sort=time&rating=all&filter=all&mode=grid
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const results = [];
+        const items = document.querySelectorAll('.item');
+
+        items.forEach(item => {
+          const titleLink = item.querySelector('.info a[href*="/subject/"]');
+          if (!titleLink) return;
+
+          const titleEl = titleLink.querySelector('em');
+          const titleText = titleEl?.textContent?.trim() || titleLink.textContent?.trim() || '';
+          const title = titleText.split('/')[0].trim();
+          const href = titleLink.href || '';
+
+          const idMatch = href.match(/subject\/(\d+)/);
+          const movieId = idMatch ? idMatch[1] : '';
+
+          if (!movieId || !title) return;
+
+          const ratingSpan = item.querySelector('span[class*="rating"]');
+          let myRating = null;
+          if (ratingSpan) {
+            const cls = ratingSpan.className || '';
+            const ratingMatch = cls.match(/rating(\d)-t/);
+            if (ratingMatch) {
+              myRating = parseInt(ratingMatch[1], 10) * 2;
+            }
+          }
+
+          const dateSpan = item.querySelector('.date');
+          const myDate = dateSpan?.textContent?.trim() || '';
+
+          const commentSpan = item.querySelector('.comment');
+          const myComment = commentSpan?.textContent?.trim() || '';
+
+          const introSpan = item.querySelector('.intro');
+          let year = '';
+          if (introSpan) {
+            const introText = introSpan.textContent || '';
+            const yearMatch = introText.match(/(\d{4})/);
+            year = yearMatch ? yearMatch[1] : '';
+          }
+
+          results.push({
+            movieId,
+            title,
+            year,
+            myRating,
+            myStatus: '${{ args.status }}',
+            myComment,
+            myDate,
+            url: href || 'https://movie.douban.com/subject/' + movieId
+          });
+        });
+
+        return results;
+      })()
+  - limit: ${{ args.limit }}

@@ -1,0 +1,49 @@
+site: google
+name: news
+description: Get Google News headlines via RSS feed
+domain: news.google.com
+strategy: PUBLIC
+browser: true
+args:
+  keyword:
+    type: str
+    positional: true
+    description: Search query (omit for top stories)
+  limit:
+    type: int
+    default: 10
+    description: Number of results
+  lang:
+    type: str
+    default: en
+    description: Language short code (e.g. en, zh)
+  region:
+    type: str
+    default: US
+    description: Region code (e.g. US, CN)
+
+pipeline:
+  - navigate: "https://news.google.com/rss/search?q=${{ args.keyword }}&hl=${{ args.lang }}&gl=${{ args.region }}&ceid=${{ args.region }}:${{ args.lang }}"
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const items = [];
+        document.querySelectorAll('item').forEach(el => {
+          let title = el.querySelector('title')?.textContent?.trim() || '';
+          const link = el.querySelector('link')?.textContent?.trim() || '';
+          const pubDate = el.querySelector('pubDate')?.textContent?.trim() || '';
+          let source = el.querySelector('source')?.textContent?.trim() || '';
+          if (!source) {
+            const idx = title.lastIndexOf(' - ');
+            if (idx !== -1) {
+              source = title.slice(idx + 3);
+              title = title.slice(0, idx);
+            }
+          }
+          items.push({ title, source, date: pubDate, url: link });
+        });
+        return items;
+      })()
+  - limit: ${{ args.limit }}
+
+columns: [title, source, date, url]

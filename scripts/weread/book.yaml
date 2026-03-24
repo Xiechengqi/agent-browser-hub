@@ -1,0 +1,31 @@
+site: weread
+name: book
+description: View book details on WeRead
+strategy: COOKIE
+browser: true
+args:
+  bookId:
+    type: str
+    required: true
+    positional: true
+    description: Book ID (numeric, from search or shelf results)
+
+pipeline:
+  - navigate: https://weread.qq.com
+  - wait: 2000
+  - evaluate: |
+      (async () => {
+        const url = 'https://i.weread.qq.com/book/info?bookId=' + encodeURIComponent('${{ args.bookId }}');
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const rating = data.newRating ? (data.newRating / 10).toFixed(1) + '%' : '-';
+        return [{
+          title: data.title || '',
+          author: data.author || '',
+          publisher: data.publisher || '',
+          intro: data.intro || '',
+          category: data.category || '',
+          rating: rating
+        }];
+      })()

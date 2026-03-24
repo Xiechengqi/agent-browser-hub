@@ -1,0 +1,23 @@
+site: weread
+name: notebooks
+description: List books that have highlights or notes
+strategy: COOKIE
+browser: true
+
+pipeline:
+  - navigate: https://weread.qq.com
+  - wait: 2000
+  - evaluate: |
+      (async () => {
+        const url = 'https://i.weread.qq.com/user/notebooks';
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const books = data.books || [];
+        return books.map(item => ({
+          title: (item.book && item.book.title) || '',
+          author: (item.book && item.book.author) || '',
+          noteCount: (item.bookmarkCount || 0) + (item.reviewCount || 0),
+          bookId: item.bookId || ''
+        }));
+      })()
