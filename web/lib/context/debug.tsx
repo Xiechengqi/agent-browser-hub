@@ -21,7 +21,10 @@ export function DebugProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetch('/api/settings')
+    const token = localStorage.getItem('hub_token');
+    fetch('/api/settings', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data?.vnc_url) {

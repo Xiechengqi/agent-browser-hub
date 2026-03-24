@@ -23,7 +23,10 @@ export default function SettingsDialog({ open, onClose }: Props) {
   useEffect(() => {
     if (open) {
       setVncUrl(contextVncUrl);
-      fetch('/api/settings')
+      const token = localStorage.getItem('hub_token');
+      fetch('/api/settings', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
         .then(res => res.json())
         .then(data => {
           if (data.success && data.data) {
@@ -44,9 +47,13 @@ export default function SettingsDialog({ open, onClose }: Props) {
   const handleSaveSettings = async () => {
     setMsg('');
     try {
+      const token = localStorage.getItem('hub_token');
       const res = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ vnc_url: vncUrl })
       });
       const data = await res.json();
