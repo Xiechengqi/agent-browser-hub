@@ -232,8 +232,18 @@ async fn update_password(
         return Json(ApiResponse::error("Password must be at least 4 characters"));
     }
 
-    let mut current = state.password.lock().await;
-    *current = password;
+    *state.password.lock().await = password.clone();
+
+    let config = crate::config::Config {
+        password,
+        vnc_url: state.vnc_url.lock().await.clone(),
+        vnc_username: state.vnc_username.lock().await.clone(),
+        vnc_password: state.vnc_password.lock().await.clone(),
+    };
+
+    if let Err(e) = crate::config::save_config(&config) {
+        state.logs.push("ERROR", format!("Failed to save config: {}", e)).await;
+    }
 
     state.logs.push("INFO", "Password updated".into()).await;
     Json(ApiResponse::success_no_data("Password updated"))
