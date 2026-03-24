@@ -45,7 +45,8 @@ pub fn render(template: &Value, ctx: &RenderContext) -> Result<Value> {
             // Also support {{key}} syntax
             let re2 = Regex::new(r"\{\{(\w+)\}\}")?;
             let result = re2.replace_all(&result, |caps: &regex::Captures| {
-                ctx.args.get(&caps[1])
+                ctx.args
+                    .get(&caps[1])
                     .map(|v| value_to_string(v))
                     .unwrap_or_else(|| caps[0].to_string())
             });
@@ -78,7 +79,13 @@ fn eval_expr(expr: &str, ctx: &RenderContext) -> Result<Value> {
                 "+" => num_val + operand,
                 "-" => num_val - operand,
                 "*" => num_val * operand,
-                "/" => if operand != 0.0 { num_val / operand } else { 0.0 },
+                "/" => {
+                    if operand != 0.0 {
+                        num_val / operand
+                    } else {
+                        0.0
+                    }
+                }
                 _ => num_val,
             };
             return Ok(Value::Number(serde_json::Number::from_f64(result).unwrap()));
@@ -99,11 +106,23 @@ fn eval_expr(expr: &str, ctx: &RenderContext) -> Result<Value> {
 }
 
 fn resolve_path(path: &str, ctx: &RenderContext) -> Result<Value> {
-    let parts: Vec<&str> = path.split('.').collect();
+    let normalized = normalize_bracket_path(path);
+    let parts: Vec<&str> = normalized
+        .split('.')
+        .filter(|part| !part.is_empty())
+        .collect();
+    if parts.is_empty() {
+        return Ok(Value::Null);
+    }
     let root = parts[0];
 
     let mut obj = match root {
-        "args" => Value::Object(ctx.args.iter().map(|(k, v)| (k.clone(), v.clone())).collect()),
+        "args" => Value::Object(
+            ctx.args
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+        ),
         "data" => ctx.data.clone().unwrap_or(Value::Null),
         "item" => ctx.item.clone().unwrap_or(Value::Null),
         "index" => Value::Number(ctx.index.into()),
@@ -140,11 +159,45 @@ fn resolve_path(path: &str, ctx: &RenderContext) -> Result<Value> {
     Ok(obj)
 }
 
+fn normalize_bracket_path(path: &str) -> String {
+    let mut out = String::with_capacity(path.len());
+    let chars: Vec<char> = path.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if chars[i] == '[' {
+            let quote = chars.get(i + 1).copied();
+            if matches!(quote, Some('\'') | Some('"')) {
+                let mut j = i + 2;
+                while j < chars.len() && chars[j] != quote.unwrap() {
+                    j += 1;
+                }
+                if j + 1 < chars.len() && chars[j + 1] == ']' {
+                    out.push('.');
+                    for ch in &chars[i + 2..j] {
+                        out.push(*ch);
+                    }
+                    i = j + 2;
+                    continue;
+                }
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+
+    out
+}
+
 fn apply_filter(filter_expr: &str, value: &Value) -> Result<Value> {
     let re = Regex::new(r"^(\w+)(?:\((.+?)\))?$")?;
-    let caps = re.captures(filter_expr).ok_or_else(|| anyhow::anyhow!("Invalid filter"))?;
+    let caps = re
+        .captures(filter_expr)
+        .ok_or_else(|| anyhow::anyhow!("Invalid filter"))?;
     let name = &caps[1];
-    let arg = caps.get(2).map(|m| m.as_str().trim_matches(|c| c == '\'' || c == '"'));
+    let arg = caps
+        .get(2)
+        .map(|m| m.as_str().trim_matches(|c| c == '\'' || c == '"'));
 
     match name {
         "default" => {
@@ -157,7 +210,11 @@ fn apply_filter(filter_expr: &str, value: &Value) -> Result<Value> {
         "join" => {
             if let Value::Array(arr) = value {
                 let sep = arg.unwrap_or(", ");
-                let joined = arr.iter().map(|v| value_to_string(v)).collect::<Vec<_>>().join(sep);
+                let joined = arr
+                    .iter()
+                    .map(|v| value_to_string(v))
+                    .collect::<Vec<_>>()
+                    .join(sep);
                 Ok(Value::String(joined))
             } else {
                 Ok(value.clone())
@@ -177,7 +234,10 @@ fn apply_filter(filter_expr: &str, value: &Value) -> Result<Value> {
         }
         "replace" => {
             if let Some(args) = arg {
-                let parts: Vec<&str> = args.split(',').map(|s| s.trim().trim_matches(|c| c == '\'' || c == '"')).collect();
+                let parts: Vec<&str> = args
+                    .split(',')
+                    .map(|s| s.trim().trim_matches(|c| c == '\'' || c == '"'))
+                    .collect();
                 if parts.len() >= 2 {
                     let s = value_to_string(value);
                     Ok(Value::String(s.replace(parts[0], parts[1])))
@@ -211,7 +271,9 @@ fn apply_filter(filter_expr: &str, value: &Value) -> Result<Value> {
             }
         }
         "json" => Ok(Value::String(serde_json::to_string(value)?)),
-        "urlencode" => Ok(Value::String(urlencoding::encode(&value_to_string(value)).to_string())),
+        "urlencode" => Ok(Value::String(
+            urlencoding::encode(&value_to_string(value)).to_string(),
+        )),
         _ => Ok(value.clone()),
     }
 }

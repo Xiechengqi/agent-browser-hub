@@ -3,7 +3,7 @@ description = "Get a tweet thread (original + all replies)"
 strategy = "COOKIE"
 
 [[params]]
-name = "tweet-id"
+name = "tweet_id"
 type = "string"
 required = true
 positional = true

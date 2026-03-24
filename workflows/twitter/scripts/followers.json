@@ -32,7 +32,7 @@
         "wait": 5000
       },
       {
-        "evaluate": "(() => {\n  const results = [];\n  const seen = new Set();\n  const cells = document.querySelectorAll('[data-testid=\"UserCell\"]');\n\n  cells.forEach(cell => {\n    try {\n      const link = cell.querySelector('a[href^=\"/\"]');\n      const username = link?.getAttribute('href')?.replace('/', '') || '';\n      if (!username || seen.has(username)) return;\n      seen.add(username);\n\n      const nameEl = cell.querySelector('[dir=\"ltr\"]');\n      const name = nameEl ? nameEl.textContent : '';\n      const bioEl = cell.querySelector('[dir=\"auto\"]');\n      const bio = bioEl ? bioEl.textContent.substring(0, 80) : '';\n\n      results.push({ screen_name: username, name, bio, followers: 0 });\n    } catch (e) {}\n  });\n\n  return results;\n})()\n"
+        "evaluate": "(() => {\n  const results = [];\n  const seen = new Set();\n  const cells = document.querySelectorAll('[data-testid=\"UserCell\"]');\n  const cleanBio = (text) => (text || '').replace(/^Click to (?:Follow|Unfollow)\\s+\\S+\\s*/i, '').trim().substring(0, 80);\n\n  cells.forEach(cell => {\n    try {\n      const link = cell.querySelector('a[href^=\"/\"]');\n      const username = link?.getAttribute('href')?.replace('/', '') || '';\n      if (!username || seen.has(username)) return;\n      seen.add(username);\n\n      const nameEl = cell.querySelector('[dir=\"ltr\"]');\n      const name = nameEl ? nameEl.textContent : '';\n      const bioEl = cell.querySelector('[dir=\"auto\"]');\n      const bio = cleanBio(bioEl ? bioEl.textContent : '');\n\n      results.push({ screen_name: username, name, bio, followers: 0 });\n    } catch (e) {}\n  });\n\n  return results;\n})()\n"
       },
       {
         "limit": "${{ args.limit }}"

@@ -3,7 +3,7 @@ description = "Fetch a Twitter Article (long-form content) as Markdown"
 strategy = "COOKIE"
 
 [[params]]
-name = "tweet-id"
+name = "tweet_id"
 type = "string"
 required = true
 positional = true
