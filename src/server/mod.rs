@@ -512,13 +512,13 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
     // Public routes (no auth)
     let public_routes = Router::new()
         .route("/api/login", post(login))
-        .route("/api/version", get(get_version));
+        .route("/api/version", get(get_version))
+        .route("/api/commands", get(list_scripts));
 
     // Protected routes (require auth)
     let protected_routes = Router::new()
         .route("/api/password", post(update_password))
         .route("/api/upgrade", post(upgrade))
-        .route("/api/commands", get(list_scripts))
         .route("/api/execute/{site}/{command}", post(execute_script))
         .route_layer(middleware::from_fn(auth_middleware));
 
