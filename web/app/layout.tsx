@@ -1,15 +1,20 @@
+'use client';
+
 import '@/app/globals.css';
 import { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/lib/store/auth';
 
-export const metadata = {
-  title: 'Agent Browser Hub',
-  description: 'Browser automation command hub',
-};
+const queryClient = new QueryClient();
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh">
-      <body>{children}</body>
+      <body>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      </body>
     </html>
   );
 }
