@@ -17,7 +17,7 @@ args:
 
 pipeline:
   - navigate:
-      url: https://x.com/home
+      url: https://x.com
       settleMs: 3000
 
   - evaluate: |
@@ -29,19 +29,7 @@ pipeline:
           if (!href) throw new Error('Could not find logged-in user');
           targetUser = href.replace('/', '');
         }
-
-        const selectors = [
-          'a[href="/' + targetUser + '/verified_followers"]',
-          'a[href="/' + targetUser + '/followers"]'
-        ];
-        for (const sel of selectors) {
-          const link = document.querySelector(sel);
-          if (link) {
-            link.click();
-            return;
-          }
-        }
-        throw new Error('Could not find followers link');
+        window.location.href = 'https://x.com/' + targetUser + '/verified_followers';
       })()
 
   - wait: 5000

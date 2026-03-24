@@ -13,7 +13,7 @@ args:
 
 pipeline:
   - navigate:
-      url: https://x.com/home
+      url: https://x.com/notifications
       settleMs: 3000
 
   - evaluate: |
