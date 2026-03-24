@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/store/auth';
 import { systemApi } from '@/lib/api/commands';
 import CommandSearch from '@/components/command/CommandSearch';
 import CommandList from '@/components/command/CommandList';
+import LogViewer from '@/components/layout/LogViewer';
 
 export default function Page() {
   const { isAuthenticated, logout } = useAuth();
@@ -16,6 +17,7 @@ export default function Page() {
   const { data: commands, isLoading } = useCommands();
   const setCommands = useCommandsStore((state) => state.setCommands);
   const [upgrading, setUpgrading] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -55,6 +57,7 @@ export default function Page() {
           <h1 className="text-2xl font-bold">Agent Browser Hub</h1>
           <div className="flex items-center gap-4">
             <Link href="/about" className="text-sm text-gray-500 hover:text-gray-800">版本信息</Link>
+            <button onClick={() => setShowLogs(true)} className="text-sm text-gray-500 hover:text-gray-800">日志</button>
             <button
               onClick={handleUpgrade}
               disabled={upgrading}
@@ -77,6 +80,7 @@ export default function Page() {
           </>
         )}
       </main>
+      <LogViewer open={showLogs} onClose={() => setShowLogs(false)} />
     </div>
   );
 }

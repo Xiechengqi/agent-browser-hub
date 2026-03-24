@@ -1,6 +1,6 @@
 use axum::{
     Router, Json,
-    extract::{Path, State, Request},
+    extract::{Path, Query, State, Request},
     http::{StatusCode, header},
     middleware::{self, Next},
     response::{Html, IntoResponse, Response},
@@ -10,7 +10,7 @@ use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, LazyLock};
 use tokio::sync::Mutex;
 
@@ -35,12 +35,53 @@ const BUILD_TIME: &str = env!("BUILD_TIME");
 use crate::GITHUB_REPO;
 
 // ============================================================================
+// In-Memory Log Buffer
+// ============================================================================
+
+const MAX_LOG_LINES: usize = 500;
+
+#[derive(Clone, Serialize)]
+struct LogEntry {
+    time: String,
+    level: String,
+    message: String,
+}
+
+#[derive(Clone, Default)]
+pub struct LogBuffer {
+    entries: Arc<Mutex<VecDeque<LogEntry>>>,
+}
+
+impl LogBuffer {
+    async fn push(&self, level: &str, message: String) {
+        let entry = LogEntry {
+            time: Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+            level: level.to_string(),
+            message: message.clone(),
+        };
+        eprintln!("[{}] [{}] {}", entry.time, level, message);
+        let mut entries = self.entries.lock().await;
+        if entries.len() >= MAX_LOG_LINES {
+            entries.pop_front();
+        }
+        entries.push_back(entry);
+    }
+
+    async fn get_entries(&self, limit: usize) -> Vec<LogEntry> {
+        let entries = self.entries.lock().await;
+        let start = if entries.len() > limit { entries.len() - limit } else { 0 };
+        entries.iter().skip(start).cloned().collect()
+    }
+}
+
+// ============================================================================
 // Data Structures
 // ============================================================================
 
 #[derive(Clone)]
 pub struct AppState {
     pub password: Arc<Mutex<String>>,
+    pub logs: LogBuffer,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -166,11 +207,15 @@ async fn login(
     let password = state.password.lock().await;
 
     if req.password != *password {
+        state.logs.push("WARN", "Login failed: incorrect password".into()).await;
         return Json(ApiResponse::error("Password incorrect"));
     }
 
     match generate_token() {
-        Ok(token) => Json(ApiResponse::success("Login successful", LoginResponse { token })),
+        Ok(token) => {
+            state.logs.push("INFO", "Login successful".into()).await;
+            Json(ApiResponse::success("Login successful", LoginResponse { token }))
+        }
         Err(_) => Json(ApiResponse::error("Failed to generate token")),
     }
 }
@@ -187,6 +232,7 @@ async fn update_password(
     let mut current = state.password.lock().await;
     *current = password;
 
+    state.logs.push("INFO", "Password updated".into()).await;
     Json(ApiResponse::success_no_data("Password updated"))
 }
 
@@ -372,42 +418,64 @@ async fn upgrade() -> Json<ApiResponse<String>> {
 // ============================================================================
 
 async fn execute_script(
+    State(state): State<AppState>,
     Path((site, name)): Path<(String, String)>,
     Json(req): Json<HashMap<String, Value>>,
 ) -> Json<Value> {
+    state.logs.push("INFO", format!("Execute: {}/{}", site, name)).await;
+
     if !site.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
+        state.logs.push("ERROR", format!("Invalid script path: {}/{}", site, name)).await;
         return Json(serde_json::json!({"success": false, "error": "Invalid script path"}));
     }
 
     let script_path = format!("scripts/{}/{}.yaml", site, name);
     if !std::path::Path::new(&script_path).exists() {
+        state.logs.push("ERROR", format!("Script not found: {}", script_path)).await;
         return Json(serde_json::json!({"success": false, "error": format!("Script not found: {}/{}", site, name)}));
     }
 
     let yaml_content = match std::fs::read_to_string(&script_path) {
         Ok(c) => c,
-        Err(e) => return Json(serde_json::json!({"success": false, "error": format!("Read failed: {}", e)})),
+        Err(e) => {
+            state.logs.push("ERROR", format!("Read failed: {}", e)).await;
+            return Json(serde_json::json!({"success": false, "error": format!("Read failed: {}", e)}));
+        }
     };
 
     let script: crate::core::Script = match serde_yaml::from_str(&yaml_content) {
         Ok(s) => s,
-        Err(e) => return Json(serde_json::json!({"success": false, "error": format!("Parse failed: {}", e)})),
+        Err(e) => {
+            state.logs.push("ERROR", format!("Parse YAML failed: {}", e)).await;
+            return Json(serde_json::json!({"success": false, "error": format!("Parse failed: {}", e)}));
+        }
     };
 
     let executor = match crate::core::Executor::new().await {
         Ok(e) => e,
-        Err(e) => return Json(serde_json::json!({"success": false, "error": format!("Executor failed: {}", e)})),
+        Err(e) => {
+            state.logs.push("ERROR", format!("Executor init failed: {}", e)).await;
+            return Json(serde_json::json!({"success": false, "error": format!("Executor failed: {}", e)}));
+        }
     };
 
     let params = req.get("params").and_then(|v| v.as_object()).map(|m| {
         m.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }).unwrap_or_default();
 
+    state.logs.push("DEBUG", format!("Params: {:?}", params)).await;
+
     match executor.execute(&script, params).await {
-        Ok(result) => Json(serde_json::json!({"success": true, "data": result})),
-        Err(e) => Json(serde_json::json!({"success": false, "error": format!("Execution failed: {}", e)})),
+        Ok(result) => {
+            state.logs.push("INFO", format!("Execute OK: {}/{}", site, name)).await;
+            Json(serde_json::json!({"success": true, "data": result}))
+        }
+        Err(e) => {
+            state.logs.push("ERROR", format!("Execute failed {}/{}: {}", site, name, e)).await;
+            Json(serde_json::json!({"success": false, "error": format!("Execution failed: {}", e)}))
+        }
     }
 }
 
@@ -488,6 +556,24 @@ async fn list_scripts() -> Json<Vec<Value>> {
 }
 
 // ============================================================================
+// Handlers - Logs
+// ============================================================================
+
+#[derive(Deserialize)]
+struct LogsQuery {
+    limit: Option<usize>,
+}
+
+async fn get_logs(
+    State(state): State<AppState>,
+    Query(query): Query<LogsQuery>,
+) -> Json<Vec<LogEntry>> {
+    let limit = query.limit.unwrap_or(200);
+    let entries = state.logs.get_entries(limit).await;
+    Json(entries)
+}
+
+// ============================================================================
 // Static File Serving
 // ============================================================================
 
@@ -531,7 +617,10 @@ async fn static_handler(req: Request) -> Response {
 pub async fn start(port: u16) -> anyhow::Result<()> {
     let state = AppState {
         password: Arc::new(Mutex::new(DEFAULT_PASSWORD.to_string())),
+        logs: LogBuffer::default(),
     };
+
+    state.logs.push("INFO", format!("Server starting on port {}", port)).await;
 
     // Public routes (no auth)
     let public_routes = Router::new()
@@ -543,6 +632,7 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
     let protected_routes = Router::new()
         .route("/api/password", post(update_password))
         .route("/api/upgrade", post(upgrade))
+        .route("/api/logs", get(get_logs))
         .route("/api/execute/{site}/{command}", post(execute_script))
         .route_layer(middleware::from_fn(auth_middleware));
 

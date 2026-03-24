@@ -29,4 +29,5 @@ export const authApi = {
 export const systemApi = {
   version: () => api.get('/api/version').then(r => r.data),
   upgrade: () => api.post('/api/upgrade').then(r => r.data),
+  logs: (limit = 200) => api.get(`/api/logs?limit=${limit}`).then(r => r.data),
 };
