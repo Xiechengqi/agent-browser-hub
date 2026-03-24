@@ -16,9 +16,9 @@ interface Props {
 }
 
 const levelColor: Record<string, string> = {
-  ERROR: 'text-red-500',
-  WARN: 'text-yellow-500',
-  INFO: 'text-blue-500',
+  ERROR: 'text-red-600',
+  WARN: 'text-amber-600',
+  INFO: 'text-blue-600',
   DEBUG: 'text-gray-400',
 };
 
@@ -70,15 +70,15 @@ export default function LogViewer({ open, onClose }: Props) {
             </div>
           </div>
         </DialogHeader>
-        <div className="flex-1 overflow-auto bg-gray-900 rounded p-4 font-mono text-xs leading-5 min-h-[400px]">
+        <div className="flex-1 overflow-auto bg-gray-50 border rounded p-4 font-mono text-xs leading-5 min-h-[400px]">
           {logs.length === 0 ? (
-            <p className="text-gray-500">暂无日志</p>
+            <p className="text-gray-400">暂无日志</p>
           ) : (
             logs.map((log, i) => (
-              <div key={i} className="flex gap-2">
-                <span className="text-gray-500 shrink-0">{log.time}</span>
-                <span className={`shrink-0 w-12 ${levelColor[log.level] || 'text-gray-400'}`}>{log.level}</span>
-                <span className="text-gray-200 break-all">{log.message}</span>
+              <div key={i} className="flex gap-2 hover:bg-gray-100">
+                <span className="text-gray-400 shrink-0">{log.time}</span>
+                <span className={`shrink-0 w-12 font-semibold ${levelColor[log.level] || 'text-gray-400'}`}>{log.level}</span>
+                <span className="text-gray-700 break-all">{log.message}</span>
               </div>
             ))
           )}
