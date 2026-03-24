@@ -441,12 +441,36 @@ async fn list_scripts() -> Json<Vec<Value>> {
                                 .unwrap_or("PUBLIC")
                                 .to_string();
 
+                            // Parse params from "args" (map) or "params" (array)
+                            let mut params = Vec::new();
+                            if let Some(args) = yaml["args"].as_object() {
+                                for (arg_name, arg_val) in args {
+                                    params.push(serde_json::json!({
+                                        "name": arg_name,
+                                        "type": arg_val["type"].as_str().unwrap_or("string"),
+                                        "required": arg_val["required"].as_bool().unwrap_or(false),
+                                        "default": arg_val.get("default"),
+                                        "description": arg_val["description"].as_str().unwrap_or(""),
+                                    }));
+                                }
+                            } else if let Some(p_arr) = yaml["params"].as_array() {
+                                for p in p_arr {
+                                    params.push(serde_json::json!({
+                                        "name": p["name"].as_str().unwrap_or(""),
+                                        "type": p["type"].as_str().unwrap_or("string"),
+                                        "required": p["required"].as_bool().unwrap_or(false),
+                                        "default": p.get("default"),
+                                        "description": p["description"].as_str().unwrap_or(""),
+                                    }));
+                                }
+                            }
+
                             scripts.push(serde_json::json!({
                                 "site": site,
                                 "name": name,
                                 "description": description,
                                 "strategy": strategy,
-                                "params": [],
+                                "params": params,
                             }));
                         }
                     }
