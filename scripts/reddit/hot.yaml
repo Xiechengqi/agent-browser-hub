@@ -18,7 +18,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const sub = ${{ args.subreddit | json }};
+        const sub = '${{ args.subreddit }}';
         const path = sub ? '/r/' + sub + '/hot.json' : '/hot.json';
         const limit = ${{ args.limit }};
         const res = await fetch(path + '?limit=' + limit + '&raw_json=1', {

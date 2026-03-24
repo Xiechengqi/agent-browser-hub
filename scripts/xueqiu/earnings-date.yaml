@@ -23,7 +23,7 @@ pipeline:
   - navigate: https://xueqiu.com
   - evaluate: |
       (async () => {
-        const symbol = (${{ args.symbol | json }} || '').toUpperCase();
+        const symbol = ('${{ args.symbol }}' || '').toUpperCase();
         const onlyNext = ${{ args.next }};
         if (!symbol) throw new Error('Missing argument: symbol');
         const resp = await fetch(

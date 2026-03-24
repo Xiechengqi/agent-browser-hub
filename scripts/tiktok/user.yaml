@@ -22,7 +22,7 @@ pipeline:
   - evaluate: |
       (() => {
         const limit = ${{ args.limit }};
-        const username = ${{ args.username | json }};
+        const username = '${{ args.username }}';
         const links = Array.from(document.querySelectorAll('a[href*="/video/"]'));
         const seen = {};
         const results = [];

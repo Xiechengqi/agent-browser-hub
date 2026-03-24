@@ -18,7 +18,7 @@ pipeline:
   - navigate: https://xueqiu.com
   - evaluate: |
       (async () => {
-        const category = parseInt(${{ args.category | json }}) || 1;
+        const category = parseInt('${{ args.category }}') || 1;
         const resp = await fetch(`https://stock.xueqiu.com/v5/stock/portfolio/stock/list.json?size=100&category=${category}&pid=-1`, {credentials: 'include'});
         if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');
         const d = await resp.json();

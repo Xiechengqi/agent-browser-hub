@@ -22,8 +22,8 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const url = ${{ args.url | json }};
-        const commentText = ${{ args.text | json }};
+        const url = '${{ args.url }}';
+        const commentText = '${{ args.text }}';
         const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
         // Click comment icon to expand comment section

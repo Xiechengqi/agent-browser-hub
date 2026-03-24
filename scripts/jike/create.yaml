@@ -18,7 +18,7 @@ pipeline:
   - evaluate: |
       (async () => {
         try {
-          const textToInsert = ${{ args.text | json }};
+          const textToInsert = '${{ args.text }}';
           const form = document.querySelector('[class*="_postForm_"]');
           const editor = form ? form.querySelector('[contenteditable="true"]') : document.querySelector('[contenteditable="true"]');
           if (editor) {

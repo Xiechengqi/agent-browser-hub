@@ -20,7 +20,7 @@ pipeline:
   - evaluate: |
       (async () => {
         const strip = (html) => (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/<em>/g, '').replace(/<\/em>/g, '').trim();
-        const keyword = ${{ args.query | json }};
+        const keyword = '${{ args.query }}';
         const limit = ${{ args.limit }};
         const res = await fetch('https://www.zhihu.com/api/v4/search_v3?q=' + encodeURIComponent(keyword) + '&t=general&offset=0&limit=' + limit, {
           credentials: 'include'

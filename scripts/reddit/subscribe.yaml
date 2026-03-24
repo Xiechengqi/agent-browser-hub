@@ -22,7 +22,7 @@ pipeline:
   - evaluate: |
       (async () => {
         try {
-          let sub = ${{ args.subreddit | json }};
+          let sub = '${{ args.subreddit }}';
           if (sub.startsWith('r/')) sub = sub.slice(2);
           const undo = ${{ args.undo }};
           const action = undo ? 'unsub' : 'sub';

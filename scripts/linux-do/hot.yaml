@@ -20,7 +20,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const period = ${{ args.period | json }};
+        const period = '${{ args.period }}';
         const res = await fetch('/top.json?period=' + encodeURIComponent(period), { credentials: 'include' });
         if (!res.ok) throw new Error('HTTP ' + res.status + ' - 请先登录 linux.do');
         let data;

@@ -53,7 +53,7 @@ pipeline:
   - evaluate: |
       (async () => {
         try {
-          const textToInsert = ${{ args.text | json }};
+          const textToInsert = '${{ args.text }}';
           if (!textToInsert) return { ok: true };
           const editor = document.querySelector('[contenteditable="true"]');
           if (!editor) return { ok: false, message: '未找到附言输入框' };

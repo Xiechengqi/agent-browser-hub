@@ -19,7 +19,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const query = ${{ args.query | json }};
+        const query = '${{ args.query }}';
         const limit = ${{ args.limit }};
         const res = await fetch(
           'https://www.instagram.com/web/search/topsearch/?query=' + encodeURIComponent(query) + '&context=user',

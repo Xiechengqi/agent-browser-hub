@@ -17,7 +17,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const group = ${{ args.group | json }};
+        const group = '${{ args.group }}';
         const groupName = document.querySelector('h1')?.textContent?.trim() || group;
 
         // Find "Join Group" button

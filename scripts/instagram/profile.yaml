@@ -15,7 +15,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const username = ${{ args.username | json }};
+        const username = '${{ args.username }}';
         const res = await fetch(
           'https://www.instagram.com/api/v1/users/web_profile_info/?username=' + encodeURIComponent(username),
           {

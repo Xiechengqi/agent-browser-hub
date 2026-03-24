@@ -20,7 +20,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const keyword = ${{ args.query | json }};
+        const keyword = '${{ args.query }}';
         const res = await fetch('/search.json?q=' + encodeURIComponent(keyword), { credentials: 'include' });
         if (!res.ok) throw new Error('HTTP ' + res.status + ' - 请先登录 linux.do');
         let data;

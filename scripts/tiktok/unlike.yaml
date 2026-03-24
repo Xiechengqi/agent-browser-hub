@@ -17,7 +17,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const url = ${{ args.url | json }};
+        const url = '${{ args.url }}';
         const btn = document.querySelector('[data-e2e="like-icon"]');
         if (!btn) throw new Error('Like button not found - make sure you are logged in');
         const container = btn.closest('button') || btn.closest('[role="button"]') || btn;

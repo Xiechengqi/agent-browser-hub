@@ -19,7 +19,7 @@ pipeline:
   - evaluate: |
       (async () => {
         const count = ${{ args.limit }};
-        const type = ${{ args.type | json }};
+        const type = '${{ args.type }}';
         const resp = await fetch(`https://stock.xueqiu.com/v5/stock/hot_stock/list.json?size=${count}&type=${type}`, {credentials: 'include'});
         if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');
         const d = await resp.json();

@@ -28,10 +28,10 @@ pipeline:
   - navigate: https://www.reddit.com
   - evaluate: |
       (async () => {
-        let sub = ${{ args.name | json }};
+        let sub = '${{ args.name }}';
         if (sub.startsWith('r/')) sub = sub.slice(2);
-        const sort = ${{ args.sort | json }};
-        const time = ${{ args.time | json }};
+        const sort = '${{ args.sort }}';
+        const time = '${{ args.time }}';
         const limit = ${{ args.limit }};
         let url = '/r/' + sub + '/' + sort + '.json?limit=' + limit + '&raw_json=1';
         if ((sort === 'top' || sort === 'controversial') && time) {

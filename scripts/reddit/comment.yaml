@@ -23,11 +23,11 @@ pipeline:
   - evaluate: |
       (async () => {
         try {
-          let postId = ${{ args['post-id'] | json }};
+          let postId = '${{ args.post-id }}';
           const urlMatch = postId.match(/comments\/([a-z0-9]+)/);
           if (urlMatch) postId = urlMatch[1];
           const fullname = postId.startsWith('t3_') || postId.startsWith('t1_') ? postId : 't3_' + postId;
-          const text = ${{ args.text | json }};
+          const text = '${{ args.text }}';
           const meRes = await fetch('/api/me.json', { credentials: 'include' });
           const me = await meRes.json();
           const modhash = me?.data?.modhash || '';

@@ -17,7 +17,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const url = ${{ args.url | json }};
+        const url = '${{ args.url }}';
         const btn = document.querySelector('[data-e2e="bookmark-icon"]') ||
                     document.querySelector('[data-e2e="collect-icon"]');
         if (!btn) throw new Error('Favorites button not found - make sure you are logged in');

@@ -17,7 +17,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const username = ${{ args.username | json }};
+        const username = '${{ args.username }}';
         // Find "Add Friend" button
         const buttons = Array.from(document.querySelectorAll('[role="button"]'));
         const addBtn = buttons.find(b => {

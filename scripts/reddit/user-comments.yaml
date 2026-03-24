@@ -20,7 +20,7 @@ pipeline:
   - navigate: https://www.reddit.com
   - evaluate: |
       (async () => {
-        const username = ${{ args.username | json }};
+        const username = '${{ args.username }}';
         const name = username.startsWith('u/') ? username.slice(2) : username;
         const limit = ${{ args.limit }};
         const res = await fetch('/user/' + name + '/comments.json?limit=' + limit + '&raw_json=1', {

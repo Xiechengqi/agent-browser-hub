@@ -15,7 +15,7 @@ args:
 pipeline:
   - evaluate: |
       (() => {
-        const text = ${{ args.text | json }};
+        const text = '${{ args.text }}';
         const editor = document.querySelector('[role="textbox"][data-slate-editor="true"], [class*="slateTextArea"]');
         if (!editor) throw new Error('Could not find Discord message input. Make sure a channel is open.');
         editor.focus();

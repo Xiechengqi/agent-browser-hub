@@ -22,7 +22,7 @@ pipeline:
   - evaluate: |
       (async () => {
         const limit = ${{ args.limit }};
-        const type = ${{ args.type | json }};
+        const type = '${{ args.type }}';
         const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
         // Click inbox icon to open notifications panel

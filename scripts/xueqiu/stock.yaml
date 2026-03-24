@@ -15,7 +15,7 @@ pipeline:
   - navigate: https://xueqiu.com
   - evaluate: |
       (async () => {
-        const symbol = (${{ args.symbol | json }} || '').toUpperCase();
+        const symbol = ('${{ args.symbol }}' || '').toUpperCase();
         if (!symbol) throw new Error('Missing argument: symbol');
         const resp = await fetch(`https://stock.xueqiu.com/v5/stock/batch/quote.json?symbol=${encodeURIComponent(symbol)}`, {credentials: 'include'});
         if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');

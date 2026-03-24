@@ -23,7 +23,7 @@ pipeline:
   - evaluate: |
       (async () => {
         try {
-          const textToInsert = ${{ args.text | json }};
+          const textToInsert = '${{ args.text }}';
           const editor = document.querySelector('[class*="_comment_"] [contenteditable="true"]') || document.querySelector('[contenteditable="true"]');
           if (editor) {
             editor.focus();

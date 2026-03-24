@@ -19,7 +19,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        let tweetId = ${{ args['tweet-id'] | json }};
+        let tweetId = '${{ args.tweet-id }}';
         const urlMatch = tweetId.match(/\/(?:status|article)\/(\d+)/);
         if (urlMatch) tweetId = urlMatch[1];
 

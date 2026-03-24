@@ -32,10 +32,10 @@ pipeline:
   - navigate: https://www.reddit.com
   - evaluate: |
       (async () => {
-        const q = encodeURIComponent(${{ args.query | json }});
-        const sub = ${{ args.subreddit | json }};
-        const sort = ${{ args.sort | json }};
-        const time = ${{ args.time | json }};
+        const q = encodeURIComponent('${{ args.query }}');
+        const sub = '${{ args.subreddit }}';
+        const sort = '${{ args.sort }}';
+        const time = '${{ args.time }}';
         const limit = ${{ args.limit }};
         const basePath = sub ? '/r/' + sub + '/search.json' : '/search.json';
         const params = 'q=' + q + '&sort=' + sort + '&t=' + time + '&limit=' + limit

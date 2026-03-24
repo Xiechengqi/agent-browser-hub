@@ -25,7 +25,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const slug = ${{ args.slug | json }};
+        const slug = '${{ args.slug }}';
         const res = await fetch('/c/' + encodeURIComponent(slug) + '/${{ args.id }}.json', { credentials: 'include' });
         if (!res.ok) throw new Error('HTTP ' + res.status + ' - 请先登录 linux.do');
         let data;

@@ -27,7 +27,7 @@ pipeline:
 
         return [{
           name: name,
-          username: ${{ args.username | json }},
+          username: '${{ args.username }}',
           friends: friendsLink ? friendsLink.textContent.trim() : '-',
           followers: followersLink ? followersLink.textContent.trim() : '-',
           url: window.location.href,

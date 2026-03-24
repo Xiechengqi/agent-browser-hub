@@ -15,7 +15,7 @@ args:
 pipeline:
   - evaluate: |
       (async () => {
-        const q = ${{ args.query | json }};
+        const q = '${{ args.query }}';
         const input = document.querySelector('[aria-label*="Search"], [class*="searchBar"] input, [placeholder*="Search"]');
         if (!input) throw new Error('Search input not found');
         input.focus();
@@ -47,7 +47,7 @@ pipeline:
             Message: (content || '').substring(0, 200),
           });
         });
-        return items.length > 0 ? items : [{ Index: 0, Author: 'System', Message: 'No results for "' + ${{ args.query | json }} + '"' }];
+        return items.length > 0 ? items : [{ Index: 0, Author: 'System', Message: 'No results for "' + '${{ args.query }}' + '"' }];
       })()
 
   - evaluate: |

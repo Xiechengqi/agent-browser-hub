@@ -24,8 +24,8 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const username = ${{ args.username | json }};
-        const commentText = ${{ args.text | json }};
+        const username = '${{ args.username }}';
+        const commentText = '${{ args.text }}';
         const idx = ${{ args.index }} - 1;
         const headers = { 'X-IG-App-ID': '936619743392459' };
         const opts = { credentials: 'include', headers };
