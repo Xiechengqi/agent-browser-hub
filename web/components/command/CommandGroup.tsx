@@ -14,7 +14,7 @@ export default function CommandGroup({ site, commands }: Props) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div id={`site-${site}`} className="border rounded-lg overflow-hidden scroll-mt-20">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"

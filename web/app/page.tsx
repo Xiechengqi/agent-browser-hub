@@ -7,6 +7,7 @@ import { useCommandsStore } from '@/lib/store/commands';
 import { useAuth } from '@/lib/store/auth';
 import CommandSearch from '@/components/command/CommandSearch';
 import CommandList from '@/components/command/CommandList';
+import CommandOutline from '@/components/command/CommandOutline';
 import LogViewer from '@/components/layout/LogViewer';
 import UpgradeDialog from '@/components/layout/UpgradeDialog';
 import VersionDialog from '@/components/layout/VersionDialog';
@@ -67,6 +68,7 @@ export default function Page() {
           <>
             <CommandSearch />
             <CommandList />
+            <CommandOutline />
           </>
         )}
       </main>
