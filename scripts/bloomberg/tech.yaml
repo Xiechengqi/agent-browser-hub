@@ -1,0 +1,68 @@
+site: bloomberg
+name: tech
+strategy: PUBLIC
+browser: false
+
+args:
+  limit:
+    type: int
+    default: 1
+    description: Number of feed items to return (max 20)
+
+pipeline:
+  - navigate: https://feeds.bloomberg.com/technology/news.rss
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const xml = document.body.textContent || document.documentElement.textContent;
+        const items = [];
+        const itemRegex = /<item\b[^>]*>([\s\S]*?)<\/item>/gi;
+        let match;
+
+        while ((match = itemRegex.exec(xml))) {
+          const block = match[1];
+          const title = extractTag(block, 'title');
+          const summary = extractTag(block, 'description');
+          const link = extractTag(block, 'link') || extractTag(block, 'guid');
+          const mediaLinks = extractMediaLinks(block);
+
+          if (title && link) {
+            items.push({ title, summary, link, mediaLinks: mediaLinks.join(', ') });
+          }
+        }
+
+        function extractTag(block, tag) {
+          const regex = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i');
+          const m = block.match(regex);
+          if (!m) return '';
+          return stripHtml(decodeCdata(m[1])).trim();
+        }
+
+        function extractMediaLinks(block) {
+          const links = [];
+          const regex = /<(?:media:content|media:thumbnail|enclosure)\b[^>]*\burl="([^"]+)"[^>]*>/gi;
+          let m;
+          while ((m = regex.exec(block))) {
+            if (m[1]) links.push(decodeEntities(m[1]));
+          }
+          return links;
+        }
+
+        function decodeCdata(s) {
+          const m = s.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
+          return m ? m[1] : s;
+        }
+
+        function stripHtml(s) {
+          return s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        }
+
+        function decodeEntities(s) {
+          return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        }
+
+        return items;
+      })()
+  - limit: ${{ args.limit }}
+
+columns: [title, summary, link, mediaLinks]

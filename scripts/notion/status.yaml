@@ -1,0 +1,11 @@
+site: notion
+name: status
+strategy: UI
+browser: true
+args: {}
+
+pipeline:
+  - evaluate: |
+      (() => {
+        return [{ Status: 'Connected', Url: window.location.href, Title: document.title }];
+      })()

@@ -1,0 +1,38 @@
+site: doubao
+name: new
+strategy: COOKIE
+browser: true
+args: {}
+
+pipeline:
+  - navigate: https://www.doubao.com/chat
+  - wait: 1000
+  - evaluate: |
+      (() => {
+        const isVisible = (el) => {
+          if (!(el instanceof HTMLElement)) return false;
+          const style = window.getComputedStyle(el);
+          if (style.display === 'none' || style.visibility === 'hidden') return false;
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const labels = ['新对话', 'New Chat', '创建新对话'];
+        const buttons = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+        for (const button of buttons) {
+          if (!isVisible(button)) continue;
+          const text = (button.innerText || button.textContent || '').trim();
+          const aria = (button.getAttribute('aria-label') || '').trim();
+          const title = (button.getAttribute('title') || '').trim();
+          const haystacks = [text, aria, title];
+          if (haystacks.some(value => labels.some(label => value.includes(label)))) {
+            button.click();
+            return { action: text || aria || title || 'new-chat' };
+          }
+        }
+        return { action: 'navigate' };
+      })()
+  - wait: 1500
+  - evaluate: |
+      ((result) => {
+        return [{ Status: 'Success', Action: result.action === 'navigate' ? 'Reloaded /chat as fallback' : 'Clicked ' + result.action }];
+      })()

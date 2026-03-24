@@ -1,0 +1,81 @@
+site: twitter
+name: timeline
+description: Fetch Twitter timeline (for-you or following)
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  type:
+    type: str
+    default: for-you
+    description: Timeline type (for-you or following)
+  limit:
+    type: int
+    default: 20
+    description: Number of tweets
+
+pipeline:
+  - navigate:
+      url: https://x.com
+      settleMs: 3000
+
+  - evaluate: |
+      (async () => {
+        const limit = ${{ args.limit }};
+        const timelineType = ${{ args.type | json }};
+
+        const ct0 = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ct0='))?.split('=')[1];
+        if (!ct0) throw new Error('Not logged into x.com');
+
+        const bearer = 'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+        const headers = {
+          'Authorization': 'Bearer ' + decodeURIComponent(bearer),
+          'X-Csrf-Token': ct0,
+          'X-Twitter-Auth-Type': 'OAuth2Session',
+          'X-Twitter-Active-User': 'yes'
+        };
+
+        const endpoint = timelineType === 'following' ? 'HomeLatestTimeline' : 'HomeTimeline';
+        const queryId = timelineType === 'following' ? 'BKB7oi212Fi7kQtCBGE4zA' : 'c-CzHF1LboFilMpsx4ZCrQ';
+        const method = timelineType === 'following' ? 'POST' : 'GET';
+
+        const variables = { count: Math.min(40, limit), includePromotedContent: false, latestControlAvailable: true };
+        const features = { responsive_web_graphql_timeline_navigation_enabled: true, view_counts_everywhere_api_enabled: true };
+
+        const apiUrl = `/i/api/graphql/${queryId}/${endpoint}?variables=${encodeURIComponent(JSON.stringify(variables))}&features=${encodeURIComponent(JSON.stringify(features))}`;
+
+        const resp = await fetch(apiUrl, { method, headers, credentials: 'include' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        const instructions = data?.data?.home?.home_timeline_urt?.instructions || [];
+        const results = [];
+        const seen = new Set();
+
+        for (const inst of instructions) {
+          for (const entry of inst.entries || []) {
+            const tw = entry.content?.itemContent?.tweet_results?.result;
+            if (!tw || !tw.rest_id || seen.has(tw.rest_id)) continue;
+            seen.add(tw.rest_id);
+
+            const legacy = tw.legacy || {};
+            const user = tw.core?.user_results?.result;
+            const screenName = user?.legacy?.screen_name || user?.core?.screen_name || 'unknown';
+            const noteText = tw.note_tweet?.note_tweet_results?.result?.text;
+
+            results.push({
+              id: tw.rest_id,
+              author: screenName,
+              text: noteText || legacy.full_text || '',
+              likes: legacy.favorite_count || 0,
+              retweets: legacy.retweet_count || 0,
+              url: `https://x.com/${screenName}/status/${tw.rest_id}`
+            });
+          }
+        }
+
+        return results.slice(0, limit);
+      })()
+
+columns: [id, author, text, likes, retweets, url]

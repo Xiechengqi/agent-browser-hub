@@ -1,0 +1,61 @@
+site: jike
+name: search
+description: 搜索即刻帖子
+domain: web.okjike.com
+strategy: COOKIE
+browser: true
+
+args:
+  query:
+    type: string
+    required: true
+    positional: true
+    description: Search query
+  limit:
+    type: int
+    default: 20
+    description: Number of results
+
+pipeline:
+  - navigate: https://web.okjike.com/search?q=${{ args.query | urlencode }}
+
+  - evaluate: |
+      (() => {
+        function getPostData(element) {
+          for (const key of Object.keys(element)) {
+            if (key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')) {
+              let fiber = element[key];
+              for (let i = 0; i < 10 && fiber; i++) {
+                const props = fiber.memoizedProps || fiber.pendingProps;
+                if (props && props.data && props.data.id) return props.data;
+                fiber = fiber.return;
+              }
+            }
+          }
+          return null;
+        }
+        const results = [];
+        const seen = new Set();
+        const elements = document.querySelectorAll('[class*="_post_"], [class*="_postItem_"]');
+        for (const el of elements) {
+          const data = getPostData(el);
+          if (!data || !data.id || seen.has(data.id)) continue;
+          seen.add(data.id);
+          const author = data.user?.screenName || data.target?.user?.screenName || '';
+          const content = data.content || data.target?.content || '';
+          if (!author && !content) continue;
+          results.push({
+            author,
+            content: content.replace(/\n/g, ' ').slice(0, 120),
+            likes: data.likeCount || 0,
+            comments: data.commentCount || 0,
+            time: data.actionTime || data.createdAt || '',
+            url: 'https://web.okjike.com/originalPost/' + data.id,
+          });
+        }
+        return results;
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [author, content, likes, comments, time, url]

@@ -1,0 +1,74 @@
+site: twitter
+name: profile
+description: Fetch a Twitter user profile
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  username:
+    type: str
+    positional: true
+    description: Twitter screen name (without @)
+
+pipeline:
+  - navigate:
+      url: https://x.com/${{ args.username || 'home' }}
+      settleMs: 3000
+
+  - evaluate: |
+      (async () => {
+        let username = ${{ args.username | json }};
+
+        if (!username) {
+          const link = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
+          const href = link ? link.getAttribute('href') : null;
+          if (!href) throw new Error('Could not detect logged-in user');
+          username = href.replace('/', '');
+        }
+
+        const ct0 = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ct0='))?.split('=')[1];
+        if (!ct0) throw new Error('Not logged into x.com');
+
+        const bearer = 'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+        const headers = {
+          'Authorization': 'Bearer ' + decodeURIComponent(bearer),
+          'X-Csrf-Token': ct0,
+          'X-Twitter-Auth-Type': 'OAuth2Session',
+          'X-Twitter-Active-User': 'yes'
+        };
+
+        const variables = JSON.stringify({ screen_name: username, withSafetyModeUserFields: true });
+        const features = JSON.stringify({
+          responsive_web_graphql_exclude_directive_enabled: true,
+          verified_phone_label_enabled: false,
+          responsive_web_graphql_timeline_navigation_enabled: true
+        });
+
+        const queryId = 'qRednkZG-rn1P6b48NINmQ';
+        const url = '/i/api/graphql/' + queryId + '/UserByScreenName?variables=' + encodeURIComponent(variables) + '&features=' + encodeURIComponent(features);
+
+        const resp = await fetch(url, {headers, credentials: 'include'});
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const d = await resp.json();
+
+        const result = d.data?.user?.result;
+        if (!result) throw new Error('User not found');
+
+        const legacy = result.legacy || {};
+        const expandedUrl = legacy.entities?.url?.urls?.[0]?.expanded_url || '';
+
+        return [{
+          screen_name: legacy.screen_name || username,
+          name: legacy.name || '',
+          bio: legacy.description || '',
+          location: legacy.location || '',
+          url: expandedUrl,
+          followers: legacy.followers_count || 0,
+          following: legacy.friends_count || 0,
+          tweets: legacy.statuses_count || 0,
+          verified: result.is_blue_verified || legacy.verified || false
+        }];
+      })()
+
+columns: [screen_name, name, bio, followers, following, tweets, verified]

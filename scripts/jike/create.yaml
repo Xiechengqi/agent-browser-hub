@@ -1,0 +1,66 @@
+site: jike
+name: create
+description: 发布即刻动态
+domain: web.okjike.com
+strategy: COOKIE
+browser: true
+
+args:
+  text:
+    type: string
+    required: true
+    positional: true
+    description: 动态正文内容
+
+pipeline:
+  - navigate: https://web.okjike.com
+
+  - evaluate: |
+      (async () => {
+        try {
+          const textToInsert = ${{ args.text | json }};
+          const form = document.querySelector('[class*="_postForm_"]');
+          const editor = form ? form.querySelector('[contenteditable="true"]') : document.querySelector('[contenteditable="true"]');
+          if (editor) {
+            editor.focus();
+            const dt = new DataTransfer();
+            dt.setData('text/plain', textToInsert);
+            editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+            await new Promise(r => setTimeout(r, 800));
+            const inserted = editor.textContent || '';
+            if (inserted.length > 0) return { ok: true, message: 'contenteditable' };
+          }
+          const textarea = form ? form.querySelector('textarea') : document.querySelector('textarea');
+          if (textarea) {
+            textarea.focus();
+            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+            setter?.call(textarea, textToInsert);
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            await new Promise(r => setTimeout(r, 500));
+            return { ok: true, message: 'textarea' };
+          }
+          return { ok: false, message: '未找到发帖输入框' };
+        } catch (e) {
+          return { ok: false, message: e.toString() };
+        }
+      })()
+
+  - evaluate: |
+      (async () => {
+        try {
+          await new Promise(r => setTimeout(r, 500));
+          const candidates = [...Array.from(document.querySelectorAll('button')).filter(btn => {
+            const text = btn.textContent?.trim() || '';
+            return text === '发送' || text === '发布';
+          })].filter(el => el && !el.disabled);
+          if (candidates.length === 0) return { ok: false, message: '未找到可用的发送按钮' };
+          candidates[0].click();
+          return { ok: true, message: '动态发布成功' };
+        } catch (e) {
+          return { ok: false, message: e.toString() };
+        }
+      })()
+
+  - wait: 3000
+
+columns: [status, message]

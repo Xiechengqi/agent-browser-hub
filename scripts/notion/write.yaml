@@ -1,0 +1,32 @@
+site: notion
+name: write
+strategy: UI
+browser: true
+args:
+  text:
+    type: str
+    required: true
+    description: Text to append to the page
+
+pipeline:
+  - evaluate: |
+      ((text) => {
+        const editables = document.querySelectorAll('.notion-page-content [contenteditable="true"], [class*="page-content"] [contenteditable="true"]');
+        let target = editables.length > 0 ? editables[editables.length - 1] : null;
+        if (!target) {
+          const all = document.querySelectorAll('[contenteditable="true"]');
+          target = all.length > 0 ? all[all.length - 1] : null;
+        }
+        if (!target) throw new Error('Could not find editable area in Notion page');
+        target.focus();
+        const sel = window.getSelection();
+        sel.selectAllChildren(target);
+        sel.collapseToEnd();
+        document.execCommand('insertText', false, text);
+        return { status: 'success' };
+      })(${{ args.text }})
+  - wait: 500
+  - evaluate: |
+      (() => {
+        return [{ Status: 'Text appended successfully' }];
+      })()

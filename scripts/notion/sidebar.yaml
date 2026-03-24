@@ -1,0 +1,28 @@
+site: notion
+name: sidebar
+strategy: UI
+browser: true
+args: {}
+
+pipeline:
+  - evaluate: |
+      (() => {
+        const results = [];
+        const selectors = [
+          '[class*="sidebar"] [role="treeitem"]',
+          '[class*="sidebar"] a',
+          '.notion-sidebar [role="button"]',
+          'nav [role="treeitem"]',
+        ];
+        for (const sel of selectors) {
+          const nodes = document.querySelectorAll(sel);
+          if (nodes.length > 0) {
+            nodes.forEach((n, i) => {
+              const text = (n.textContent || '').trim().substring(0, 100);
+              if (text && text.length > 1) results.push({ Index: i + 1, Title: text });
+            });
+            break;
+          }
+        }
+        return results.length > 0 ? results : [{ Index: 0, Title: 'No sidebar items found. Toggle the sidebar first.' }];
+      })()

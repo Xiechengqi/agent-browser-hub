@@ -14,12 +14,7 @@ args:
     description: Number of articles to return
 
 pipeline:
-  - evaluate: |
-      (() => {
-        return '${{ args.url }}'.replace(/\/$/, '') + '/archive';
-      })()
-    store: archiveUrl
-  - navigate: ${{ store.archiveUrl }}
+  - navigate: ${{ args.url }}/archive
   - wait: 5000
   - evaluate: |
       (async () => {

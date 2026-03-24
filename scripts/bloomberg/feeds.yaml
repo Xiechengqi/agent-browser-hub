@@ -1,0 +1,21 @@
+site: bloomberg
+name: feeds
+strategy: PUBLIC
+browser: false
+
+pipeline:
+  - evaluate: |
+      (() => {
+        return [
+          { name: 'main', url: 'https://feeds.bloomberg.com/news.rss' },
+          { name: 'markets', url: 'https://feeds.bloomberg.com/markets/news.rss' },
+          { name: 'economics', url: 'https://feeds.bloomberg.com/economics/news.rss' },
+          { name: 'industries', url: 'https://feeds.bloomberg.com/industries/news.rss' },
+          { name: 'tech', url: 'https://feeds.bloomberg.com/technology/news.rss' },
+          { name: 'politics', url: 'https://feeds.bloomberg.com/politics/news.rss' },
+          { name: 'businessweek', url: 'https://feeds.bloomberg.com/businessweek/news.rss' },
+          { name: 'opinions', url: 'https://feeds.bloomberg.com/bview/news.rss' }
+        ];
+      })()
+
+columns: [name, url]

@@ -1,0 +1,106 @@
+site: xiaohongshu
+name: user
+description: "Get public notes from a Xiaohongshu user profile"
+domain: www.xiaohongshu.com
+strategy: COOKIE
+browser: true
+
+args:
+  id:
+    type: str
+    required: true
+    description: User id or profile URL
+  limit:
+    type: int
+    default: 15
+    description: Number of notes to return
+
+columns: [id, title, type, likes, url]
+
+pipeline:
+  - evaluate: |
+      (() => {
+        const input = ${{ JSON.stringify(args.id) }};
+        const trimmed = (input || '').trim();
+        const withoutQuery = trimmed.replace(/[?#].*$/, '');
+        const matched = withoutQuery.match(/\/user\/profile\/([a-zA-Z0-9]+)/);
+        if (matched && matched[1]) return matched[1];
+        return withoutQuery.replace(/\/+$/, '').split('/').pop() || withoutQuery;
+      })()
+    as: userId
+  - navigate: https://www.xiaohongshu.com/user/profile/${{ steps.userId }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const safeClone = (value) => {
+          try {
+            return JSON.parse(JSON.stringify(value ?? null));
+          } catch {
+            return null;
+          }
+        };
+
+        const userStore = window.__INITIAL_STATE__?.user || {};
+        const noteGroups = safeClone(userStore.notes?._value || userStore.notes || []);
+        const fallbackUserId = ${{ JSON.stringify(steps.userId) }};
+
+        function flattenNoteGroups(groups) {
+          if (!Array.isArray(groups)) return [];
+          const notes = [];
+          for (const group of groups) {
+            if (!group) continue;
+            if (Array.isArray(group)) {
+              for (const item of group) {
+                if (item) notes.push(item);
+              }
+              continue;
+            }
+            notes.push(group);
+          }
+          return notes;
+        }
+
+        function toCleanString(value) {
+          return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim();
+        }
+
+        function buildNoteUrl(userId, noteId, xsecToken) {
+          const cleanUserId = toCleanString(userId);
+          const cleanNoteId = toCleanString(noteId);
+          if (!cleanUserId || !cleanNoteId) return '';
+          let url = 'https://www.xiaohongshu.com/user/profile/' + cleanUserId + '/' + cleanNoteId;
+          const cleanToken = toCleanString(xsecToken);
+          if (cleanToken) {
+            url += '?xsec_token=' + encodeURIComponent(cleanToken) + '&xsec_source=pc_user';
+          }
+          return url;
+        }
+
+        const notes = flattenNoteGroups(noteGroups);
+        const rows = [];
+        const seen = new Set();
+
+        for (const entry of notes) {
+          const noteCard = entry?.noteCard ?? entry?.note_card ?? entry;
+          if (!noteCard || typeof noteCard !== 'object') continue;
+
+          const noteId = toCleanString(noteCard.noteId ?? noteCard.note_id ?? entry?.noteId ?? entry?.note_id ?? entry?.id);
+          if (!noteId || seen.has(noteId)) continue;
+          seen.add(noteId);
+
+          const userId = toCleanString(noteCard.user?.userId ?? noteCard.user?.user_id ?? fallbackUserId);
+          const xsecToken = toCleanString(entry?.xsecToken ?? entry?.xsec_token ?? noteCard.xsecToken ?? noteCard.xsec_token);
+          const likes = toCleanString(noteCard.interactInfo?.likedCount ?? noteCard.interact_info?.liked_count ?? 0) || '0';
+
+          rows.push({
+            id: noteId,
+            title: toCleanString(noteCard.displayTitle ?? noteCard.display_title ?? noteCard.title),
+            type: toCleanString(noteCard.type),
+            likes,
+            url: buildNoteUrl(userId || fallbackUserId, noteId, xsecToken),
+          });
+        }
+
+        return rows;
+      })()
+  - limit: ${{ args.limit }}

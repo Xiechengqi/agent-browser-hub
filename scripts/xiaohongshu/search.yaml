@@ -1,0 +1,81 @@
+site: xiaohongshu
+name: search
+description: "搜索小红书笔记"
+domain: www.xiaohongshu.com
+strategy: COOKIE
+browser: true
+
+args:
+  query:
+    type: str
+    required: true
+    description: Search keyword
+  limit:
+    type: int
+    default: 20
+    description: Number of results
+
+columns: [rank, title, author, likes, url]
+
+pipeline:
+  - navigate: https://www.xiaohongshu.com/search_result?keyword=${{ args.query | urlencode }}&source=web_search_result_notes
+  - wait: 3000
+  - scroll:
+      times: 2
+  - evaluate: |
+      (() => {
+        const loginWall = /登录后查看搜索结果/.test(document.body.innerText || '');
+
+        const normalizeUrl = (href) => {
+          if (!href) return '';
+          if (href.startsWith('http://') || href.startsWith('https://')) return href;
+          if (href.startsWith('/')) return 'https://www.xiaohongshu.com' + href;
+          return '';
+        };
+
+        const cleanText = (value) => (value || '').replace(/\s+/g, ' ').trim();
+
+        const results = [];
+        const seen = new Set();
+
+        document.querySelectorAll('section.note-item').forEach(el => {
+          if (el.classList.contains('query-note-item')) return;
+
+          const titleEl = el.querySelector('.title, .note-title, a.title, .footer .title span');
+          const nameEl = el.querySelector('a.author .name, .name, .author-name, .nick-name, a.author');
+          const likesEl = el.querySelector('.count, .like-count, .like-wrapper .count');
+          const detailLinkEl =
+            el.querySelector('a.cover.mask') ||
+            el.querySelector('a[href*="/search_result/"]') ||
+            el.querySelector('a[href*="/explore/"]') ||
+            el.querySelector('a[href*="/note/"]');
+          const authorLinkEl = el.querySelector('a.author, a[href*="/user/profile/"]');
+
+          const url = normalizeUrl(detailLinkEl?.getAttribute('href') || '');
+          if (!url) return;
+
+          const key = url;
+          if (seen.has(key)) return;
+          seen.add(key);
+
+          results.push({
+            title: cleanText(titleEl?.textContent || ''),
+            author: cleanText(nameEl?.textContent || ''),
+            likes: cleanText(likesEl?.textContent || '0'),
+            url,
+            author_url: normalizeUrl(authorLinkEl?.getAttribute('href') || ''),
+          });
+        });
+
+        if (loginWall && results.length === 0) {
+          throw new Error('Login required: Xiaohongshu search results are blocked behind a login wall');
+        }
+
+        return results
+          .filter(item => item.title)
+          .map((item, i) => ({
+            rank: i + 1,
+            ...item,
+          }));
+      })()
+  - limit: ${{ args.limit }}

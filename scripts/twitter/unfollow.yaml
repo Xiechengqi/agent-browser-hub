@@ -1,0 +1,52 @@
+site: twitter
+name: unfollow
+description: Unfollow a Twitter user
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  username:
+    type: str
+    required: true
+    positional: true
+    description: Twitter screen name (without @)
+
+pipeline:
+  - navigate:
+      url: https://x.com/${{ args.username }}
+      settleMs: 5000
+
+  - evaluate: |
+      (async () => {
+        const username = ${{ args.username | json }};
+        let attempts = 0;
+
+        while (attempts < 20) {
+          const followBtn = document.querySelector('[data-testid$="-follow"]');
+          if (followBtn) return [{ status: 'success', message: 'Not following @' + username }];
+
+          const unfollowBtn = document.querySelector('[data-testid$="-unfollow"]');
+          if (unfollowBtn) {
+            unfollowBtn.click();
+            await new Promise(r => setTimeout(r, 1000));
+
+            const confirmBtn = document.querySelector('[data-testid="confirmationSheetConfirm"]');
+            if (confirmBtn) {
+              confirmBtn.click();
+              await new Promise(r => setTimeout(r, 1000));
+            }
+
+            const verify = document.querySelector('[data-testid$="-follow"]');
+            if (verify) return [{ status: 'success', message: 'Successfully unfollowed @' + username }];
+            return [{ status: 'failed', message: 'Unfollow action initiated but UI did not update' }];
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+          attempts++;
+        }
+
+        return [{ status: 'failed', message: 'Could not find Unfollow button' }];
+      })()
+
+columns: [status, message]

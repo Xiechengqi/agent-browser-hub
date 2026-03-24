@@ -1,0 +1,45 @@
+site: twitter
+name: follow
+description: Follow a Twitter user
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  username:
+    type: str
+    required: true
+    positional: true
+    description: Twitter screen name (without @)
+
+pipeline:
+  - navigate:
+      url: https://x.com/${{ args.username }}
+      settleMs: 5000
+
+  - evaluate: |
+      (async () => {
+        const username = ${{ args.username | json }};
+        let attempts = 0;
+
+        while (attempts < 20) {
+          const unfollowBtn = document.querySelector('[data-testid$="-unfollow"]');
+          if (unfollowBtn) return [{ status: 'success', message: 'Already following @' + username }];
+
+          const followBtn = document.querySelector('[data-testid$="-follow"]');
+          if (followBtn) {
+            followBtn.click();
+            await new Promise(r => setTimeout(r, 1500));
+            const verify = document.querySelector('[data-testid$="-unfollow"]');
+            if (verify) return [{ status: 'success', message: 'Successfully followed @' + username }];
+            return [{ status: 'failed', message: 'Follow action initiated but UI did not update' }];
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+          attempts++;
+        }
+
+        return [{ status: 'failed', message: 'Could not find Follow button' }];
+      })()
+
+columns: [status, message]

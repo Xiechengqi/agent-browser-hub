@@ -1,0 +1,34 @@
+site: discord-app
+name: send
+description: Send a message in the active Discord channel
+domain: localhost
+strategy: COOKIE
+browser: true
+
+args:
+  text:
+    type: string
+    required: true
+    positional: true
+    description: Message to send
+
+pipeline:
+  - evaluate: |
+      (() => {
+        const text = ${{ args.text | json }};
+        const editor = document.querySelector('[role="textbox"][data-slate-editor="true"], [class*="slateTextArea"]');
+        if (!editor) throw new Error('Could not find Discord message input. Make sure a channel is open.');
+        editor.focus();
+        document.execCommand('insertText', false, text);
+      })()
+
+  - wait: 300
+
+  - evaluate: |
+      (() => {
+        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true });
+        document.activeElement.dispatchEvent(enterEvent);
+        return [{ Status: 'Success' }];
+      })()
+
+columns: [Status]

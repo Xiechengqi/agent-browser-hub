@@ -1,0 +1,53 @@
+site: reddit
+name: upvote
+description: Upvote or downvote a Reddit post
+domain: reddit.com
+strategy: COOKIE
+browser: true
+
+args:
+  post-id:
+    type: string
+    required: true
+    positional: true
+    description: Post ID (e.g. 1abc123) or fullname (t3_xxx)
+  direction:
+    type: string
+    default: up
+    description: Vote direction (up, down, none)
+
+pipeline:
+  - navigate: https://www.reddit.com
+
+  - evaluate: |
+      (async () => {
+        try {
+          let postId = ${{ args['post-id'] | json }};
+          const urlMatch = postId.match(/comments\/([a-z0-9]+)/);
+          if (urlMatch) postId = urlMatch[1];
+          const fullname = postId.startsWith('t3_') || postId.startsWith('t1_') ? postId : 't3_' + postId;
+          const dir = ${{ args.direction | json }};
+          const direction = dir === 'down' ? -1 : dir === 'none' ? 0 : 1;
+          const configEl = document.getElementById('config');
+          let modhash = '';
+          if (configEl) modhash = configEl.querySelector('[name="uh"]')?.getAttribute('content') || '';
+          if (!modhash) {
+            const meRes = await fetch('/api/me.json', { credentials: 'include' });
+            const me = await meRes.json();
+            modhash = me?.data?.modhash || '';
+          }
+          const res = await fetch('/api/vote', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'id=' + encodeURIComponent(fullname) + '&dir=' + direction + (modhash ? '&uh=' + encodeURIComponent(modhash) : ''),
+          });
+          if (!res.ok) return [{ status: 'failed', message: 'HTTP ' + res.status }];
+          const labels = { '1': 'Upvoted', '-1': 'Downvoted', '0': 'Vote removed' };
+          return [{ status: 'success', message: (labels[String(direction)] || 'Voted') + ' ' + fullname }];
+        } catch (e) {
+          return [{ status: 'failed', message: e.toString() }];
+        }
+      })()
+
+columns: [status, message]

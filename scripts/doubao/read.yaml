@@ -1,0 +1,54 @@
+site: doubao
+name: read
+strategy: COOKIE
+browser: true
+args: {}
+
+pipeline:
+  - navigate: https://www.doubao.com/chat
+  - wait: 1000
+  - evaluate: |
+      (() => {
+        const clean = (value) => (value || '').replace(/\u00a0/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+        const isVisible = (el) => {
+          if (!(el instanceof HTMLElement)) return false;
+          const style = window.getComputedStyle(el);
+          if (style.display === 'none' || style.visibility === 'hidden') return false;
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const getRole = (root) => {
+          if (root.matches('[data-testid="send_message"], [class*="send-message"]') || root.querySelector('[data-testid="send_message"], [class*="send-message"]')) return 'User';
+          if (root.matches('[data-testid="receive_message"], [data-testid*="receive_message"], [class*="receive-message"]') || root.querySelector('[data-testid="receive_message"], [data-testid*="receive_message"], [class*="receive-message"]')) return 'Assistant';
+          return '';
+        };
+        const extractText = (root) => {
+          const selectors = ['[data-testid="message_text_content"]', '[data-testid="message_content"]', '[data-testid*="message_text"]', '[data-testid*="message_content"]', '[class*="message-text"]', '[class*="message-content"]'];
+          const chunks = [], seen = new Set();
+          for (const selector of selectors) {
+            const nodes = Array.from(root.querySelectorAll(selector)).filter(el => isVisible(el)).map(el => clean(el.innerText || el.textContent || '')).filter(Boolean);
+            for (const nodeText of nodes) {
+              if (seen.has(nodeText)) continue;
+              seen.add(nodeText);
+              chunks.push(nodeText);
+            }
+            if (chunks.length > 0) break;
+          }
+          return chunks.length > 0 ? clean(chunks.join('\n')) : clean(root.innerText || root.textContent || '');
+        };
+        const messageList = document.querySelector('[data-testid="message-list"]');
+        if (!messageList) return [{ Role: 'System', Text: 'No visible Doubao messages were found.' }];
+        const unionRoots = Array.from(messageList.querySelectorAll('[data-testid="union_message"]')).filter(el => isVisible(el));
+        const blockRoots = Array.from(messageList.querySelectorAll('[data-testid="message-block-container"]')).filter(el => isVisible(el) && !el.closest('[data-testid="union_message"]'));
+        const roots = (unionRoots.length > 0 ? unionRoots : blockRoots).filter((el, index, items) => !items.some((other, otherIndex) => otherIndex !== index && other.contains(el)));
+        const turns = roots.map(el => ({ el, role: getRole(el), text: extractText(el) })).filter(item => (item.role === 'User' || item.role === 'Assistant') && item.text);
+        turns.sort((a, b) => a.el === b.el ? 0 : (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+        const deduped = [], seen = new Set();
+        for (const turn of turns) {
+          const key = turn.role + '::' + turn.text;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push({ Role: turn.role, Text: turn.text });
+        }
+        return deduped.length > 0 ? deduped : [{ Role: 'System', Text: 'No visible Doubao messages were found.' }];
+      })()

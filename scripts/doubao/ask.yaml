@@ -1,0 +1,50 @@
+site: doubao
+name: ask
+strategy: COOKIE
+browser: true
+args:
+  text:
+    type: str
+    required: true
+    description: Prompt to send
+  timeout:
+    type: int
+    required: false
+    description: Max seconds to wait (default 60)
+
+pipeline:
+  - navigate: https://www.doubao.com/chat
+  - wait: 1000
+  - evaluate: |
+      ((inputText) => {
+        const isVisible = (el) => {
+          if (!(el instanceof HTMLElement)) return false;
+          const style = window.getComputedStyle(el);
+          if (style.display === 'none' || style.visibility === 'hidden') return false;
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const candidates = ['textarea[data-testid="chat_input_input"]', '[data-testid="chat_input"] textarea', '.chat-input textarea', 'textarea[placeholder*="发消息"]', 'textarea[placeholder*="Message"]', 'textarea'];
+        let composer = null;
+        for (const selector of candidates) {
+          const node = Array.from(document.querySelectorAll(selector)).find(isVisible);
+          if (node) { composer = node; break; }
+        }
+        if (!(composer instanceof HTMLTextAreaElement || composer instanceof HTMLInputElement)) throw new Error('Could not find Doubao textarea');
+        composer.focus();
+        const proto = composer instanceof HTMLTextAreaElement ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        setter?.call(composer, inputText);
+        composer.dispatchEvent(new Event('input', { bubbles: true }));
+        const root = document.querySelector('[data-testid="chat_input"], .chat-input') || document.body;
+        const buttons = Array.from(root.querySelectorAll('button, [role="button"]')).filter(isVisible);
+        const target = buttons[buttons.length - 1];
+        if (target) target.click();
+      })(${{ args.text }})
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const timeout = ${{ args.timeout }} || 60;
+        const promptText = ${{ args.text }};
+        return { timeout, promptText };
+      })()

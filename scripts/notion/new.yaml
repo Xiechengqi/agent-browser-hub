@@ -1,0 +1,30 @@
+site: notion
+name: new
+strategy: UI
+browser: true
+args:
+  title:
+    type: str
+    required: false
+    description: Page title (optional)
+
+pipeline:
+  - evaluate: |
+      (() => {
+        const isMac = navigator.platform.toLowerCase().includes('mac');
+        const key = isMac ? 'Meta' : 'Control';
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', [key.toLowerCase() + 'Key']: true, bubbles: true }));
+      })()
+  - wait: 1000
+  - evaluate: |
+      ((title) => {
+        if (title) {
+          const titleEl = document.querySelector('[placeholder="Untitled"], [data-content-editable-leaf] [placeholder]');
+          if (titleEl) {
+            titleEl.focus();
+            document.execCommand('insertText', false, title);
+          }
+          return [{ Status: 'Created page: ' + title }];
+        }
+        return [{ Status: 'New blank page created' }];
+      })(${{ args.title }})

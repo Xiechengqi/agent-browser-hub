@@ -1,0 +1,38 @@
+site: notion
+name: search
+strategy: UI
+browser: true
+args:
+  query:
+    type: str
+    required: true
+    description: Search query
+
+pipeline:
+  - evaluate: |
+      (() => {
+        const isMac = navigator.platform.toLowerCase().includes('mac');
+        const key = isMac ? 'Meta' : 'Control';
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', [key.toLowerCase() + 'Key']: true, bubbles: true }));
+      })()
+  - wait: 500
+  - evaluate: |
+      ((q) => {
+        const input = document.querySelector('input[placeholder*="Search"], input[type="text"]');
+        if (input) {
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          setter.call(input, q);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      })(${{ args.query }})
+  - wait: 1500
+  - evaluate: |
+      (() => {
+        const items = document.querySelectorAll('[role="option"], [class*="searchResult"], [class*="quick-find"] [role="button"]');
+        const results = Array.from(items).slice(0, 20).map((item, i) => ({
+          Index: i + 1,
+          Title: (item.textContent || '').trim().substring(0, 120),
+        }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        return results.length > 0 ? results : [{ Index: 0, Title: 'No results for "' + ${{ args.query }} + '"' }];
+      })()

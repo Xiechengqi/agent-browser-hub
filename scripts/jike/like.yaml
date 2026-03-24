@@ -1,0 +1,36 @@
+site: jike
+name: like
+description: 点赞即刻帖子
+domain: web.okjike.com
+strategy: COOKIE
+browser: true
+
+args:
+  id:
+    type: string
+    required: true
+    positional: true
+    description: 帖子 ID
+
+pipeline:
+  - navigate: https://web.okjike.com/originalPost/${{ args.id }}
+
+  - evaluate: |
+      (async () => {
+        try {
+          const likeBtn = document.querySelector('[class*="_likeButton_"]');
+          if (!likeBtn) return { ok: false, message: '未找到点赞按钮' };
+          const cls = likeBtn.className || '';
+          if (cls.includes('_liked')) return { ok: true, message: '该帖子已赞过' };
+          const beforeCls = likeBtn.className;
+          likeBtn.click();
+          await new Promise(r => setTimeout(r, 1500));
+          const afterCls = likeBtn.className;
+          if (afterCls !== beforeCls) return { ok: true, message: '点赞成功' };
+          return { ok: false, message: '点赞状态未确认' };
+        } catch (e) {
+          return { ok: false, message: e.toString() };
+        }
+      })()
+
+columns: [status, message]

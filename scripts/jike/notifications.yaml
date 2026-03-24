@@ -1,0 +1,74 @@
+site: jike
+name: notifications
+description: 即刻通知
+domain: web.okjike.com
+strategy: COOKIE
+browser: true
+
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of notifications
+
+pipeline:
+  - navigate: https://web.okjike.com/notification
+
+  - evaluate: |
+      (() => {
+        function getNotificationData(element) {
+          for (const key of Object.keys(element)) {
+            if (key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')) {
+              let fiber = element[key];
+              for (let i = 0; i < 15 && fiber; i++) {
+                const props = fiber.memoizedProps || fiber.pendingProps;
+                if (props && props.data) {
+                  const d = props.data;
+                  if (d.type || d.actionType || d.notificationType) return d;
+                }
+                fiber = fiber.return;
+              }
+            }
+          }
+          return null;
+        }
+        function resolveActionLabel(type) {
+          if (!type) return '通知';
+          const upper = type.toUpperCase();
+          if (upper.includes('LIKE')) return '赞了你';
+          if (upper.includes('COMMENT')) return '评论了你';
+          if (upper.includes('FOLLOW')) return '关注了你';
+          if (upper.includes('REPOST')) return '转发了你';
+          if (upper.includes('MENTION')) return '提到了你';
+          if (upper.includes('REPLY')) return '回复了你';
+          return type;
+        }
+        const results = [];
+        const seen = new Set();
+        const elements = Array.from(document.querySelectorAll('[class*="_item_"]'));
+        for (const el of elements) {
+          const data = getNotificationData(el);
+          if (!data) continue;
+          const actionType = data.actionType || data.type || data.notificationType || '';
+          const fromUser = (data.sourceUser && data.sourceUser.screenName) || (data.user && data.user.screenName) || (data.actionUser && data.actionUser.screenName) || (data.actor && data.actor.screenName) || '';
+          const targetContent = (data.targetPost && data.targetPost.content) || (data.post && data.post.content) || '';
+          const commentContent = (data.comment && data.comment.content) || data.commentContent || '';
+          const content = commentContent || targetContent;
+          const time = data.createdAt || data.updatedAt || '';
+          const key = fromUser + '\x00' + time + '\x00' + (data.type || data.actionType || '');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          if (!fromUser && !content) continue;
+          results.push({
+            type: resolveActionLabel(actionType),
+            user: fromUser,
+            content: content.replace(/\n/g, ' ').slice(0, 100),
+            time: time,
+          });
+        }
+        return results;
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [type, user, content, time]

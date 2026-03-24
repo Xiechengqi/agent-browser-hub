@@ -1,0 +1,44 @@
+site: twitter
+name: bookmark
+description: Bookmark a tweet
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  url:
+    type: str
+    required: true
+    positional: true
+    description: Tweet URL
+
+pipeline:
+  - navigate:
+      url: ${{ args.url }}
+      settleMs: 5000
+
+  - evaluate: |
+      (async () => {
+        let attempts = 0;
+
+        while (attempts < 20) {
+          const removeBtn = document.querySelector('[data-testid="removeBookmark"]');
+          if (removeBtn) return [{ status: 'success', message: 'Tweet is already bookmarked' }];
+
+          const bookmarkBtn = document.querySelector('[data-testid="bookmark"]');
+          if (bookmarkBtn) {
+            bookmarkBtn.click();
+            await new Promise(r => setTimeout(r, 1000));
+            const verify = document.querySelector('[data-testid="removeBookmark"]');
+            if (verify) return [{ status: 'success', message: 'Tweet successfully bookmarked' }];
+            return [{ status: 'failed', message: 'Bookmark action initiated but UI did not update' }];
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+          attempts++;
+        }
+
+        return [{ status: 'failed', message: 'Could not find Bookmark button' }];
+      })()
+
+columns: [status, message]

@@ -1,0 +1,59 @@
+site: discord-app
+name: search
+description: Search messages in the current Discord server/channel
+domain: localhost
+strategy: COOKIE
+browser: true
+
+args:
+  query:
+    type: string
+    required: true
+    positional: true
+    description: Search query
+
+pipeline:
+  - evaluate: |
+      (async () => {
+        const q = ${{ args.query | json }};
+        const input = document.querySelector('[aria-label*="Search"], [class*="searchBar"] input, [placeholder*="Search"]');
+        if (!input) throw new Error('Search input not found');
+        input.focus();
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(input, q);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      })()
+
+  - wait: 500
+
+  - evaluate: |
+      (() => {
+        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true });
+        document.activeElement.dispatchEvent(enterEvent);
+      })()
+
+  - wait: 2000
+
+  - evaluate: |
+      (() => {
+        const items = [];
+        const resultNodes = document.querySelectorAll('[class*="searchResult_"], [id*="search-result"]');
+        resultNodes.forEach((node, i) => {
+          const author = node.querySelector('[class*="username"]')?.textContent?.trim() || '—';
+          const content = node.querySelector('[id^="message-content-"], [class*="messageContent"]')?.textContent?.trim() || node.textContent?.trim();
+          items.push({
+            Index: i + 1,
+            Author: author,
+            Message: (content || '').substring(0, 200),
+          });
+        });
+        return items.length > 0 ? items : [{ Index: 0, Author: 'System', Message: 'No results for "' + ${{ args.query | json }} + '"' }];
+      })()
+
+  - evaluate: |
+      (() => {
+        const escEvent = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true });
+        document.dispatchEvent(escEvent);
+      })()
+
+columns: [Index, Author, Message]

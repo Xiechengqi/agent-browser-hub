@@ -1,0 +1,44 @@
+site: twitter
+name: like
+description: Like a specific tweet
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  url:
+    type: str
+    required: true
+    positional: true
+    description: Tweet URL
+
+pipeline:
+  - navigate:
+      url: ${{ args.url }}
+      settleMs: 5000
+
+  - evaluate: |
+      (async () => {
+        let attempts = 0;
+
+        while (attempts < 20) {
+          const unlikeBtn = document.querySelector('[data-testid="unlike"]');
+          if (unlikeBtn) return [{ status: 'success', message: 'Tweet is already liked' }];
+
+          const likeBtn = document.querySelector('[data-testid="like"]');
+          if (likeBtn) {
+            likeBtn.click();
+            await new Promise(r => setTimeout(r, 1000));
+            const verifyBtn = document.querySelector('[data-testid="unlike"]');
+            if (verifyBtn) return [{ status: 'success', message: 'Tweet successfully liked' }];
+            return [{ status: 'failed', message: 'Like action initiated but UI did not update' }];
+          }
+
+          await new Promise(r => setTimeout(r, 500));
+          attempts++;
+        }
+
+        return [{ status: 'failed', message: 'Could not find Like button' }];
+      })()
+
+columns: [status, message]

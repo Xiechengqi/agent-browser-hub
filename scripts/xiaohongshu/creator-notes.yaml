@@ -1,0 +1,76 @@
+site: xiaohongshu
+name: creator-notes
+description: "小红书创作者笔记列表 + 每篇数据 (标题/日期/观看/点赞/收藏/评论)"
+domain: creator.xiaohongshu.com
+strategy: COOKIE
+browser: true
+
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of notes to return
+
+columns: [rank, id, title, date, views, likes, collects, comments, url]
+
+pipeline:
+  - navigate: https://creator.xiaohongshu.com/statistics/data-analysis?type=0&page_size=20&page_num=1
+  - wait: 3000
+  - evaluate: |
+      (async () => {
+        const limit = ${{ args.limit }} || 20;
+        const NOTE_DETAIL_PAGE_URL = 'https://creator.xiaohongshu.com/statistics/note-detail';
+
+        function buildNoteDetailUrl(noteId) {
+          return noteId ? NOTE_DETAIL_PAGE_URL + '?noteId=' + encodeURIComponent(noteId) : '';
+        }
+
+        function formatPostTime(ts) {
+          if (!ts) return '';
+          const date = new Date(ts + 8 * 3600000);
+          const pad = (v) => String(v).padStart(2, '0');
+          return date.getUTCFullYear() + '年' + pad(date.getUTCMonth() + 1) + '月' + pad(date.getUTCDate()) + '日 ' + pad(date.getUTCHours()) + ':' + pad(date.getUTCMinutes());
+        }
+
+        // Try API-based fetch first
+        const pageSize = Math.min(Math.max(limit, 10), 20);
+        const maxPages = Math.max(1, Math.ceil(limit / pageSize));
+        const notes = [];
+
+        for (let pageNum = 1; pageNum <= maxPages && notes.length < limit; pageNum++) {
+          const apiPath = '/api/galaxy/creator/datacenter/note/analyze/list?type=0&page_size=' + pageSize + '&page_num=' + pageNum;
+          try {
+            const resp = await fetch(apiPath, { credentials: 'include' });
+            if (!resp.ok) break;
+            const json = await resp.json();
+            const items = json?.data?.note_infos ?? [];
+            if (!items.length) break;
+
+            for (const item of items) {
+              notes.push({
+                id: item.id ?? '',
+                title: item.title ?? '',
+                date: formatPostTime(item.post_time),
+                views: item.read_count ?? 0,
+                likes: item.like_count ?? 0,
+                collects: item.fav_count ?? 0,
+                comments: item.comment_count ?? 0,
+                url: buildNoteDetailUrl(item.id),
+              });
+            }
+            if (items.length < pageSize) break;
+          } catch {
+            break;
+          }
+        }
+
+        if (notes.length === 0) {
+          throw new Error('No notes found. Are you logged into creator.xiaohongshu.com?');
+        }
+
+        return notes.slice(0, limit).map((n, i) => ({
+          rank: i + 1,
+          ...n,
+        }));
+      })()
+  - limit: ${{ args.limit }}

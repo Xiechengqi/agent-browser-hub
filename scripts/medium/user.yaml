@@ -14,13 +14,7 @@ args:
     description: Number of articles to return
 
 pipeline:
-  - evaluate: |
-      (() => {
-        const u = '${{ args.username }}';
-        return u.startsWith('@') ? `https://medium.com/${u}` : `https://medium.com/@${u}`;
-      })()
-    store: url
-  - navigate: ${{ store.url }}
+  - navigate: https://medium.com/@${{ args.username }}
   - wait: 5000
   - evaluate: |
       (async () => {

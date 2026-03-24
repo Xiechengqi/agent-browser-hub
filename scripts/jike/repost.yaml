@@ -1,0 +1,89 @@
+site: jike
+name: repost
+description: 转发即刻帖子
+domain: web.okjike.com
+strategy: COOKIE
+browser: true
+
+args:
+  id:
+    type: string
+    required: true
+    positional: true
+    description: 帖子 ID
+  text:
+    type: string
+    required: false
+    positional: true
+    description: 转发附言（可选）
+
+pipeline:
+  - navigate: https://web.okjike.com/originalPost/${{ args.id }}
+
+  - evaluate: |
+      (async () => {
+        try {
+          const actions = document.querySelector('[class*="_actions_"]');
+          if (!actions) return { ok: false, message: '未找到操作栏' };
+          const children = Array.from(actions.children).filter(c => c.offsetHeight > 0);
+          if (!children[2]) return { ok: false, message: '未找到转发按钮' };
+          children[2].click();
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, message: e.toString() };
+        }
+      })()
+
+  - wait: 1000
+
+  - evaluate: |
+      (async () => {
+        try {
+          const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === '转发动态');
+          if (!btn) return { ok: false, message: '未找到"转发动态"菜单项' };
+          btn.click();
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, message: e.toString() };
+        }
+      })()
+
+  - wait: 2000
+
+  - evaluate: |
+      (async () => {
+        try {
+          const textToInsert = ${{ args.text | json }};
+          if (!textToInsert) return { ok: true };
+          const editor = document.querySelector('[contenteditable="true"]');
+          if (!editor) return { ok: false, message: '未找到附言输入框' };
+          editor.focus();
+          const dt = new DataTransfer();
+          dt.setData('text/plain', textToInsert);
+          editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+          await new Promise(r => setTimeout(r, 500));
+          return { ok: true };
+        } catch(e) {
+          return { ok: false, message: '附言写入失败: ' + e.toString() };
+        }
+      })()
+
+  - evaluate: |
+      (async () => {
+        try {
+          await new Promise(r => setTimeout(r, 500));
+          const btn = Array.from(document.querySelectorAll('button')).find(b => {
+            const text = b.textContent?.trim() || '';
+            return (text === '发送' || text === '发布') && !b.disabled;
+          });
+          if (!btn) return { ok: false, message: '未找到发送按钮' };
+          btn.click();
+          return { ok: true, message: '转发成功' };
+        } catch (e) {
+          return { ok: false, message: e.toString() };
+        }
+      })()
+
+  - wait: 3000
+
+columns: [status, message]
