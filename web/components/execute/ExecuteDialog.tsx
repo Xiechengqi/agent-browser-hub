@@ -60,7 +60,7 @@ export default function ExecuteDialog({ command, open, onClose, debugMode = fals
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={debugMode ? "max-w-7xl max-h-[90vh] overflow-y-auto" : "max-w-4xl max-h-[90vh] overflow-y-auto"}>
         <DialogHeader>
           <DialogTitle>执行命令: {command.site}/{command.name}</DialogTitle>
         </DialogHeader>
@@ -68,7 +68,7 @@ export default function ExecuteDialog({ command, open, onClose, debugMode = fals
           {debugMode && (
             <div className="border border-slate-200 rounded-lg overflow-hidden">
               <div className="bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">VNC 调试窗口</div>
-              <iframe src={vncUrl} className="w-full h-96 border-0" />
+              <iframe src={vncUrl} className="w-full h-[500px] border-0" />
             </div>
           )}
           <ParamForm params={command.params} values={params} onChange={setParams} />
