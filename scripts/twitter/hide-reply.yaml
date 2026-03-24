@@ -1,0 +1,53 @@
+site: twitter
+name: hide-reply
+description: Hide a reply on your tweet
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  url:
+    type: str
+    required: true
+    positional: true
+    description: Reply tweet URL
+
+pipeline:
+  - navigate:
+      url: ${{ args.url }}
+      settleMs: 5000
+
+  - evaluate: |
+      (async () => {
+        let attempts = 0;
+
+        while (attempts < 20) {
+          const moreMenu = document.querySelector('[aria-label="More"]');
+          if (moreMenu) break;
+          await new Promise(r => setTimeout(r, 500));
+          attempts++;
+        }
+
+        const moreMenu = document.querySelector('[aria-label="More"]');
+        if (!moreMenu) return [{ status: 'failed', message: 'Could not find More menu' }];
+
+        moreMenu.click();
+        await new Promise(r => setTimeout(r, 1000));
+
+        const items = document.querySelectorAll('[role="menuitem"]');
+        let hideItem = null;
+        for (const item of items) {
+          if (item.textContent && item.textContent.includes('Hide reply')) {
+            hideItem = item;
+            break;
+          }
+        }
+
+        if (!hideItem) return [{ status: 'failed', message: 'Hide reply option not found' }];
+
+        hideItem.click();
+        await new Promise(r => setTimeout(r, 1500));
+        return [{ status: 'success', message: 'Reply successfully hidden' }];
+      })()
+
+columns: [status, message]

@@ -1,0 +1,63 @@
+site: barchart
+name: options
+description: Barchart options chain with greeks, IV, volume, and open interest
+domain: www.barchart.com
+strategy: COOKIE
+browser: true
+
+args:
+  symbol:
+    type: str
+    required: true
+    description: Stock ticker (e.g. AAPL)
+  type:
+    type: str
+    default: Call
+    description: "Option type: Call or Put"
+  limit:
+    type: int
+    default: 20
+    description: Max number of strikes to return
+
+pipeline:
+  - navigate: https://www.barchart.com/stocks/quotes/${{ args.symbol }}/options
+  - wait: 4000
+  - evaluate: |
+      (async () => {
+        const sym = '${{ args.symbol }}'.toUpperCase();
+        const optType = '${{ args.type }}';
+        const limit = ${{ args.limit }};
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        try {
+          const fields = 'strikePrice,bidPrice,askPrice,lastPrice,priceChange,volume,openInterest,volatility,delta,gamma,theta,vega,expirationDate,optionType,percentFromLast'.split(',');
+          const url = '/proxies/core-api/v1/options/chain?symbol=' + encodeURIComponent(sym) + '&fields=' + fields.join(',') + '&raw=1';
+          const resp = await fetch(url, { credentials: 'include', headers: { 'X-CSRF-TOKEN': csrf } });
+          if (resp.ok) {
+            const d = await resp.json();
+            let items = d?.data || [];
+            items = items.filter(i => ((i.raw || i).optionType || '').toLowerCase() === optType.toLowerCase());
+            items.sort((a, b) => Math.abs((a.raw || a).percentFromLast || 999) - Math.abs((b.raw || b).percentFromLast || 999));
+            return items.slice(0, limit).map(i => {
+              const r = i.raw || i;
+              return {
+                strike: r.strikePrice,
+                bid: r.bidPrice != null ? Number(r.bidPrice).toFixed(2) : null,
+                ask: r.askPrice != null ? Number(r.askPrice).toFixed(2) : null,
+                last: r.lastPrice != null ? Number(r.lastPrice).toFixed(2) : null,
+                change: r.priceChange != null ? Number(r.priceChange).toFixed(2) : null,
+                volume: r.volume,
+                openInterest: r.openInterest,
+                iv: r.volatility != null ? Number(r.volatility).toFixed(2) + '%' : null,
+                delta: r.delta != null ? Number(r.delta).toFixed(4) : null,
+                gamma: r.gamma != null ? Number(r.gamma).toFixed(4) : null,
+                theta: r.theta != null ? Number(r.theta).toFixed(4) : null,
+                vega: r.vega != null ? Number(r.vega).toFixed(4) : null,
+                expiration: r.expirationDate
+              };
+            });
+          }
+        } catch(e) {}
+        return [];
+      })()
+
+columns: [strike, bid, ask, last, change, volume, openInterest, iv, delta, gamma, theta, vega, expiration]

@@ -1,0 +1,36 @@
+site: boss
+name: joblist
+strategy: COOKIE
+browser: true
+args: {}
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', 'https://www.zhipin.com/wapi/zpjob/job/chatted/jobList', true);
+          xhr.withCredentials = true;
+          xhr.timeout = 15000;
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.onload = () => {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (data.code !== 0) reject(new Error(data.message || 'API error'));
+              const jobs = data.zpData || [];
+              resolve(jobs.map(j => ({
+                job_name: j.jobName || '',
+                salary: j.salaryDesc || '',
+                city: j.address || '',
+                status: j.jobOnlineStatus === 1 ? '在线' : '已关闭',
+                encrypt_job_id: j.encryptJobId || ''
+              })));
+            } catch(e) { reject(e); }
+          };
+          xhr.onerror = () => reject(new Error('Network Error'));
+          xhr.ontimeout = () => reject(new Error('Timeout'));
+          xhr.send(null);
+        });
+      })()

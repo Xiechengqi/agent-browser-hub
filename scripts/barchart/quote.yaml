@@ -1,0 +1,54 @@
+site: barchart
+name: quote
+description: Barchart stock quote with price, volume, and key metrics
+domain: www.barchart.com
+strategy: COOKIE
+browser: true
+
+args:
+  symbol:
+    type: str
+    required: true
+    description: Stock ticker (e.g. AAPL, MSFT, TSLA)
+
+pipeline:
+  - navigate: https://www.barchart.com/stocks/quotes/${{ args.symbol }}/overview
+  - wait: 4000
+  - evaluate: |
+      (async () => {
+        const sym = '${{ args.symbol }}'.toUpperCase();
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        try {
+          const fields = 'symbol,symbolName,lastPrice,priceChange,percentChange,highPrice,lowPrice,openPrice,previousPrice,volume,averageVolume,marketCap,peRatio,earningsPerShare'.split(',');
+          const url = '/proxies/core-api/v1/quotes/get?symbol=' + encodeURIComponent(sym) + '&fields=' + fields.join(',');
+          const resp = await fetch(url, {
+            credentials: 'include',
+            headers: { 'X-CSRF-TOKEN': csrf }
+          });
+          if (resp.ok) {
+            const d = await resp.json();
+            const r = d?.data?.[0];
+            if (r) {
+              return [{
+                symbol: r.symbol || sym,
+                name: r.symbolName || sym,
+                price: r.lastPrice,
+                change: r.priceChange,
+                changePct: r.percentChange,
+                open: r.openPrice,
+                high: r.highPrice,
+                low: r.lowPrice,
+                prevClose: r.previousPrice,
+                volume: r.volume,
+                avgVolume: r.averageVolume,
+                marketCap: r.marketCap,
+                peRatio: r.peRatio,
+                eps: r.earningsPerShare
+              }];
+            }
+          }
+        } catch(e) {}
+        return [];
+      })()
+
+columns: [symbol, name, price, change, changePct, open, high, low, prevClose, volume, avgVolume, marketCap, peRatio, eps]

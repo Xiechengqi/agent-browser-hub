@@ -1,0 +1,52 @@
+site: boss
+name: chatlist
+strategy: COOKIE
+browser: true
+args:
+  page:
+    type: int
+    required: false
+    description: Page number (default 1)
+  limit:
+    type: int
+    required: false
+    description: Number of results (default 20)
+  job-id:
+    type: str
+    required: false
+    description: Filter by job ID (0=all)
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const page = ${{ args.page }} || 1;
+        const limit = ${{ args.limit }} || 20;
+        const jobId = ${{ args.job-id }} || '0';
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', `https://www.zhipin.com/wapi/zprelation/friend/getBossFriendListV2.json?page=${page}&status=0&jobId=${jobId}`, true);
+          xhr.withCredentials = true;
+          xhr.timeout = 15000;
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.onload = () => {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (data.code !== 0) reject(new Error(data.message || 'API error'));
+              const friends = data.zpData?.friendList || [];
+              resolve(friends.slice(0, limit).map(f => ({
+                name: f.name || '',
+                job: f.jobName || '',
+                last_msg: f.lastMessageInfo?.text || '',
+                last_time: f.lastTime || '',
+                uid: f.encryptUid || '',
+                security_id: f.securityId || ''
+              })));
+            } catch(e) { reject(e); }
+          };
+          xhr.onerror = () => reject(new Error('Network Error'));
+          xhr.ontimeout = () => reject(new Error('Timeout'));
+          xhr.send(null);
+        });
+      })()

@@ -1,0 +1,48 @@
+site: twitter
+name: reply
+description: Reply to a specific tweet
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  url:
+    type: str
+    required: true
+    positional: true
+    description: Tweet URL
+  text:
+    type: str
+    required: true
+    positional: true
+    description: Reply text
+
+pipeline:
+  - navigate:
+      url: ${{ args.url }}
+      settleMs: 5000
+
+  - evaluate: |
+      (async () => {
+        const text = ${{ args.text | json }};
+        const box = document.querySelector('[data-testid="tweetTextarea_0"]');
+        if (box) {
+          box.focus();
+          document.execCommand('insertText', false, text);
+        } else {
+          return [{ status: 'failed', message: 'Could not find reply text area' }];
+        }
+
+        await new Promise(r => setTimeout(r, 1000));
+
+        const btn = document.querySelector('[data-testid="tweetButtonInline"]');
+        if (btn && !btn.disabled) {
+          btn.click();
+          await new Promise(r => setTimeout(r, 3000));
+          return [{ status: 'success', message: 'Reply posted successfully' }];
+        } else {
+          return [{ status: 'failed', message: 'Reply button disabled or not found' }];
+        }
+      })()
+
+columns: [status, message]

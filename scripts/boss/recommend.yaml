@@ -1,0 +1,43 @@
+site: boss
+name: recommend
+strategy: COOKIE
+browser: true
+args:
+  limit:
+    type: int
+    required: false
+    description: Number of results (default 20)
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const limit = ${{ args.limit }} || 20;
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/greetRecSortList', true);
+          xhr.withCredentials = true;
+          xhr.timeout = 15000;
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.onload = () => {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (data.code !== 0) reject(new Error(data.message || 'API error'));
+              const friends = data.zpData?.friendList || [];
+              resolve(friends.slice(0, limit).map(f => ({
+                name: f.name || '',
+                job_name: f.jobName || '',
+                last_time: f.lastTime || '',
+                labels: (f.relationLabelList || []).join(', '),
+                encrypt_uid: f.encryptUid || '',
+                security_id: f.securityId || '',
+                encrypt_job_id: f.encryptJobId || ''
+              })));
+            } catch(e) { reject(e); }
+          };
+          xhr.onerror = () => reject(new Error('Network Error'));
+          xhr.ontimeout = () => reject(new Error('Timeout'));
+          xhr.send(null);
+        });
+      })()
