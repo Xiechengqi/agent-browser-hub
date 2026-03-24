@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useCommands } from '@/lib/hooks/useCommands';
 import { useCommandsStore } from '@/lib/store/commands';
 import { useAuth } from '@/lib/store/auth';
@@ -10,6 +9,8 @@ import CommandSearch from '@/components/command/CommandSearch';
 import CommandList from '@/components/command/CommandList';
 import LogViewer from '@/components/layout/LogViewer';
 import UpgradeDialog from '@/components/layout/UpgradeDialog';
+import VersionDialog from '@/components/layout/VersionDialog';
+import SettingsDialog from '@/components/layout/SettingsDialog';
 
 export default function Page() {
   const { isAuthenticated, logout } = useAuth();
@@ -18,6 +19,8 @@ export default function Page() {
   const setCommands = useCommandsStore((state) => state.setCommands);
   const [showLogs, setShowLogs] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showVersion, setShowVersion] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -38,10 +41,10 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Agent Browser Hub</h1>
           <div className="flex items-center gap-4">
-            <Link href="/about" className="text-sm text-gray-500 hover:text-gray-800">版本信息</Link>
+            <button onClick={() => setShowVersion(true)} className="text-sm text-gray-500 hover:text-gray-800">版本信息</button>
             <button onClick={() => setShowLogs(true)} className="text-sm text-gray-500 hover:text-gray-800">日志</button>
             <button onClick={() => setShowUpgrade(true)} className="text-sm text-orange-500 hover:text-orange-700">强制升级</button>
-            <Link href="/settings" className="text-sm text-gray-500 hover:text-gray-800">设置</Link>
+            <button onClick={() => setShowSettings(true)} className="text-sm text-gray-500 hover:text-gray-800">设置</button>
             <button onClick={logout} className="text-sm text-red-400 hover:text-red-600">退出登录</button>
           </div>
         </div>
@@ -58,6 +61,8 @@ export default function Page() {
       </main>
       <LogViewer open={showLogs} onClose={() => setShowLogs(false)} />
       <UpgradeDialog open={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <VersionDialog open={showVersion} onClose={() => setShowVersion(false)} />
+      <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

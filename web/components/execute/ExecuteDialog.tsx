@@ -8,6 +8,7 @@ import ParamForm from './ParamForm';
 import FormatSelector from './FormatSelector';
 import ResultDisplay from './ResultDisplay';
 import { Button } from '@/components/ui/button';
+import axios from 'axios';
 
 interface Props {
   command: Command;
@@ -18,9 +19,10 @@ interface Props {
 export default function ExecuteDialog({ command, open, onClose }: Props) {
   const [params, setParams] = useState<Record<string, any>>({});
   const [format, setFormat] = useState<'json' | 'yaml' | 'table' | 'csv' | 'md'>('json');
-  const { mutate: execute, data: result, isPending, isSuccess } = useExecute();
+  const { mutate: execute, data: result, isPending, isSuccess, isError, error, reset } = useExecute();
 
   const handleExecute = () => {
+    reset();
     const request: ExecuteRequest = { params, format };
     execute({ site: command.site, name: command.name, request });
   };
@@ -28,7 +30,20 @@ export default function ExecuteDialog({ command, open, onClose }: Props) {
   const handleClose = () => {
     setParams({});
     setFormat('json');
+    reset();
     onClose();
+  };
+
+  const getErrorMessage = () => {
+    if (!isError || !error) return '';
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) return '认证失败，请重新登录';
+      const data = error.response?.data;
+      if (data?.error) return data.error;
+      if (data?.message) return data.message;
+      return error.message || '请求失败';
+    }
+    return String(error);
   };
 
   return (
@@ -43,6 +58,12 @@ export default function ExecuteDialog({ command, open, onClose }: Props) {
           <Button onClick={handleExecute} disabled={isPending} className="w-full">
             {isPending ? '执行中...' : '执行'}
           </Button>
+          {isError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded">
+              <p className="text-red-800 font-semibold">请求失败</p>
+              <p className="text-red-600 text-sm mt-1">{getErrorMessage()}</p>
+            </div>
+          )}
           {isSuccess && result && <ResultDisplay result={result} format={format} />}
         </div>
       </DialogContent>

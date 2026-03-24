@@ -745,9 +745,9 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
     let protected_routes = Router::new()
         .route("/api/password", post(update_password))
         .route("/api/upgrade", post(upgrade))
-        .route("/api/upgrade/{component}", post(upgrade_component))
+        .route("/api/upgrade/:component", post(upgrade_component))
         .route("/api/logs", get(get_logs))
-        .route("/api/execute/{site}/{command}", post(execute_script))
+        .route("/api/execute/:site/:command", post(execute_script))
         .route_layer(middleware::from_fn(auth_middleware));
 
     let app = Router::new()
