@@ -81,6 +81,7 @@ impl LogBuffer {
 #[derive(Clone)]
 pub struct AppState {
     pub password: Arc<Mutex<String>>,
+    pub vnc_url: Arc<Mutex<String>>,
     pub logs: LogBuffer,
 }
 
@@ -269,6 +270,39 @@ async fn get_version() -> Json<ApiResponse<VersionInfo>> {
         commit_message: GIT_COMMIT_MSG.to_string(),
         build_time: BUILD_TIME.to_string(),
     }))
+}
+
+// ============================================================================
+// Handlers - Settings
+// ============================================================================
+
+async fn get_settings(State(state): State<AppState>) -> Json<ApiResponse<serde_json::Value>> {
+    let password = state.password.lock().await.clone();
+    let vnc_url = state.vnc_url.lock().await.clone();
+    Json(ApiResponse::success("ok", serde_json::json!({
+        "password": password,
+        "vnc_url": vnc_url
+    })))
+}
+
+async fn update_settings(State(state): State<AppState>, Json(req): Json<serde_json::Value>) -> Json<ApiResponse<String>> {
+    if let Some(password) = req.get("password").and_then(|v| v.as_str()) {
+        *state.password.lock().await = password.to_string();
+    }
+    if let Some(vnc_url) = req.get("vnc_url").and_then(|v| v.as_str()) {
+        *state.vnc_url.lock().await = vnc_url.to_string();
+    }
+
+    let config = crate::config::Config {
+        password: state.password.lock().await.clone(),
+        vnc_url: state.vnc_url.lock().await.clone(),
+    };
+
+    if let Err(e) = crate::config::save_config(&config) {
+        return Json(ApiResponse::error(format!("Failed to save config: {}", e)));
+    }
+
+    Json(ApiResponse::success("Settings saved", "ok".to_string()))
 }
 
 // ============================================================================
@@ -752,8 +786,10 @@ async fn static_handler(req: Request) -> Response {
 // ============================================================================
 
 pub async fn start(port: u16) -> anyhow::Result<()> {
+    let config = crate::config::load_config();
     let state = AppState {
-        password: Arc::new(Mutex::new(DEFAULT_PASSWORD.to_string())),
+        password: Arc::new(Mutex::new(config.password.clone())),
+        vnc_url: Arc::new(Mutex::new(config.vnc_url.clone())),
         logs: LogBuffer::default(),
     };
 
@@ -768,6 +804,8 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
     // Protected routes (require auth)
     let protected_routes = Router::new()
         .route("/api/password", post(update_password))
+        .route("/api/settings", get(get_settings))
+        .route("/api/settings", post(update_settings))
         .route("/api/upgrade", post(upgrade))
         .route("/api/upgrade/:component", post(upgrade_component))
         .route("/api/logs", get(get_logs))
