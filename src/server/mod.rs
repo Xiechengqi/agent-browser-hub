@@ -586,12 +586,25 @@ async fn execute_script(
         m.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }).unwrap_or_default();
 
-    state.logs.push("DEBUG", format!("Params: {:?}", params)).await;
+    let format_str = req.get("format").and_then(|v| v.as_str()).unwrap_or("json");
+    let output_format = crate::core::OutputFormat::from_str(format_str);
+
+    state.logs.push("DEBUG", format!("Params: {:?}, format: {}", params, format_str)).await;
 
     match executor.execute(&script, params).await {
         Ok(result) => {
             state.logs.push("INFO", format!("Execute OK: {}/{}", site, name)).await;
-            Json(serde_json::json!({"success": true, "data": result}))
+            let formatted = crate::core::output::format_output(&result.result, &output_format)
+                .unwrap_or_else(|_| serde_json::to_string_pretty(&result.result).unwrap_or_default());
+            Json(serde_json::json!({
+                "success": true,
+                "data": {
+                    "execution_id": result.execution_id,
+                    "status": result.status,
+                    "duration_ms": result.duration_ms,
+                    "result": formatted,
+                }
+            }))
         }
         Err(e) => {
             state.logs.push("ERROR", format!("Execute failed {}/{}: {}", site, name, e)).await;
