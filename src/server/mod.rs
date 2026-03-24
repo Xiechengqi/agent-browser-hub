@@ -413,6 +413,119 @@ async fn upgrade() -> Json<ApiResponse<String>> {
     Json(ApiResponse::success("Upgrade complete, restarting...", new_version))
 }
 
+async fn upgrade_component(
+    State(state): State<AppState>,
+    Path(component): Path<String>,
+) -> Json<ApiResponse<String>> {
+    match component.as_str() {
+        "agent-browser-hub" => {
+            state.logs.push("INFO", "Upgrading agent-browser-hub...".into()).await;
+            upgrade().await
+        }
+        "agent-browser" => {
+            state.logs.push("INFO", "Upgrading agent-browser...".into()).await;
+            upgrade_agent_browser(state).await
+        }
+        _ => Json(ApiResponse::error(format!("Unknown component: {}", component))),
+    }
+}
+
+async fn upgrade_agent_browser(state: AppState) -> Json<ApiResponse<String>> {
+    let download_url = "https://github.com/Xiechengqi/agent-browser/releases/download/latest/agent-browser-linux-x64";
+
+    state.logs.push("INFO", format!("Downloading agent-browser from: {}", download_url)).await;
+
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(300))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            state.logs.push("ERROR", format!("HTTP client error: {}", e)).await;
+            return Json(ApiResponse::error(format!("HTTP client error: {}", e)));
+        }
+    };
+
+    let binary_data = match client
+        .get(download_url)
+        .header("User-Agent", "agent-browser-hub")
+        .send()
+        .await
+    {
+        Ok(r) => {
+            if !r.status().is_success() {
+                let msg = format!("Download failed: {}", r.status());
+                state.logs.push("ERROR", msg.clone()).await;
+                return Json(ApiResponse::error(msg));
+            }
+            match r.bytes().await {
+                Ok(b) => b,
+                Err(e) => {
+                    state.logs.push("ERROR", format!("Download error: {}", e)).await;
+                    return Json(ApiResponse::error(format!("Download error: {}", e)));
+                }
+            }
+        }
+        Err(e) => {
+            state.logs.push("ERROR", format!("Request error: {}", e)).await;
+            return Json(ApiResponse::error(format!("Request error: {}", e)));
+        }
+    };
+
+    state.logs.push("INFO", format!("Downloaded {} bytes", binary_data.len())).await;
+
+    // Find agent-browser binary path
+    let ab_path = which_agent_browser();
+    let temp_path = "/tmp/agent-browser-new";
+
+    if let Err(e) = std::fs::write(temp_path, &binary_data) {
+        state.logs.push("ERROR", format!("Write temp file failed: {}", e)).await;
+        return Json(ApiResponse::error(format!("Write failed: {}", e)));
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(temp_path, std::fs::Permissions::from_mode(0o755));
+    }
+
+    // Backup and replace
+    let backup_path = format!("{}.bak", ab_path);
+    if std::path::Path::new(&ab_path).exists() {
+        if let Err(e) = std::fs::copy(&ab_path, &backup_path) {
+            state.logs.push("WARN", format!("Backup failed: {}", e)).await;
+        }
+    }
+
+    if let Err(e) = std::fs::copy(temp_path, &ab_path) {
+        state.logs.push("ERROR", format!("Replace binary failed: {}", e)).await;
+        let _ = std::fs::copy(&backup_path, &ab_path);
+        return Json(ApiResponse::error(format!("Replace failed: {}", e)));
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&ab_path, std::fs::Permissions::from_mode(0o755));
+    }
+
+    let _ = std::fs::remove_file(temp_path);
+    state.logs.push("INFO", "agent-browser upgraded successfully".into()).await;
+    Json(ApiResponse::success("agent-browser upgraded", "ok".into()))
+}
+
+fn which_agent_browser() -> String {
+    if let Ok(output) = std::process::Command::new("which").arg("agent-browser").output() {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() {
+                return path;
+            }
+        }
+    }
+    "/usr/local/bin/agent-browser".to_string()
+}
+
 // ============================================================================
 // Handlers - Scripts
 // ============================================================================
@@ -632,6 +745,7 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
     let protected_routes = Router::new()
         .route("/api/password", post(update_password))
         .route("/api/upgrade", post(upgrade))
+        .route("/api/upgrade/{component}", post(upgrade_component))
         .route("/api/logs", get(get_logs))
         .route("/api/execute/{site}/{command}", post(execute_script))
         .route_layer(middleware::from_fn(auth_middleware));
