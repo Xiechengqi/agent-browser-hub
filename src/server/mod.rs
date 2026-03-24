@@ -490,10 +490,18 @@ async fn upgrade_agent_browser(state: AppState) -> Json<ApiResponse<String>> {
     }
 
     // Backup and replace
+    // NOTE: On Linux, you cannot overwrite a running binary (ETXTBSY).
+    // The fix is to remove the old file first, then copy the new one.
+    // Removing a running binary is safe — the kernel keeps the inode alive
+    // until the process exits.
     let backup_path = format!("{}.bak", ab_path);
     if std::path::Path::new(&ab_path).exists() {
         if let Err(e) = std::fs::copy(&ab_path, &backup_path) {
             state.logs.push("WARN", format!("Backup failed: {}", e)).await;
+        }
+        if let Err(e) = std::fs::remove_file(&ab_path) {
+            state.logs.push("ERROR", format!("Remove old binary failed: {}", e)).await;
+            return Json(ApiResponse::error(format!("Remove old binary failed: {}", e)));
         }
     }
 
