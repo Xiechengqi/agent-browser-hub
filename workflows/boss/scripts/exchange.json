@@ -1,0 +1,31 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "exchange",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "uid": {
+        "type": "str",
+        "required": true,
+        "description": "Encrypted UID of candidate"
+      },
+      "type": {
+        "type": "str",
+        "required": false,
+        "description": "Exchange type (phone or wechat, default phone)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/chat/index"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const encryptUid = ${{ args.uid }};\n  const exchangeType = ${{ args.type }} || 'phone';\n  const typeId = exchangeType === 'wechat' ? 2 : 1;\n  return new Promise((resolve, reject) => {\n    const xhr1 = new XMLHttpRequest();\n    xhr1.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/getBossFriendListV2.json?page=1&status=0&jobId=0', true);\n    xhr1.withCredentials = true;\n    xhr1.timeout = 15000;\n    xhr1.setRequestHeader('Accept', 'application/json');\n    xhr1.onload = () => {\n      try {\n        const data1 = JSON.parse(xhr1.responseText);\n        if (data1.code !== 0) reject(new Error(data1.message || 'API error'));\n        const friends = data1.zpData?.friendList || [];\n        const friend = friends.find(f => f.encryptUid === encryptUid);\n        if (!friend) reject(new Error('Candidate not found'));\n        const params = new URLSearchParams({ type: String(typeId), securityId: friend.securityId || '', uniqueId: String(friend.uid), name: friend.name || '' });\n        const xhr2 = new XMLHttpRequest();\n        xhr2.open('POST', 'https://www.zhipin.com/wapi/zpchat/exchange/request', true);\n        xhr2.withCredentials = true;\n        xhr2.timeout = 15000;\n        xhr2.setRequestHeader('Accept', 'application/json');\n        xhr2.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');\n        xhr2.onload = () => {\n          try {\n            const data2 = JSON.parse(xhr2.responseText);\n            if (data2.code !== 0) reject(new Error(data2.message || 'API error'));\n            const typeLabel = exchangeType === 'wechat' ? '微信' : '手机号';\n            resolve([{ status: '✅ 交换请求已发送', detail: `已向 ${friend.name} 发送${typeLabel}交换请求` }]);\n          } catch(e) { reject(e); }\n        };\n        xhr2.onerror = () => reject(new Error('Network Error'));\n        xhr2.ontimeout = () => reject(new Error('Timeout'));\n        xhr2.send(params.toString());\n      } catch(e) { reject(e); }\n    };\n    xhr1.onerror = () => reject(new Error('Network Error'));\n    xhr1.ontimeout = () => reject(new Error('Timeout'));\n    xhr1.send(null);\n  });\n})()\n"
+      }
+    ]
+  }
+}

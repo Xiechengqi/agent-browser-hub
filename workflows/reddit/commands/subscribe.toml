@@ -1,0 +1,25 @@
+name = "subscribe"
+description = "Subscribe or unsubscribe to a subreddit"
+strategy = "COOKIE"
+
+[[params]]
+name = "subreddit"
+type = "string"
+required = true
+positional = true
+description = "Subreddit name (e.g. python)"
+
+[[params]]
+name = "undo"
+type = "bool"
+required = false
+positional = false
+description = "Unsubscribe instead of subscribe"
+default = false
+
+[execution]
+entry = "script"
+script = "scripts/subscribe.json"
+
+[output]
+columns = ["status", "message"]

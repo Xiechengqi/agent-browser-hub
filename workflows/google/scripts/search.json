@@ -1,0 +1,43 @@
+{
+  "pipeline": {
+    "meta": {
+      "id": "google-search",
+      "name": "Google Search",
+      "description": "Search Google and extract results",
+      "category": "search"
+    },
+    "config": {
+      "domain": "google.com",
+      "strategy": "public",
+      "timeout": 30
+    },
+    "params": [
+      {
+        "name": "keyword",
+        "type": "string",
+        "required": true,
+        "positional": true
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "default": 10
+      }
+    ],
+    "steps": [
+      {
+        "action": "navigate",
+        "url": "https://www.google.com/search?q={{keyword}}&num={{limit}}"
+      },
+      {
+        "action": "wait",
+        "duration": 2
+      },
+      {
+        "action": "evaluate",
+        "script": "(function() {\n  const results = [];\n  const links = document.querySelectorAll('#rso a h3');\n  links.forEach(h3 => {\n    const link = h3.closest('a');\n    if (link && link.href) {\n      results.push({\n        title: h3.textContent,\n        url: link.href\n      });\n    }\n  });\n  return results;\n})()\n",
+        "output": "result"
+      }
+    ]
+  }
+}

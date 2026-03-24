@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://en.wikipedia.org/api/rest_v1/page/summary/${{ args.title | urlencode }}"
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "evaluate": "(() => {\n  const pre = document.querySelector('pre');\n  if (!pre) return null;\n  const data = JSON.parse(pre.textContent);\n  return {\n    title: data.title,\n    description: data.description,\n    extract: data.extract,\n    url: data.content_urls?.desktop?.page || data.content_urls?.mobile?.page || '',\n    thumbnail: data.thumbnail?.source || null,\n    lang: data.lang || 'en'\n  };\n})()"
+    }
+  ]
+}

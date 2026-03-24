@@ -1,0 +1,53 @@
+{
+  "pipeline": {
+    "site": "jimeng",
+    "name": "generate",
+    "description": "即梦AI 文生图 — 输入 prompt 生成图片",
+    "domain": "jimeng.jianying.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "prompt": {
+        "positional": true,
+        "type": "string",
+        "required": true,
+        "description": "图片描述 prompt"
+      },
+      "model": {
+        "type": "string",
+        "default": "high_aes_general_v50",
+        "description": "模型: high_aes_general_v50 (5.0 Lite), high_aes_general_v42 (4.6), high_aes_general_v40 (4.0)"
+      },
+      "wait": {
+        "type": "int",
+        "default": 40,
+        "description": "等待生成完成的秒数"
+      }
+    },
+    "columns": [
+      "status",
+      "prompt",
+      "image_count",
+      "image_urls"
+    ],
+    "pipeline": [
+      {
+        "navigate": "https://jimeng.jianying.com/ai-tool/generate?type=image&workspace=0"
+      },
+      {
+        "wait": 3
+      },
+      {
+        "evaluate": "(async () => {\n  const prompt = '${{ args.prompt }}';\n  const waitSec = ${{ args.wait }};\n  \n  // Step 1: Count existing images before generation\n  const beforeImgs = document.querySelectorAll('img[src*=\"dreamina-sign\"], img[src*=\"tb4s082cfz\"]').length;\n  \n  // Step 2: Clear and set prompt\n  const editors = document.querySelectorAll('[contenteditable=\"true\"]');\n  const editor = editors[0];\n  if (!editor) return [{ status: 'failed', prompt: prompt, image_count: 0, image_urls: 'Editor not found' }];\n  \n  editor.focus();\n  await new Promise(r => setTimeout(r, 200));\n  document.execCommand('selectAll');\n  await new Promise(r => setTimeout(r, 100));\n  document.execCommand('delete');\n  await new Promise(r => setTimeout(r, 200));\n  document.execCommand('insertText', false, prompt);\n  await new Promise(r => setTimeout(r, 500));\n  \n  // Step 3: Click generate\n  const btn = document.querySelector('.lv-btn.lv-btn-primary[class*=\"circle\"]');\n  if (!btn) return [{ status: 'failed', prompt: prompt, image_count: 0, image_urls: 'Generate button not found' }];\n  btn.click();\n  \n  // Step 4: Wait for new images to appear\n  let newImgs = [];\n  for (let i = 0; i < waitSec; i++) {\n    await new Promise(r => setTimeout(r, 1000));\n    const allImgs = document.querySelectorAll('img[src*=\"dreamina-sign\"], img[src*=\"tb4s082cfz\"]');\n    if (allImgs.length > beforeImgs) {\n      // New images appeared — generation complete\n      newImgs = Array.from(allImgs).slice(0, allImgs.length - beforeImgs);\n      break;\n    }\n  }\n  \n  if (newImgs.length === 0) {\n    return [{ status: 'timeout', prompt: prompt, image_count: 0, image_urls: 'Generation may still be in progress' }];\n  }\n  \n  // Step 5: Extract image URLs (use thumbnail URLs which are accessible)\n  const urls = newImgs.map(img => img.src);\n  \n  return [{ \n    status: 'success', \n    prompt: prompt.substring(0, 80), \n    image_count: urls.length, \n    image_urls: urls.join('\\n')\n  }];\n})()\n"
+      },
+      {
+        "map": {
+          "status": "${{ item.status }}",
+          "prompt": "${{ item.prompt }}",
+          "image_count": "${{ item.image_count }}",
+          "image_urls": "${{ item.image_urls }}"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+name = "episodes"
+description = "List recent episodes of an Apple Podcast (use ID from search)"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "Podcast ID (collectionId from search output)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max episodes to show"
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/episodes.json"
+
+[output]
+columns = ["title", "duration", "date"]

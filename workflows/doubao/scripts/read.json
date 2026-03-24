@@ -1,0 +1,20 @@
+{
+  "pipeline": {
+    "site": "doubao",
+    "name": "read",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "navigate": "https://www.doubao.com/chat"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "(() => {\n  const clean = (value) => (value || '').replace(/\\u00a0/g, ' ').replace(/\\n{3,}/g, '\\n\\n').trim();\n  const isVisible = (el) => {\n    if (!(el instanceof HTMLElement)) return false;\n    const style = window.getComputedStyle(el);\n    if (style.display === 'none' || style.visibility === 'hidden') return false;\n    const rect = el.getBoundingClientRect();\n    return rect.width > 0 && rect.height > 0;\n  };\n  const getRole = (root) => {\n    if (root.matches('[data-testid=\"send_message\"], [class*=\"send-message\"]') || root.querySelector('[data-testid=\"send_message\"], [class*=\"send-message\"]')) return 'User';\n    if (root.matches('[data-testid=\"receive_message\"], [data-testid*=\"receive_message\"], [class*=\"receive-message\"]') || root.querySelector('[data-testid=\"receive_message\"], [data-testid*=\"receive_message\"], [class*=\"receive-message\"]')) return 'Assistant';\n    return '';\n  };\n  const extractText = (root) => {\n    const selectors = ['[data-testid=\"message_text_content\"]', '[data-testid=\"message_content\"]', '[data-testid*=\"message_text\"]', '[data-testid*=\"message_content\"]', '[class*=\"message-text\"]', '[class*=\"message-content\"]'];\n    const chunks = [], seen = new Set();\n    for (const selector of selectors) {\n      const nodes = Array.from(root.querySelectorAll(selector)).filter(el => isVisible(el)).map(el => clean(el.innerText || el.textContent || '')).filter(Boolean);\n      for (const nodeText of nodes) {\n        if (seen.has(nodeText)) continue;\n        seen.add(nodeText);\n        chunks.push(nodeText);\n      }\n      if (chunks.length > 0) break;\n    }\n    return chunks.length > 0 ? clean(chunks.join('\\n')) : clean(root.innerText || root.textContent || '');\n  };\n  const messageList = document.querySelector('[data-testid=\"message-list\"]');\n  if (!messageList) return [{ Role: 'System', Text: 'No visible Doubao messages were found.' }];\n  const unionRoots = Array.from(messageList.querySelectorAll('[data-testid=\"union_message\"]')).filter(el => isVisible(el));\n  const blockRoots = Array.from(messageList.querySelectorAll('[data-testid=\"message-block-container\"]')).filter(el => isVisible(el) && !el.closest('[data-testid=\"union_message\"]'));\n  const roots = (unionRoots.length > 0 ? unionRoots : blockRoots).filter((el, index, items) => !items.some((other, otherIndex) => otherIndex !== index && other.contains(el)));\n  const turns = roots.map(el => ({ el, role: getRole(el), text: extractText(el) })).filter(item => (item.role === 'User' || item.role === 'Assistant') && item.text);\n  turns.sort((a, b) => a.el === b.el ? 0 : (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));\n  const deduped = [], seen = new Set();\n  for (const turn of turns) {\n    const key = turn.role + '::' + turn.text;\n    if (seen.has(key)) continue;\n    seen.add(key);\n    deduped.push({ Role: turn.role, Text: turn.text });\n  }\n  return deduped.length > 0 ? deduped : [{ Role: 'System', Text: 'No visible Doubao messages were found.' }];\n})()\n"
+      }
+    ]
+  }
+}

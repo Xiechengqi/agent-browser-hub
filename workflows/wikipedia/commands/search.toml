@@ -1,0 +1,25 @@
+name = "search"
+description = "Search Wikipedia articles"
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = "Search query"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Maximum number of results"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["title", "description", "url"]

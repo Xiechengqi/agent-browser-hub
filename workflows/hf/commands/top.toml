@@ -1,0 +1,10 @@
+name = "top"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/top.json"
+
+[output]
+columns = []

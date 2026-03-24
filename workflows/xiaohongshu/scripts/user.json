@@ -1,0 +1,47 @@
+{
+  "pipeline": {
+    "site": "xiaohongshu",
+    "name": "user",
+    "description": "Get public notes from a Xiaohongshu user profile",
+    "domain": "www.xiaohongshu.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "id": {
+        "type": "str",
+        "required": true,
+        "description": "User id or profile URL"
+      },
+      "limit": {
+        "type": "int",
+        "default": 15,
+        "description": "Number of notes to return"
+      }
+    },
+    "columns": [
+      "id",
+      "title",
+      "type",
+      "likes",
+      "url"
+    ],
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const input = ${{ JSON.stringify(args.id) }};\n  const trimmed = (input || '').trim();\n  const withoutQuery = trimmed.replace(/[?#].*$/, '');\n  const matched = withoutQuery.match(/\\/user\\/profile\\/([a-zA-Z0-9]+)/);\n  if (matched && matched[1]) return matched[1];\n  return withoutQuery.replace(/\\/+$/, '').split('/').pop() || withoutQuery;\n})()\n",
+        "as": "userId"
+      },
+      {
+        "navigate": "https://www.xiaohongshu.com/user/profile/${{ steps.userId }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const safeClone = (value) => {\n    try {\n      return JSON.parse(JSON.stringify(value ?? null));\n    } catch {\n      return null;\n    }\n  };\n\n  const userStore = window.__INITIAL_STATE__?.user || {};\n  const noteGroups = safeClone(userStore.notes?._value || userStore.notes || []);\n  const fallbackUserId = ${{ JSON.stringify(steps.userId) }};\n\n  function flattenNoteGroups(groups) {\n    if (!Array.isArray(groups)) return [];\n    const notes = [];\n    for (const group of groups) {\n      if (!group) continue;\n      if (Array.isArray(group)) {\n        for (const item of group) {\n          if (item) notes.push(item);\n        }\n        continue;\n      }\n      notes.push(group);\n    }\n    return notes;\n  }\n\n  function toCleanString(value) {\n    return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim();\n  }\n\n  function buildNoteUrl(userId, noteId, xsecToken) {\n    const cleanUserId = toCleanString(userId);\n    const cleanNoteId = toCleanString(noteId);\n    if (!cleanUserId || !cleanNoteId) return '';\n    let url = 'https://www.xiaohongshu.com/user/profile/' + cleanUserId + '/' + cleanNoteId;\n    const cleanToken = toCleanString(xsecToken);\n    if (cleanToken) {\n      url += '?xsec_token=' + encodeURIComponent(cleanToken) + '&xsec_source=pc_user';\n    }\n    return url;\n  }\n\n  const notes = flattenNoteGroups(noteGroups);\n  const rows = [];\n  const seen = new Set();\n\n  for (const entry of notes) {\n    const noteCard = entry?.noteCard ?? entry?.note_card ?? entry;\n    if (!noteCard || typeof noteCard !== 'object') continue;\n\n    const noteId = toCleanString(noteCard.noteId ?? noteCard.note_id ?? entry?.noteId ?? entry?.note_id ?? entry?.id);\n    if (!noteId || seen.has(noteId)) continue;\n    seen.add(noteId);\n\n    const userId = toCleanString(noteCard.user?.userId ?? noteCard.user?.user_id ?? fallbackUserId);\n    const xsecToken = toCleanString(entry?.xsecToken ?? entry?.xsec_token ?? noteCard.xsecToken ?? noteCard.xsec_token);\n    const likes = toCleanString(noteCard.interactInfo?.likedCount ?? noteCard.interact_info?.liked_count ?? 0) || '0';\n\n    rows.push({\n      id: noteId,\n      title: toCleanString(noteCard.displayTitle ?? noteCard.display_title ?? noteCard.title),\n      type: toCleanString(noteCard.type),\n      likes,\n      url: buildNoteUrl(userId || fallbackUserId, noteId, xsecToken),\n    });\n  }\n\n  return rows;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

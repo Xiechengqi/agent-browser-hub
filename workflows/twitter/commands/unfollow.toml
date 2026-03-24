@@ -1,0 +1,17 @@
+name = "unfollow"
+description = "Unfollow a Twitter user"
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Twitter screen name (without @)"
+
+[execution]
+entry = "script"
+script = "scripts/unfollow.json"
+
+[output]
+columns = ["status", "message"]

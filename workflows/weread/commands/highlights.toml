@@ -1,0 +1,25 @@
+name = "highlights"
+description = "List your highlights (underlines) in a book"
+strategy = "COOKIE"
+
+[[params]]
+name = "bookId"
+type = "string"
+required = true
+positional = true
+description = "Book ID (from shelf or search results)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/highlights.json"
+
+[output]
+columns = []

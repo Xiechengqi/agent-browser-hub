@@ -1,0 +1,25 @@
+name = "user"
+description = "Get recent posts from an Instagram user"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Instagram username"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of posts"
+default = 12
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["index", "caption", "likes", "comments", "type", "date"]

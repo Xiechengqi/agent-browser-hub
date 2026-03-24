@@ -1,0 +1,25 @@
+name = "search"
+description = "搜索新浪博客文章（通过新浪搜索）"
+strategy = "PUBLIC"
+
+[[params]]
+name = "keyword"
+type = "string"
+required = true
+positional = true
+description = "搜索关键词"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "返回的文章数量"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["rank", "title", "author", "date", "description", "url"]

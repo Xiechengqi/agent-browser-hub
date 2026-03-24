@@ -1,0 +1,18 @@
+name = "frontpage"
+description = "Reddit Frontpage / r/all"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = ""
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/frontpage.json"
+
+[output]
+columns = ["title", "subreddit", "author", "upvotes", "comments", "url"]

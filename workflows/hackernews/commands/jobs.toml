@@ -1,0 +1,10 @@
+name = "jobs"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/jobs.json"
+
+[output]
+columns = []

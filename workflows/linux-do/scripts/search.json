@@ -1,0 +1,49 @@
+{
+  "pipeline": {
+    "site": "linux-do",
+    "name": "search",
+    "description": "搜索 linux.do",
+    "domain": "linux.do",
+    "browser": true,
+    "args": {
+      "query": {
+        "positional": true,
+        "type": "str",
+        "required": true,
+        "description": "Search query"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of results"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://linux.do"
+      },
+      {
+        "evaluate": "(async () => {\n  const keyword = '${{ args.query }}';\n  const res = await fetch('/search.json?q=' + encodeURIComponent(keyword), { credentials: 'include' });\n  if (!res.ok) throw new Error('HTTP ' + res.status + ' - 请先登录 linux.do');\n  let data;\n  try { data = await res.json(); } catch { throw new Error('响应不是有效 JSON - 请先登录 linux.do'); }\n  const topics = data?.topics || [];\n  return topics.slice(0, ${{ args.limit }}).map(t => ({\n    title: t.title,\n    views: t.views,\n    likes: t.like_count,\n    replies: (t.posts_count || 1) - 1,\n  }));\n})()\n"
+      },
+      {
+        "map": {
+          "rank": "${{ index + 1 }}",
+          "title": "${{ item.title }}",
+          "views": "${{ item.views }}",
+          "likes": "${{ item.likes }}",
+          "replies": "${{ item.replies }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "views",
+      "likes",
+      "replies"
+    ]
+  }
+}

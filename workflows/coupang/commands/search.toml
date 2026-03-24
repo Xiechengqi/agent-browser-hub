@@ -1,0 +1,33 @@
+name = "search"
+description = "Search Coupang products with logged-in browser session"
+strategy = "COOKIE"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = "Search keyword"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Search result page number"
+default = 1
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max results (max 50)"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["rank", "title", "price", "unit_price", "rating", "review_count", "rocket", "delivery_type", "delivery_promise", "url"]

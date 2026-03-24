@@ -1,0 +1,25 @@
+{
+  "pipeline": {
+    "site": "douban",
+    "name": "search",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.douban.com/search?q=${{ args.query }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.result').forEach(result => {\n    const titleEl = result.querySelector('.title a');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: titleEl.href\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

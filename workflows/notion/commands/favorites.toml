@@ -1,0 +1,10 @@
+name = "favorites"
+description = ""
+strategy = "UI"
+
+[execution]
+entry = "script"
+script = "scripts/favorites.json"
+
+[output]
+columns = []

@@ -1,0 +1,21 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://xueqiu.com"
+    },
+    {
+      "evaluate": "(async () => {\n  const category = parseInt('${{ args.category }}') || 1;\n  const resp = await fetch(`https://stock.xueqiu.com/v5/stock/portfolio/stock/list.json?size=100&category=${category}&pid=-1`, { credentials: 'include' });\n  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');\n  const d = await resp.json();\n  if (!d.data || !d.data.stocks) throw new Error('获取失败，可能未登录');\n  return d.data.stocks.map(s => ({\n    symbol: s.symbol,\n    name: s.name,\n    price: s.current,\n    change: s.chg,\n    changePercent: s.percent != null ? s.percent.toFixed(2) + '%' : null,\n    volume: s.volume,\n    url: 'https://xueqiu.com/S/' + s.symbol\n  }));\n})()"
+    },
+    {
+      "map": {
+        "symbol": "${{ item.symbol }}",
+        "name": "${{ item.name }}",
+        "price": "${{ item.price }}",
+        "changePercent": "${{ item.changePercent }}"
+      }
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

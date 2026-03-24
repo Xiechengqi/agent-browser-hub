@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCommands } from '@/lib/hooks/useCommands';
+import { useCommands, useWorkflowSources } from '@/lib/hooks/useCommands';
 import { useCommandsStore } from '@/lib/store/commands';
 import { useAuth } from '@/lib/store/auth';
 import { DebugProvider, useDebug } from '@/lib/context/debug';
 import CommandSearch from '@/components/command/CommandSearch';
 import CommandList from '@/components/command/CommandList';
 import CommandOutline from '@/components/command/CommandOutline';
+import WorkflowOverview from '@/components/command/WorkflowOverview';
 import ScrollToTop from '@/components/layout/ScrollToTop';
 import LogViewer from '@/components/layout/LogViewer';
 import UpgradeDialog from '@/components/layout/UpgradeDialog';
@@ -19,6 +20,7 @@ function PageContent() {
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const { data: commands, isLoading } = useCommands();
+  const { data: workflowSources = [] } = useWorkflowSources(isAuthenticated);
   const setCommands = useCommandsStore((state) => state.setCommands);
   const { debugMode, setDebugMode } = useDebug();
   const [showLogs, setShowLogs] = useState(false);
@@ -75,6 +77,7 @@ function PageContent() {
         ) : (
           <>
             <CommandSearch />
+            <WorkflowOverview commands={commands || []} workflowSources={workflowSources} />
             <CommandList />
             <CommandOutline />
           </>

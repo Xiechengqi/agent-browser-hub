@@ -1,0 +1,25 @@
+name = "search"
+description = "Search Twitter/X for tweets"
+strategy = "INTERCEPT"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+description = "Search query"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["id", "author", "text", "likes", "views", "url"]

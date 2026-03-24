@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "bookmarks",
+    "description": "Fetch Twitter/X bookmarks",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of bookmarks"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://x.com",
+          "settleMs": 3000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const limit = parseInt('${{ args.limit }}');\n  const ct0 = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ct0='))?.split('=')[1];\n  if (!ct0) throw new Error('Not logged into x.com');\n\n  const bearer = 'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';\n  const queryId = 'Fy0QMy4q_aZCpkO0PnyLYw';\n  const headers = {\n    'Authorization': 'Bearer ' + decodeURIComponent(bearer),\n    'X-Csrf-Token': ct0,\n    'X-Twitter-Auth-Type': 'OAuth2Session',\n    'X-Twitter-Active-User': 'yes'\n  };\n\n  const variables = { count: Math.min(100, limit), includePromotedContent: false };\n  const features = { longform_notetweets_consumption_enabled: true, view_counts_everywhere_api_enabled: true };\n  const apiUrl = `/i/api/graphql/${queryId}/Bookmarks?variables=${encodeURIComponent(JSON.stringify(variables))}&features=${encodeURIComponent(JSON.stringify(features))}`;\n\n  const resp = await fetch(apiUrl, { headers, credentials: 'include' });\n  if (!resp.ok) throw new Error('HTTP ' + resp.status);\n  const data = await resp.json();\n\n  const instructions = data?.data?.bookmark_timeline_v2?.timeline?.instructions || data?.data?.bookmark_timeline?.timeline?.instructions || [];\n  const results = [];\n  const seen = new Set();\n\n  for (const inst of instructions) {\n    for (const entry of inst.entries || []) {\n      const tw = entry.content?.itemContent?.tweet_results?.result;\n      if (!tw || !tw.rest_id || seen.has(tw.rest_id)) continue;\n      seen.add(tw.rest_id);\n\n      const legacy = tw.legacy || {};\n      const user = tw.core?.user_results?.result;\n      const screenName = user?.legacy?.screen_name || user?.core?.screen_name || 'unknown';\n      const noteText = tw.note_tweet?.note_tweet_results?.result?.text;\n\n      results.push({\n        author: screenName,\n        text: noteText || legacy.full_text || '',\n        likes: legacy.favorite_count || 0,\n        url: `https://x.com/${screenName}/status/${tw.rest_id}`\n      });\n    }\n  }\n\n  return results.slice(0, limit);\n})()\n"
+      }
+    ],
+    "columns": [
+      "author",
+      "text",
+      "likes",
+      "url"
+    ]
+  }
+}

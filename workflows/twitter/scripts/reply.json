@@ -1,0 +1,39 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "reply",
+    "description": "Reply to a specific tweet",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "url": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Tweet URL"
+      },
+      "text": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Reply text"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "${{ args.url }}",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const text = '${{ args.text }}';\n  const box = document.querySelector('[data-testid=\"tweetTextarea_0\"]');\n  if (box) {\n    box.focus();\n    document.execCommand('insertText', false, text);\n  } else {\n    return [{ status: 'failed', message: 'Could not find reply text area' }];\n  }\n\n  await new Promise(r => setTimeout(r, 1000));\n\n  const btn = document.querySelector('[data-testid=\"tweetButtonInline\"]');\n  if (btn && !btn.disabled) {\n    btn.click();\n    await new Promise(r => setTimeout(r, 3000));\n    return [{ status: 'success', message: 'Reply posted successfully' }];\n  } else {\n    return [{ status: 'failed', message: 'Reply button disabled or not found' }];\n  }\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

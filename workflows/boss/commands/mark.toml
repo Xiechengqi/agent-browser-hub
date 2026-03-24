@@ -1,0 +1,31 @@
+name = "mark"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Encrypted UID of candidate"
+
+[[params]]
+name = "label"
+type = "string"
+required = true
+positional = false
+description = "Label name or ID"
+
+[[params]]
+name = "remove"
+type = "bool"
+required = false
+positional = false
+description = "Remove label instead of adding"
+
+[execution]
+entry = "script"
+script = "scripts/mark.json"
+
+[output]
+columns = []

@@ -1,0 +1,10 @@
+name = "notebooks"
+description = "List books that have highlights or notes"
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/notebooks.json"
+
+[output]
+columns = []

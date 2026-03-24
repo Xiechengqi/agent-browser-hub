@@ -1,0 +1,18 @@
+name = "top-sellers"
+description = "Steam top selling games"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of games"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/top-sellers.json"
+
+[output]
+columns = ["rank", "name", "price", "discount", "url"]

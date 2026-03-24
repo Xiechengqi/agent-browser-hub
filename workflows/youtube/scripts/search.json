@@ -1,0 +1,41 @@
+{
+  "pipeline": {
+    "site": "youtube",
+    "name": "search",
+    "description": "Search YouTube videos",
+    "domain": "www.youtube.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "str",
+        "required": true,
+        "description": "Search query"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Max results (max 50)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.youtube.com"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(async () => {\n  const query = '${{ args.query }}';\n  const limit = Math.min(${{ args.limit }}, 50);\n  const cfg = window.ytcfg?.data_ || {};\n  const apiKey = cfg.INNERTUBE_API_KEY;\n  const context = cfg.INNERTUBE_CONTEXT;\n  if (!apiKey || !context) return [];\n  const resp = await fetch('/youtubei/v1/search?key=' + apiKey + '&prettyPrint=false', {\n    method: 'POST',\n    credentials: 'include',\n    headers: {'Content-Type': 'application/json'},\n    body: JSON.stringify({context, query})\n  });\n  if (!resp.ok) return [];\n  const data = await resp.json();\n  const contents = data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];\n  const videos = [];\n  for (const section of contents) {\n    for (const item of (section.itemSectionRenderer?.contents || [])) {\n      if (item.videoRenderer && videos.length < limit) {\n        const v = item.videoRenderer;\n        videos.push({\n          rank: videos.length + 1,\n          title: v.title?.runs?.[0]?.text || '',\n          channel: v.ownerText?.runs?.[0]?.text || '',\n          views: v.viewCountText?.simpleText || v.shortViewCountText?.simpleText || '',\n          duration: v.lengthText?.simpleText || 'LIVE',\n          url: 'https://www.youtube.com/watch?v=' + v.videoId\n        });\n      }\n    }\n  }\n  return videos;\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "channel",
+      "views",
+      "duration",
+      "url"
+    ]
+  }
+}

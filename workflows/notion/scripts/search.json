@@ -1,0 +1,19 @@
+{
+  "pipeline": [
+    {
+      "evaluate": "(() => {\n  const isMac = navigator.platform.toLowerCase().includes('mac');\n  const key = isMac ? 'Meta' : 'Control';\n  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', [key.toLowerCase() + 'Key']: true, bubbles: true }));\n})()"
+    },
+    {
+      "wait": 500
+    },
+    {
+      "evaluate": "((q) => {\n  const input = document.querySelector('input[placeholder*=\"Search\"], input[type=\"text\"]');\n  if (input) {\n    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;\n    setter.call(input, q);\n    input.dispatchEvent(new Event('input', { bubbles: true }));\n  }\n})('${{ args.query }}')"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "evaluate": "(() => {\n  const items = document.querySelectorAll('[role=\"option\"], [class*=\"searchResult\"], [class*=\"quick-find\"] [role=\"button\"]');\n  const results = Array.from(items).slice(0, 20).map((item, i) => ({\n    Index: i + 1,\n    Title: (item.textContent || '').trim().substring(0, 120)\n  }));\n  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));\n  return results.length > 0 ? results : [{ Index: 0, Title: 'No results for \"${{ args.query }}\"' }];\n})()"
+    }
+  ]
+}

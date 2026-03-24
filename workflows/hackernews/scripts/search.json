@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://hn.algolia.com/api/v1/search?query=${{ args.query | urlencode }}"
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "evaluate": "(() => {\n  const pre = document.querySelector('pre');\n  if (pre) {\n    const data = JSON.parse(pre.textContent);\n    return data.hits.map(hit => ({\n      title: hit.title,\n      url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,\n      author: hit.author,\n      points: hit.points\n    }));\n  }\n  return [];\n})()\n"
+    }
+  ]
+}

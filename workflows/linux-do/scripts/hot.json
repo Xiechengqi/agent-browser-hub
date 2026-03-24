@@ -1,0 +1,57 @@
+{
+  "pipeline": {
+    "site": "linux-do",
+    "name": "hot",
+    "description": "linux.do 热门话题",
+    "domain": "linux.do",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of topics"
+      },
+      "period": {
+        "type": "str",
+        "default": "weekly",
+        "description": "Time period",
+        "choices": [
+          "all",
+          "daily",
+          "weekly",
+          "monthly",
+          "yearly"
+        ]
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://linux.do"
+      },
+      {
+        "evaluate": "(async () => {\n  const period = '${{ args.period }}';\n  const res = await fetch('/top.json?period=' + encodeURIComponent(period), { credentials: 'include' });\n  if (!res.ok) throw new Error('HTTP ' + res.status + ' - 请先登录 linux.do');\n  let data;\n  try { data = await res.json(); } catch { throw new Error('响应不是有效 JSON - 请先登录 linux.do'); }\n  const topics = data?.topic_list?.topics || [];\n  const cats = data?.topic_list?.categories || data?.categories || [];\n  const catMap = Object.fromEntries(cats.map(c => [c.id, c.name]));\n  return topics.slice(0, ${{ args.limit }}).map(t => ({\n    title: t.title,\n    replies: (t.posts_count || 1) - 1,\n    views: t.views,\n    likes: t.like_count,\n    category: catMap[t.category_id] || String(t.category_id),\n  }));\n})()\n"
+      },
+      {
+        "map": {
+          "rank": "${{ index + 1 }}",
+          "title": "${{ item.title }}",
+          "replies": "${{ item.replies }}",
+          "views": "${{ item.views }}",
+          "likes": "${{ item.likes }}",
+          "category": "${{ item.category }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "replies",
+      "views",
+      "likes",
+      "category"
+    ]
+  }
+}

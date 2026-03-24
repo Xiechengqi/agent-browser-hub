@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "v2ex",
+    "name": "daily",
+    "strategy": "COOKIE",
+    "browser": true,
+    "pipeline": [
+      {
+        "navigate": "https://www.v2ex.com/?tab=tech"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.cell.item').forEach(item => {\n    const titleEl = item.querySelector('.item_title a');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: 'https://www.v2ex.com' + titleEl.getAttribute('href')\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

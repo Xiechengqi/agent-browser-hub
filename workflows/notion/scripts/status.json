@@ -1,0 +1,14 @@
+{
+  "pipeline": {
+    "site": "notion",
+    "name": "status",
+    "strategy": "UI",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  return [{ Status: 'Connected', Url: window.location.href, Title: document.title }];\n})()\n"
+      }
+    ]
+  }
+}

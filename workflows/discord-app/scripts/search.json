@@ -1,0 +1,43 @@
+{
+  "pipeline": {
+    "site": "discord-app",
+    "name": "search",
+    "description": "Search messages in the current Discord server/channel",
+    "domain": "localhost",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Search query"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(async () => {\n  const q = '${{ args.query }}';\n  const input = document.querySelector('[aria-label*=\"Search\"], [class*=\"searchBar\"] input, [placeholder*=\"Search\"]');\n  if (!input) throw new Error('Search input not found');\n  input.focus();\n  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;\n  setter.call(input, q);\n  input.dispatchEvent(new Event('input', { bubbles: true }));\n})()\n"
+      },
+      {
+        "wait": 500
+      },
+      {
+        "evaluate": "(() => {\n  const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true });\n  document.activeElement.dispatchEvent(enterEvent);\n})()\n"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  const resultNodes = document.querySelectorAll('[class*=\"searchResult_\"], [id*=\"search-result\"]');\n  resultNodes.forEach((node, i) => {\n    const author = node.querySelector('[class*=\"username\"]')?.textContent?.trim() || '—';\n    const content = node.querySelector('[id^=\"message-content-\"], [class*=\"messageContent\"]')?.textContent?.trim() || node.textContent?.trim();\n    items.push({\n      Index: i + 1,\n      Author: author,\n      Message: (content || '').substring(0, 200),\n    });\n  });\n  return items.length > 0 ? items : [{ Index: 0, Author: 'System', Message: 'No results for \"' + '${{ args.query }}' + '\"' }];\n})()\n"
+      },
+      {
+        "evaluate": "(() => {\n  const escEvent = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true });\n  document.dispatchEvent(escEvent);\n})()\n"
+      }
+    ],
+    "columns": [
+      "Index",
+      "Author",
+      "Message"
+    ]
+  }
+}

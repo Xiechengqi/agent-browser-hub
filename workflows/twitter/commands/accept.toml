@@ -1,0 +1,25 @@
+name = "accept"
+description = "Auto-accept DM requests containing specific keywords"
+strategy = "COOKIE"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+description = "Keywords to match (comma-separated)"
+
+[[params]]
+name = "max"
+type = "int"
+required = false
+positional = false
+description = "Maximum requests to accept"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/accept.json"
+
+[output]
+columns = ["index", "status", "user", "message"]

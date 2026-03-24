@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "site": "facebook",
+    "name": "groups",
+    "description": "List your Facebook groups",
+    "domain": "www.facebook.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of groups"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.facebook.com/groups/feed/",
+          "settleMs": 3000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  const links = Array.from(document.querySelectorAll('a'))\n    .filter(a => {\n      const href = a.href || '';\n      return href.includes('/groups/') &&\n        !href.includes('/feed') &&\n        !href.includes('/discover') &&\n        !href.includes('/joins') &&\n        !href.includes('category=create') &&\n        a.textContent.trim().length > 2;\n    });\n\n  // Deduplicate by href\n  const seen = new Set();\n  const groups = [];\n  for (const a of links) {\n    const href = a.href.split('?')[0];\n    if (seen.has(href)) continue;\n    seen.add(href);\n    const raw = a.textContent.trim().replace(/\\s+/g, ' ');\n    // Split name from \"上次发帖\" info\n    const parts = raw.split(/上次发帖|Last post/);\n    groups.push({\n      name: (parts[0] || '').trim().substring(0, 60),\n      last_post: parts[1] ? parts[1].replace(/^[：:]/, '').trim() : '-',\n      url: href,\n    });\n  }\n  return groups.slice(0, limit).map((g, i) => ({ index: i + 1, ...g }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "name",
+      "last_post",
+      "url"
+    ]
+  }
+}

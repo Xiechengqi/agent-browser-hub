@@ -1,0 +1,24 @@
+name = "ask"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = false
+description = "Prompt to send"
+
+[[params]]
+name = "timeout"
+type = "int"
+required = false
+positional = false
+description = "Max seconds to wait (default 60)"
+
+[execution]
+entry = "script"
+script = "scripts/ask.json"
+
+[output]
+columns = []

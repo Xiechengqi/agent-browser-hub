@@ -1,0 +1,25 @@
+name = "search"
+description = "搜索雪球股票（代码或名称）"
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+description = "搜索关键词，如 茅台、AAPL、腾讯"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "返回数量，默认 10"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["symbol", "name", "exchange", "price", "changePercent"]

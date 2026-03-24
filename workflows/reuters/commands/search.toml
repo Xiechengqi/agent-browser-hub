@@ -1,0 +1,25 @@
+name = "search"
+description = "Reuters news search"
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = "Search query"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results (max 40)"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["rank", "title", "date", "section", "url"]

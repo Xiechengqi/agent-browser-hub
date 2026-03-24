@@ -1,0 +1,31 @@
+{
+  "pipeline": {
+    "site": "tiktok",
+    "name": "friends",
+    "description": "Get TikTok friend suggestions",
+    "domain": "www.tiktok.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of suggestions"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.tiktok.com/friends",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  const links = Array.from(document.querySelectorAll('a[href*=\"/@\"]'))\n    .filter(function(a) {\n      const text = a.textContent.trim();\n      return text.length > 1 && text.length < 80 &&\n        !text.includes('Profile') && !text.includes('More') && !text.includes('Upload');\n    });\n\n  const seen = {};\n  const results = [];\n  for (const a of links) {\n    const match = a.href.match(/@([^/]+)/);\n    const username = match ? match[1] : '';\n    if (!username || seen[username]) continue;\n    seen[username] = true;\n    const raw = a.textContent.trim();\n    const hasFollow = raw.includes('Follow');\n    const name = raw.replace('Follow', '').replace(username, '').replace('@', '').trim();\n    results.push({\n      index: results.length + 1,\n      username: username,\n      name: name || username,\n    });\n    if (results.length >= limit) break;\n  }\n  return results;\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "username",
+      "name"
+    ]
+  }
+}

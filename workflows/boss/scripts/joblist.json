@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://www.zhipin.com/web/chat/index"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "evaluate": "(() => {\n  return new Promise((resolve, reject) => {\n    const xhr = new XMLHttpRequest();\n    xhr.open('GET', 'https://www.zhipin.com/wapi/zpjob/job/chatted/jobList', true);\n    xhr.withCredentials = true;\n    xhr.timeout = 15000;\n    xhr.setRequestHeader('Accept', 'application/json');\n    xhr.onload = () => {\n      try {\n        const data = JSON.parse(xhr.responseText);\n        if (data.code !== 0) reject(new Error(data.message || 'API error'));\n        const jobs = data.zpData || [];\n        resolve(jobs.map(j => ({\n          job_name: j.jobName || '',\n          salary: j.salaryDesc || '',\n          city: j.address || '',\n          status: j.jobOnlineStatus === 1 ? '在线' : '已关闭',\n          encrypt_job_id: j.encryptJobId || ''\n        })));\n      } catch (e) {\n        reject(e);\n      }\n    };\n    xhr.onerror = () => reject(new Error('Network Error'));\n    xhr.ontimeout = () => reject(new Error('Timeout'));\n    xhr.send(null);\n  });\n})()"
+    }
+  ]
+}

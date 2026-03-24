@@ -1,0 +1,26 @@
+name = "notifications"
+description = "小红书通知 (mentions/likes/connections)"
+strategy = "INTERCEPT"
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "Notification type: mentions, likes, or connections"
+default = "mentions"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of notifications to return"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/notifications.json"
+
+[output]
+columns = ["rank", "user", "action", "content", "note", "time"]

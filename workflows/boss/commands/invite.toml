@@ -1,0 +1,38 @@
+name = "invite"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Encrypted UID of candidate"
+
+[[params]]
+name = "time"
+type = "string"
+required = true
+positional = false
+description = "Interview time (e.g. 2025-04-01 14:00)"
+
+[[params]]
+name = "address"
+type = "string"
+required = false
+positional = false
+description = "Interview address"
+
+[[params]]
+name = "contact"
+type = "string"
+required = false
+positional = false
+description = "Contact person name"
+
+[execution]
+entry = "script"
+script = "scripts/invite.json"
+
+[output]
+columns = []

@@ -1,0 +1,26 @@
+name = "hot"
+description = "Reddit 热门帖子"
+strategy = "PUBLIC"
+
+[[params]]
+name = "subreddit"
+type = "string"
+required = false
+positional = false
+description = "Subreddit name (e.g. programming). Empty for frontpage"
+default = ""
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of posts"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/hot.json"
+
+[output]
+columns = ["rank", "title", "subreddit", "score", "comments"]

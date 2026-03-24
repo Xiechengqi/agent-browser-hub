@@ -1,0 +1,15 @@
+{
+  "pipeline": [
+    {
+      "fetch": {
+        "url": "https://rss.marketingtools.apple.com/api/v2/${{ args.country | urlencode }}/podcasts/top/${{ args.limit }}/podcasts.json"
+      }
+    },
+    {
+      "evaluate": "(() => {\n  const data = ${{ data | json }};\n  const results = data?.feed?.results || [];\n  return results.map((p, i) => ({\n    rank: i + 1,\n    title: p.name,\n    author: p.artistName,\n    id: p.id\n  }));\n})()"
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

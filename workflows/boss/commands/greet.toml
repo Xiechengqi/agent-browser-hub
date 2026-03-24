@@ -1,0 +1,38 @@
+name = "greet"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Encrypted UID of candidate"
+
+[[params]]
+name = "security-id"
+type = "string"
+required = true
+positional = false
+description = "Security ID of candidate"
+
+[[params]]
+name = "job-id"
+type = "string"
+required = true
+positional = false
+description = "Encrypted job ID"
+
+[[params]]
+name = "text"
+type = "string"
+required = false
+positional = false
+description = "Custom greeting message"
+
+[execution]
+entry = "script"
+script = "scripts/greet.json"
+
+[output]
+columns = []

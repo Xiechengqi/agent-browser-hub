@@ -1,0 +1,33 @@
+name = "generate"
+description = "即梦AI 文生图 — 输入 prompt 生成图片"
+strategy = "COOKIE"
+
+[[params]]
+name = "prompt"
+type = "string"
+required = true
+positional = true
+description = "图片描述 prompt"
+
+[[params]]
+name = "model"
+type = "string"
+required = false
+positional = false
+description = "模型: high_aes_general_v50 (5.0 Lite), high_aes_general_v42 (4.6), high_aes_general_v40 (4.0)"
+default = "high_aes_general_v50"
+
+[[params]]
+name = "wait"
+type = "int"
+required = false
+positional = false
+description = "等待生成完成的秒数"
+default = 40
+
+[execution]
+entry = "script"
+script = "scripts/generate.json"
+
+[output]
+columns = ["status", "prompt", "image_count", "image_urls"]

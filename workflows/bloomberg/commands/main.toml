@@ -1,0 +1,18 @@
+name = "main"
+description = ""
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of feed items to return (max 20)"
+default = 1
+
+[execution]
+entry = "script"
+script = "scripts/main.json"
+
+[output]
+columns = ["title", "summary", "link", "mediaLinks"]

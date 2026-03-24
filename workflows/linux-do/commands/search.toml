@@ -1,0 +1,25 @@
+name = "search"
+description = "搜索 linux.do"
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+description = "Search query"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["rank", "title", "views", "likes", "replies"]

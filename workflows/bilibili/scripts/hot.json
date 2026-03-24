@@ -1,0 +1,42 @@
+{
+  "pipeline": {
+    "site": "bilibili",
+    "name": "hot",
+    "description": "B站热门视频",
+    "domain": "www.bilibili.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of videos"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.bilibili.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const res = await fetch('https://api.bilibili.com/x/web-interface/popular?ps=${{ args.limit }}&pn=1', {\n    credentials: 'include'\n  });\n  const data = await res.json();\n  return (data?.data?.list || []).map((item) => ({\n    title: item.title,\n    author: item.owner?.name,\n    play: item.stat?.view,\n    danmaku: item.stat?.danmaku,\n  }));\n})()\n"
+      },
+      {
+        "map": {
+          "rank": "${{ index + 1 }}",
+          "title": "${{ item.title }}",
+          "author": "${{ item.author }}",
+          "play": "${{ item.play }}",
+          "danmaku": "${{ item.danmaku }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "author",
+      "play",
+      "danmaku"
+    ]
+  }
+}

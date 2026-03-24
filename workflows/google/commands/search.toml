@@ -1,0 +1,25 @@
+name = "search"
+description = "Search Google and extract results"
+strategy = "public"
+
+[[params]]
+name = "keyword"
+type = "string"
+required = true
+positional = true
+description = ""
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = ""
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = []

@@ -1,0 +1,10 @@
+name = "members"
+description = "List online members in the current Discord channel"
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/members.json"
+
+[output]
+columns = ["Index", "Name", "Status"]

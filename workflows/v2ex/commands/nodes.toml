@@ -1,0 +1,18 @@
+name = "nodes"
+description = "V2EX 所有节点列表"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of nodes"
+default = 30
+
+[execution]
+entry = "script"
+script = "scripts/nodes.json"
+
+[output]
+columns = ["rank", "name", "title", "topics", "stars"]

@@ -1,0 +1,26 @@
+name = "hot"
+description = "linux.do 热门话题"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of topics"
+default = 20
+
+[[params]]
+name = "period"
+type = "string"
+required = false
+positional = false
+description = "Time period"
+default = "weekly"
+
+[execution]
+entry = "script"
+script = "scripts/hot.json"
+
+[output]
+columns = ["rank", "title", "replies", "views", "likes", "category"]

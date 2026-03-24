@@ -1,0 +1,41 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "invite",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "uid": {
+        "type": "str",
+        "required": true,
+        "description": "Encrypted UID of candidate"
+      },
+      "time": {
+        "type": "str",
+        "required": true,
+        "description": "Interview time (e.g. 2025-04-01 14:00)"
+      },
+      "address": {
+        "type": "str",
+        "required": false,
+        "description": "Interview address"
+      },
+      "contact": {
+        "type": "str",
+        "required": false,
+        "description": "Contact person name"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/chat/index"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const encryptUid = ${{ args.uid }};\n  const timeStr = ${{ args.time }};\n  const address = ${{ args.address }} || '';\n  const contact = ${{ args.contact }} || '';\n  const interviewTime = new Date(timeStr).getTime();\n  if (isNaN(interviewTime)) throw new Error('Invalid time format: ' + timeStr);\n  return new Promise((resolve, reject) => {\n    const xhr1 = new XMLHttpRequest();\n    xhr1.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/getBossFriendListV2.json?page=1&status=0&jobId=0', true);\n    xhr1.withCredentials = true;\n    xhr1.timeout = 15000;\n    xhr1.setRequestHeader('Accept', 'application/json');\n    xhr1.onload = () => {\n      try {\n        const data1 = JSON.parse(xhr1.responseText);\n        if (data1.code !== 0) reject(new Error(data1.message));\n        const friend = data1.zpData?.friendList?.find(f => f.encryptUid === encryptUid);\n        if (!friend) reject(new Error('Candidate not found'));\n        const params = new URLSearchParams({ uid: String(friend.uid), securityId: friend.securityId || '', encryptJobId: friend.encryptJobId || '', interviewTime: String(interviewTime), contactId: '', contactName: contact, contactPhone: '', address: address, interviewType: '1' });\n        const xhr2 = new XMLHttpRequest();\n        xhr2.open('POST', 'https://www.zhipin.com/wapi/zpinterview/boss/interview/invite.json', true);\n        xhr2.withCredentials = true;\n        xhr2.timeout = 15000;\n        xhr2.setRequestHeader('Accept', 'application/json');\n        xhr2.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');\n        xhr2.onload = () => {\n          try {\n            const data2 = JSON.parse(xhr2.responseText);\n            if (data2.code !== 0) reject(new Error(data2.message));\n            resolve([{ status: '✅ 面试邀请已发送', detail: `已向 ${friend.name} 发送面试邀请\\n时间: ${timeStr}\\n地点: ${address}\\n联系人: ${contact}` }]);\n          } catch(e) { reject(e); }\n        };\n        xhr2.onerror = () => reject(new Error('Network Error'));\n        xhr2.send(params.toString());\n      } catch(e) { reject(e); }\n    };\n    xhr1.onerror = () => reject(new Error('Network Error'));\n    xhr1.send(null);\n  });\n})()\n"
+      }
+    ]
+  }
+}

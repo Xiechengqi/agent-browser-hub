@@ -1,0 +1,33 @@
+name = "ask"
+description = "Send a message to Grok and get response"
+strategy = "COOKIE"
+
+[[params]]
+name = "prompt"
+type = "string"
+required = true
+positional = false
+description = "Prompt to send to Grok"
+
+[[params]]
+name = "timeout"
+type = "int"
+required = false
+positional = false
+description = "Max seconds to wait for response"
+default = 120
+
+[[params]]
+name = "new"
+type = "bool"
+required = false
+positional = false
+description = "Start a new chat before sending"
+default = false
+
+[execution]
+entry = "script"
+script = "scripts/ask.json"
+
+[output]
+columns = ["response"]

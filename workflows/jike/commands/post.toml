@@ -1,0 +1,17 @@
+name = "post"
+description = "即刻帖子详情及评论"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "Post ID (from post URL)"
+
+[execution]
+entry = "script"
+script = "scripts/post.json"
+
+[output]
+columns = ["type", "author", "content", "likes", "time"]

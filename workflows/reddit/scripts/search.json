@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://www.reddit.com"
+    },
+    {
+      "evaluate": "(async () => {\n  const q = encodeURIComponent('${{ args.query }}');\n  const sub = '${{ args.subreddit }}';\n  const sort = '${{ args.sort }}';\n  const time = '${{ args.time }}';\n  const limit = ${{ args.limit }};\n  const basePath = sub ? '/r/' + sub + '/search.json' : '/search.json';\n  const params = 'q=' + q + '&sort=' + sort + '&t=' + time + '&limit=' + limit + '&restrict_sr=' + (sub ? 'on' : 'off') + '&raw_json=1';\n  const res = await fetch(basePath + '?' + params, { credentials: 'include' });\n  const d = await res.json();\n  return (d?.data?.children || []).map(c => ({\n    title: c.data.title,\n    subreddit: c.data.subreddit_name_prefixed,\n    author: c.data.author,\n    score: c.data.score,\n    comments: c.data.num_comments,\n    url: 'https://www.reddit.com' + c.data.permalink\n  }));\n})()"
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

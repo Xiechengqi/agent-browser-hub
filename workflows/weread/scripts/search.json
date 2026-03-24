@@ -1,0 +1,25 @@
+{
+  "pipeline": {
+    "site": "weread",
+    "name": "search",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://weread.qq.com/web/search/global?keyword=${{ args.query }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.wr_bookListItem').forEach(item => {\n    const titleEl = item.querySelector('.wr_bookListItem_title');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim()\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

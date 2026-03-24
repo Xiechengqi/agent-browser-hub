@@ -1,0 +1,26 @@
+name = "watchlist"
+description = "获取雪球自选股列表"
+strategy = "PUBLIC"
+
+[[params]]
+name = "category"
+type = "string"
+required = false
+positional = false
+description = "分类：1=自选(默认) 2=持仓 3=关注"
+default = "1"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "默认 100"
+default = 100
+
+[execution]
+entry = "script"
+script = "scripts/watchlist.json"
+
+[output]
+columns = ["symbol", "name", "price", "changePercent"]

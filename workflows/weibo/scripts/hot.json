@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "weibo",
+    "name": "hot",
+    "strategy": "COOKIE",
+    "browser": true,
+    "pipeline": [
+      {
+        "navigate": "https://weibo.com/"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.card-wrap').forEach(card => {\n    const titleEl = card.querySelector('.txt');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim()\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "pipeline": {
+    "site": "jike",
+    "name": "search",
+    "description": "搜索即刻帖子",
+    "domain": "web.okjike.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Search query"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of results"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://web.okjike.com/search?q=${{ args.query | urlencode }}"
+      },
+      {
+        "evaluate": "(() => {\n  function getPostData(element) {\n    for (const key of Object.keys(element)) {\n      if (key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')) {\n        let fiber = element[key];\n        for (let i = 0; i < 10 && fiber; i++) {\n          const props = fiber.memoizedProps || fiber.pendingProps;\n          if (props && props.data && props.data.id) return props.data;\n          fiber = fiber.return;\n        }\n      }\n    }\n    return null;\n  }\n  const results = [];\n  const seen = new Set();\n  const elements = document.querySelectorAll('[class*=\"_post_\"], [class*=\"_postItem_\"]');\n  for (const el of elements) {\n    const data = getPostData(el);\n    if (!data || !data.id || seen.has(data.id)) continue;\n    seen.add(data.id);\n    const author = data.user?.screenName || data.target?.user?.screenName || '';\n    const content = data.content || data.target?.content || '';\n    if (!author && !content) continue;\n    results.push({\n      author,\n      content: content.replace(/\\n/g, ' ').slice(0, 120),\n      likes: data.likeCount || 0,\n      comments: data.commentCount || 0,\n      time: data.actionTime || data.createdAt || '',\n      url: 'https://web.okjike.com/originalPost/' + data.id,\n    });\n  }\n  return results;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "author",
+      "content",
+      "likes",
+      "comments",
+      "time",
+      "url"
+    ]
+  }
+}

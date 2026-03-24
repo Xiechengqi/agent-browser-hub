@@ -1,0 +1,41 @@
+name = "news"
+description = "Get Google News headlines via RSS feed"
+strategy = "PUBLIC"
+
+[[params]]
+name = "keyword"
+type = "string"
+required = false
+positional = true
+description = "Search query (omit for top stories)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 10
+
+[[params]]
+name = "lang"
+type = "string"
+required = false
+positional = false
+description = "Language short code (e.g. en, zh)"
+default = "en"
+
+[[params]]
+name = "region"
+type = "string"
+required = false
+positional = false
+description = "Region code (e.g. US, CN)"
+default = "US"
+
+[execution]
+entry = "script"
+script = "scripts/news.json"
+
+[output]
+columns = ["title", "source", "date", "url"]

@@ -1,0 +1,17 @@
+{
+  "pipeline": [
+    {
+      "fetch": {
+        "url": "https://hacker-news.firebaseio.com/v0/user/${{ args.username | urlencode }}.json"
+      }
+    },
+    {
+      "map": {
+        "username": "${{ item.id }}",
+        "karma": "${{ item.karma }}",
+        "created": "${{ item.created }}",
+        "about": "${{ item.about }}"
+      }
+    }
+  ]
+}

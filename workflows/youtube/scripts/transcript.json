@@ -1,0 +1,47 @@
+{
+  "pipeline": {
+    "site": "youtube",
+    "name": "transcript",
+    "description": "Get YouTube video transcript/subtitles",
+    "domain": "www.youtube.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "url": {
+        "type": "str",
+        "required": true,
+        "description": "YouTube video URL or video ID"
+      },
+      "lang": {
+        "type": "str",
+        "required": false,
+        "description": "Language code (e.g. en, zh-Hans). Omit to auto-select"
+      },
+      "mode": {
+        "type": "str",
+        "default": "raw",
+        "description": "Output mode: raw (every segment)"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const input = '${{ args.url }}';\n  let videoId = input;\n  if (input.startsWith('http')) {\n    try {\n      const parsed = new URL(input);\n      if (parsed.searchParams.has('v')) videoId = parsed.searchParams.get('v');\n      else if (parsed.hostname === 'youtu.be') videoId = parsed.pathname.slice(1).split('/')[0];\n      else {\n        const pathMatch = parsed.pathname.match(/^\\/(shorts|embed|live|v)\\/([^/?]+)/);\n        if (pathMatch) videoId = pathMatch[2];\n      }\n    } catch {}\n  }\n  return videoId;\n})()\n"
+      },
+      {
+        "navigate": "https://www.youtube.com/watch?v=${{ pipeline[0] }}"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  const videoId = '${{ pipeline[0] }}';\n  const lang = '${{ args.lang }}' || '';\n  const cfg = window.ytcfg?.data_ || {};\n  const apiKey = cfg.INNERTUBE_API_KEY;\n  if (!apiKey) throw new Error('INNERTUBE_API_KEY not found');\n  const resp = await fetch('/youtubei/v1/player?key=' + apiKey + '&prettyPrint=false', {\n    method: 'POST',\n    credentials: 'include',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      context: { client: { clientName: 'ANDROID', clientVersion: '20.10.38' } },\n      videoId\n    })\n  });\n  if (!resp.ok) throw new Error('InnerTube player API returned HTTP ' + resp.status);\n  const data = await resp.json();\n  const renderer = data.captions?.playerCaptionsTracklistRenderer;\n  if (!renderer?.captionTracks?.length) throw new Error('No captions available');\n  const tracks = renderer.captionTracks;\n  let track = null;\n  if (lang) {\n    track = tracks.find(t => t.languageCode === lang) || tracks.find(t => t.languageCode.startsWith(lang));\n  }\n  if (!track) track = tracks.find(t => t.kind !== 'asr') || tracks[0];\n  const captionResp = await fetch(track.baseUrl);\n  const xml = await captionResp.text();\n  if (!xml?.length) throw new Error('Caption URL returned empty response');\n  function getAttr(tag, name) {\n    const needle = name + '=\"';\n    const idx = tag.indexOf(needle);\n    if (idx === -1) return '';\n    const valStart = idx + needle.length;\n    const valEnd = tag.indexOf('\"', valStart);\n    return valEnd === -1 ? '' : tag.substring(valStart, valEnd);\n  }\n  function decodeEntities(s) {\n    return s.replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '\"').replaceAll('&#39;', \"'\");\n  }\n  const isFormat3 = xml.includes('<p t=\"');\n  const marker = isFormat3 ? '<p ' : '<text ';\n  const endMarker = isFormat3 ? '</p>' : '</text>';\n  const results = [];\n  let pos = 0;\n  while (true) {\n    const tagStart = xml.indexOf(marker, pos);\n    if (tagStart === -1) break;\n    let contentStart = xml.indexOf('>', tagStart);\n    if (contentStart === -1) break;\n    contentStart += 1;\n    const tagEnd = xml.indexOf(endMarker, contentStart);\n    if (tagEnd === -1) break;\n    const attrStr = xml.substring(tagStart + marker.length, contentStart - 1);\n    const content = xml.substring(contentStart, tagEnd);\n    let startSec, durSec;\n    if (isFormat3) {\n      startSec = (parseFloat(getAttr(attrStr, 't')) || 0) / 1000;\n      durSec = (parseFloat(getAttr(attrStr, 'd')) || 0) / 1000;\n    } else {\n      startSec = parseFloat(getAttr(attrStr, 'start')) || 0;\n      durSec = parseFloat(getAttr(attrStr, 'dur')) || 0;\n    }\n    const text = decodeEntities(content.replace(/<[^>]+>/g, '')).split('\\\\n').join(' ').trim();\n    if (text) results.push({ start: startSec, end: startSec + durSec, text });\n    pos = tagEnd + endMarker.length;\n  }\n  return results.map((seg, i) => ({\n    index: i + 1,\n    start: Number(seg.start).toFixed(2) + 's',\n    end: Number(seg.end).toFixed(2) + 's',\n    text: seg.text\n  }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "start",
+      "end",
+      "text"
+    ]
+  }
+}

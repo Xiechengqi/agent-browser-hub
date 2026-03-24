@@ -1,0 +1,54 @@
+{
+  "pipeline": {
+    "site": "jike",
+    "name": "repost",
+    "description": "转发即刻帖子",
+    "domain": "web.okjike.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "帖子 ID"
+      },
+      "text": {
+        "type": "string",
+        "required": false,
+        "positional": true,
+        "description": "转发附言（可选）"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://web.okjike.com/originalPost/${{ args.id }}"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const actions = document.querySelector('[class*=\"_actions_\"]');\n    if (!actions) return { ok: false, message: '未找到操作栏' };\n    const children = Array.from(actions.children).filter(c => c.offsetHeight > 0);\n    if (!children[2]) return { ok: false, message: '未找到转发按钮' };\n    children[2].click();\n    return { ok: true };\n  } catch (e) {\n    return { ok: false, message: e.toString() };\n  }\n})()\n"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === '转发动态');\n    if (!btn) return { ok: false, message: '未找到\"转发动态\"菜单项' };\n    btn.click();\n    return { ok: true };\n  } catch (e) {\n    return { ok: false, message: e.toString() };\n  }\n})()\n"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const textToInsert = '${{ args.text }}';\n    if (!textToInsert) return { ok: true };\n    const editor = document.querySelector('[contenteditable=\"true\"]');\n    if (!editor) return { ok: false, message: '未找到附言输入框' };\n    editor.focus();\n    const dt = new DataTransfer();\n    dt.setData('text/plain', textToInsert);\n    editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));\n    await new Promise(r => setTimeout(r, 500));\n    return { ok: true };\n  } catch(e) {\n    return { ok: false, message: '附言写入失败: ' + e.toString() };\n  }\n})()\n"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    await new Promise(r => setTimeout(r, 500));\n    const btn = Array.from(document.querySelectorAll('button')).find(b => {\n      const text = b.textContent?.trim() || '';\n      return (text === '发送' || text === '发布') && !b.disabled;\n    });\n    if (!btn) return { ok: false, message: '未找到发送按钮' };\n    btn.click();\n    return { ok: true, message: '转发成功' };\n  } catch (e) {\n    return { ok: false, message: e.toString() };\n  }\n})()\n"
+      },
+      {
+        "wait": 3000
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

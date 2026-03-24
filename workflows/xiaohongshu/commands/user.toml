@@ -1,0 +1,25 @@
+name = "user"
+description = "Get public notes from a Xiaohongshu user profile"
+strategy = "COOKIE"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = false
+description = "User id or profile URL"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of notes to return"
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["id", "title", "type", "likes", "url"]

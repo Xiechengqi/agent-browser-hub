@@ -1,0 +1,52 @@
+{
+  "pipeline": {
+    "site": "barchart",
+    "name": "greeks",
+    "description": "Barchart options greeks overview (IV, delta, gamma, theta, vega)",
+    "domain": "www.barchart.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "symbol": {
+        "type": "str",
+        "required": true,
+        "description": "Stock ticker (e.g. AAPL)"
+      },
+      "expiration": {
+        "type": "str",
+        "required": false,
+        "description": "Expiration date (YYYY-MM-DD). Defaults to nearest"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of near-the-money strikes per type"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.barchart.com/stocks/quotes/${{ args.symbol }}/options"
+      },
+      {
+        "wait": 4000
+      },
+      {
+        "evaluate": "(async () => {\n  const sym = '${{ args.symbol }}'.toUpperCase();\n  const expDate = '${{ args.expiration }}' || '';\n  const limit = ${{ args.limit }};\n  const csrf = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n  try {\n    const fields = 'strikePrice,lastPrice,volume,openInterest,volatility,delta,gamma,theta,vega,rho,expirationDate,optionType,percentFromLast'.split(',');\n    let url = '/proxies/core-api/v1/options/chain?symbol=' + encodeURIComponent(sym) + '&fields=' + fields.join(',') + '&raw=1';\n    if (expDate) url += '&expirationDate=' + encodeURIComponent(expDate);\n    const resp = await fetch(url, { credentials: 'include', headers: { 'X-CSRF-TOKEN': csrf } });\n    if (resp.ok) {\n      const d = await resp.json();\n      let items = d?.data || [];\n      if (!expDate && items.length) {\n        const exps = items.map(i => (i.raw || i).expirationDate).filter(Boolean).sort();\n        const nearest = exps[0];\n        if (nearest) items = items.filter(i => ((i.raw || i).expirationDate) === nearest);\n      }\n      const calls = items.filter(i => ((i.raw || i).optionType || '').toLowerCase() === 'call')\n        .sort((a, b) => Math.abs((a.raw || a).percentFromLast || 999) - Math.abs((b.raw || b).percentFromLast || 999))\n        .slice(0, limit);\n      const puts = items.filter(i => ((i.raw || i).optionType || '').toLowerCase() === 'put')\n        .sort((a, b) => Math.abs((a.raw || a).percentFromLast || 999) - Math.abs((b.raw || b).percentFromLast || 999))\n        .slice(0, limit);\n      return [...calls, ...puts].map(i => {\n        const r = i.raw || i;\n        return {\n          type: r.optionType,\n          strike: r.strikePrice,\n          last: r.lastPrice != null ? Number(r.lastPrice).toFixed(2) : null,\n          iv: r.volatility != null ? Number(r.volatility).toFixed(2) + '%' : null,\n          delta: r.delta != null ? Number(r.delta).toFixed(4) : null,\n          gamma: r.gamma != null ? Number(r.gamma).toFixed(4) : null,\n          theta: r.theta != null ? Number(r.theta).toFixed(4) : null,\n          vega: r.vega != null ? Number(r.vega).toFixed(4) : null,\n          rho: r.rho != null ? Number(r.rho).toFixed(4) : null,\n          volume: r.volume,\n          openInterest: r.openInterest,\n          expiration: r.expirationDate\n        };\n      });\n    }\n  } catch(e) {}\n  return [];\n})()\n"
+      }
+    ],
+    "columns": [
+      "type",
+      "strike",
+      "last",
+      "iv",
+      "delta",
+      "gamma",
+      "theta",
+      "vega",
+      "rho",
+      "volume",
+      "openInterest",
+      "expiration"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "facebook",
+    "name": "profile",
+    "description": "Get Facebook user/page profile info",
+    "domain": "www.facebook.com",
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Facebook username or page name"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.facebook.com/${{ args.username }}",
+          "settleMs": 3000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const h1 = document.querySelector('h1');\n  let name = h1 ? h1.textContent.trim() : '';\n\n  // Find friends/followers links\n  const links = Array.from(document.querySelectorAll('a'));\n  const friendsLink = links.find(a => a.href && a.href.includes('/friends'));\n  const followersLink = links.find(a => a.href && a.href.includes('/followers'));\n\n  return [{\n    name: name,\n    username: '${{ args.username }}',\n    friends: friendsLink ? friendsLink.textContent.trim() : '-',\n    followers: followersLink ? followersLink.textContent.trim() : '-',\n    url: window.location.href,\n  }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "name",
+      "username",
+      "friends",
+      "followers",
+      "url"
+    ]
+  }
+}

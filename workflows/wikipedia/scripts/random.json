@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://en.wikipedia.org/wiki/Special:Random"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "evaluate": "(() => {\n  const titleEl = document.querySelector('#firstHeading');\n  return {\n    title: titleEl ? titleEl.textContent : '',\n    url: window.location.href\n  };\n})()\n"
+    }
+  ]
+}

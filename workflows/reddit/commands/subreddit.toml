@@ -1,0 +1,41 @@
+name = "subreddit"
+description = "Get posts from a specific Subreddit"
+strategy = "COOKIE"
+
+[[params]]
+name = "name"
+type = "string"
+required = true
+positional = true
+description = ""
+
+[[params]]
+name = "sort"
+type = "string"
+required = false
+positional = false
+description = "Sorting method: hot, new, top, rising, controversial"
+default = "hot"
+
+[[params]]
+name = "time"
+type = "string"
+required = false
+positional = false
+description = "Time filter for top/controversial: hour, day, week, month, year, all"
+default = "all"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = ""
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/subreddit.json"
+
+[output]
+columns = ["title", "author", "upvotes", "comments", "url"]

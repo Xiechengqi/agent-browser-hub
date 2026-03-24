@@ -1,0 +1,10 @@
+name = "channels"
+description = "List channels in the current Discord server"
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/channels.json"
+
+[output]
+columns = ["Index", "Channel", "Type"]

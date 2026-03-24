@@ -1,0 +1,25 @@
+name = "notes"
+description = "List your notes (thoughts) on a book"
+strategy = "COOKIE"
+
+[[params]]
+name = "bookId"
+type = "string"
+required = true
+positional = true
+description = "Book ID (from shelf or search results)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/notes.json"
+
+[output]
+columns = []

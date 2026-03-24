@@ -1,0 +1,25 @@
+name = "reviews"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of reviews to export"
+default = 20
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Douban user ID"
+
+[execution]
+entry = "script"
+script = "scripts/reviews.json"
+
+[output]
+columns = []

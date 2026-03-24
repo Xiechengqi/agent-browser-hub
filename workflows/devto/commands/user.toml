@@ -1,0 +1,25 @@
+name = "user"
+description = "Recent DEV.to articles from a specific user"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "DEV.to username (e.g. ben, thepracticaldev)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of articles"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["rank", "title", "reactions", "comments", "tags"]

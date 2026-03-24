@@ -1,0 +1,31 @@
+{
+  "pipeline": {
+    "site": "xiaoyuzhou",
+    "name": "episode",
+    "description": "View details of a Xiaoyuzhou podcast episode",
+    "domain": "www.xiaoyuzhoufm.com",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "args": {
+      "id": {
+        "type": "str",
+        "required": true,
+        "description": "Episode ID (eid from podcast-episodes output)"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(async () => {\n  const id = '${{ args.id }}';\n  const url = `https://www.xiaoyuzhoufm.com/episode/${id}`;\n  const resp = await fetch(url, {\n    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; agent-browser-hub)' }\n  });\n  if (!resp.ok) throw new Error(`HTTP ${resp.status} for episode/${id}`);\n  const html = await resp.text();\n  const match = html.match(/<script id=\"__NEXT_DATA__\"[^>]*>([\\s\\S]*?)<\\/script>/);\n  if (!match) throw new Error('Failed to extract __NEXT_DATA__');\n  const parsed = JSON.parse(match[1]);\n  const ep = parsed.props?.pageProps?.episode;\n  if (!ep) throw new Error('Episode not found');\n  const formatDuration = (sec) => {\n    if (!Number.isFinite(sec) || sec < 0) return '-';\n    sec = Math.round(sec);\n    const m = Math.floor(sec / 60);\n    const s = sec % 60;\n    return `${m}:${String(s).padStart(2, '0')}`;\n  };\n  return [{\n    title: ep.title,\n    podcast: ep.podcast?.title,\n    duration: formatDuration(ep.duration),\n    plays: ep.playCount,\n    comments: ep.commentCount,\n    likes: ep.clapCount,\n    date: (ep.pubDate || '').slice(0, 10)\n  }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "title",
+      "podcast",
+      "duration",
+      "plays",
+      "comments",
+      "likes",
+      "date"
+    ]
+  }
+}

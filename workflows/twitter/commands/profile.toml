@@ -1,0 +1,17 @@
+name = "profile"
+description = "Fetch a Twitter user profile"
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = false
+positional = true
+description = "Twitter screen name (without @)"
+
+[execution]
+entry = "script"
+script = "scripts/profile.json"
+
+[output]
+columns = ["screen_name", "name", "bio", "followers", "following", "tweets", "verified"]

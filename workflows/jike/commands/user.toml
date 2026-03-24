@@ -1,0 +1,25 @@
+name = "user"
+description = "即刻用户动态"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Username from profile URL (e.g. wenhao1996)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of posts"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["content", "type", "likes", "comments", "time", "url"]

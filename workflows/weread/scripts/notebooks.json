@@ -1,0 +1,20 @@
+{
+  "pipeline": {
+    "site": "weread",
+    "name": "notebooks",
+    "description": "List books that have highlights or notes",
+    "strategy": "COOKIE",
+    "browser": true,
+    "pipeline": [
+      {
+        "navigate": "https://weread.qq.com"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(async () => {\n  const url = 'https://i.weread.qq.com/user/notebooks';\n  const res = await fetch(url, { credentials: 'include' });\n  if (!res.ok) throw new Error('HTTP ' + res.status);\n  const data = await res.json();\n  const books = data.books || [];\n  return books.map(item => ({\n    title: (item.book && item.book.title) || '',\n    author: (item.book && item.book.author) || '',\n    noteCount: (item.bookmarkCount || 0) + (item.reviewCount || 0),\n    bookId: item.bookId || ''\n  }));\n})()\n"
+      }
+    ]
+  }
+}

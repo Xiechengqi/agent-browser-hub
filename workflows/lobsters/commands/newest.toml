@@ -1,0 +1,10 @@
+name = "newest"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/newest.json"
+
+[output]
+columns = ["title", "url"]

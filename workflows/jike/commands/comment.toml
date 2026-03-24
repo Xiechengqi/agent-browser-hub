@@ -1,0 +1,24 @@
+name = "comment"
+description = "评论即刻帖子"
+strategy = "COOKIE"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "帖子 ID"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = true
+description = "评论内容"
+
+[execution]
+entry = "script"
+script = "scripts/comment.json"
+
+[output]
+columns = ["status", "message"]

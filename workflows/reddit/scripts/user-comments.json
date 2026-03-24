@@ -1,0 +1,46 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "user-comments",
+    "description": "View a Reddit user's comment history",
+    "domain": "reddit.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "username": {
+        "positional": true,
+        "type": "string",
+        "required": true
+      },
+      "limit": {
+        "type": "int",
+        "default": 15
+      }
+    },
+    "columns": [
+      "subreddit",
+      "score",
+      "body",
+      "url"
+    ],
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  const name = username.startsWith('u/') ? username.slice(2) : username;\n  const limit = ${{ args.limit }};\n  const res = await fetch('/user/' + name + '/comments.json?limit=' + limit + '&raw_json=1', {\n    credentials: 'include'\n  });\n  const d = await res.json();\n  return (d?.data?.children || []).map(c => {\n    let body = c.data.body || '';\n    if (body.length > 300) body = body.slice(0, 300) + '...';\n    return {\n      subreddit: c.data.subreddit_name_prefixed,\n      score: c.data.score,\n      body: body,\n      url: 'https://www.reddit.com' + c.data.permalink,\n    };\n  });\n})()\n"
+      },
+      {
+        "map": {
+          "subreddit": "${{ item.subreddit }}",
+          "score": "${{ item.score }}",
+          "body": "${{ item.body }}",
+          "url": "${{ item.url }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

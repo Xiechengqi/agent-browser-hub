@@ -1,0 +1,25 @@
+name = "search"
+description = ""
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = ""
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = ""
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["title", "authors", "url"]

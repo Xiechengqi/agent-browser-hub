@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://www.zhipin.com/web/geek/job"
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "evaluate": "(() => {\n  const securityId = '${{ args.security-id }}';\n  return new Promise((resolve, reject) => {\n    const xhr = new XMLHttpRequest();\n    xhr.open('GET', `https://www.zhipin.com/wapi/zpgeek/job/detail.json?securityId=${encodeURIComponent(securityId)}`, true);\n    xhr.withCredentials = true;\n    xhr.timeout = 15000;\n    xhr.setRequestHeader('Accept', 'application/json');\n    xhr.onload = () => {\n      try {\n        const data = JSON.parse(xhr.responseText);\n        if (data.code !== 0) reject(new Error(data.message || 'API error'));\n        const jobInfo = data.zpData?.jobInfo || {};\n        const bossInfo = data.zpData?.bossInfo || {};\n        const brandComInfo = data.zpData?.brandComInfo || {};\n        if (!jobInfo.jobName) reject(new Error('Job not found'));\n        resolve([{\n          name: jobInfo.jobName || '',\n          salary: jobInfo.salaryDesc || '',\n          experience: jobInfo.experienceName || '',\n          degree: jobInfo.degreeName || '',\n          city: jobInfo.locationName || '',\n          district: [jobInfo.areaDistrict, jobInfo.businessDistrict].filter(Boolean).join('·'),\n          description: jobInfo.postDescription || '',\n          skills: (jobInfo.showSkills || []).join(', '),\n          welfare: (brandComInfo.labels || []).join(', '),\n          boss_name: bossInfo.name || '',\n          boss_title: bossInfo.title || '',\n          active_time: bossInfo.activeTimeDesc || '',\n          company: brandComInfo.brandName || bossInfo.brandName || '',\n          industry: brandComInfo.industryName || '',\n          scale: brandComInfo.scaleName || '',\n          stage: brandComInfo.stageName || '',\n          address: jobInfo.address || '',\n          url: jobInfo.encryptId ? 'https://www.zhipin.com/job_detail/' + jobInfo.encryptId + '.html' : ''\n        }]);\n      } catch (e) {\n        reject(e);\n      }\n    };\n    xhr.onerror = () => reject(new Error('Network Error'));\n    xhr.ontimeout = () => reject(new Error('Timeout'));\n    xhr.send(null);\n  });\n})()"
+    }
+  ]
+}

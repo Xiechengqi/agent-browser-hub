@@ -94,10 +94,14 @@ impl<'a> PipelineExecutor<'a> {
         Ok(data.clone())
     }
 
-    async fn step_evaluate(&self, step: &serde_json::Map<String, Value>, _args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
-        if let Some(js) = step.get("evaluate").and_then(|v| v.as_str()) {
-            let result = self.browser.eval(js).await?;
-            return Ok(result);
+    async fn step_evaluate(&self, step: &serde_json::Map<String, Value>, args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
+        if let Some(js_val) = step.get("evaluate") {
+            let ctx = self.render_ctx(args, data);
+            let rendered = render(js_val, &ctx)?;
+            if let Some(js) = rendered.as_str() {
+                let result = self.browser.eval(js).await?;
+                return Ok(result);
+            }
         }
         Ok(data.clone())
     }
@@ -252,11 +256,20 @@ impl<'a> PipelineExecutor<'a> {
         Ok(data.clone())
     }
 
-    fn step_limit(&self, step: &serde_json::Map<String, Value>, _args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
-        if let Some(n) = step.get("limit").and_then(|v| v.as_u64()) {
-            if let Value::Array(arr) = data {
-                let limited: Vec<Value> = arr.iter().take(n as usize).cloned().collect();
-                return Ok(Value::Array(limited));
+    fn step_limit(&self, step: &serde_json::Map<String, Value>, args: &HashMap<String, Value>, data: &Value) -> Result<Value> {
+        if let Some(limit_val) = step.get("limit") {
+            let ctx = self.render_ctx(args, data);
+            let rendered = render(limit_val, &ctx)?;
+            let n = match rendered {
+                Value::Number(num) => num.as_u64(),
+                Value::String(s) => s.parse::<u64>().ok(),
+                _ => None,
+            };
+            if let Some(n) = n {
+                if let Value::Array(arr) = data {
+                    let limited: Vec<Value> = arr.iter().take(n as usize).cloned().collect();
+                    return Ok(Value::Array(limited));
+                }
             }
         }
         Ok(data.clone())

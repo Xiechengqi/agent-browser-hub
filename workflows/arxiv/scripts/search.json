@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://arxiv.org/search/?query=${{ args.query | urlencode }}&searchtype=all&size=${{ args.limit }}"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.arxiv-result').forEach(result => {\n    const titleEl = result.querySelector('.title');\n    const linkEl = result.querySelector('.list-title a');\n    const authorsEl = result.querySelector('.authors');\n    if (titleEl && linkEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: 'https://arxiv.org' + linkEl.getAttribute('href'),\n        authors: authorsEl ? authorsEl.textContent.trim() : ''\n      });\n    }\n  });\n  return items;\n})()"
+    }
+  ]
+}

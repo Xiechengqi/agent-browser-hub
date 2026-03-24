@@ -1,0 +1,17 @@
+name = "stock"
+description = "获取雪球股票实时行情"
+strategy = "PUBLIC"
+
+[[params]]
+name = "symbol"
+type = "string"
+required = true
+positional = true
+description = "股票代码，如 SH600519、SZ000858、AAPL、00700"
+
+[execution]
+entry = "script"
+script = "scripts/stock.json"
+
+[output]
+columns = ["name", "symbol", "price", "changePercent", "marketCap"]

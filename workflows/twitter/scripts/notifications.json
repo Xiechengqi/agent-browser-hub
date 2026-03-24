@@ -1,0 +1,43 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "notifications",
+    "description": "Get Twitter/X notifications",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of notifications"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://x.com/notifications",
+          "settleMs": 3000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  window.history.pushState({}, '', '/notifications');\n  window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));\n})()\n"
+      },
+      {
+        "wait": 5000
+      },
+      {
+        "evaluate": "(() => {\n  const results = [];\n  const seen = new Set();\n  const items = document.querySelectorAll('[data-testid^=\"notification\"]');\n\n  items.forEach(item => {\n    try {\n      const text = item.textContent || '';\n      const link = item.querySelector('a[href*=\"/status/\"]');\n      const url = link ? link.href : 'https://x.com/notifications';\n      const id = url.match(/\\/status\\/(\\d+)/)?.[1] || Math.random().toString();\n\n      if (seen.has(id)) return;\n      seen.add(id);\n\n      results.push({\n        id,\n        action: 'Notification',\n        text: text.substring(0, 100),\n        url\n      });\n    } catch (e) {}\n  });\n\n  return results;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "id",
+      "action",
+      "text",
+      "url"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+name = "article"
+description = "Fetch a Twitter Article (long-form content) as Markdown"
+strategy = "COOKIE"
+
+[[params]]
+name = "tweet-id"
+type = "string"
+required = true
+positional = true
+description = "Tweet ID or URL"
+
+[execution]
+entry = "script"
+script = "scripts/article.json"
+
+[output]
+columns = ["title", "author", "content", "url"]

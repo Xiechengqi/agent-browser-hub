@@ -1,0 +1,10 @@
+name = "ask"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/ask.json"
+
+[output]
+columns = []

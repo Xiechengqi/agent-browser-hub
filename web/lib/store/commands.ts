@@ -18,11 +18,15 @@ export const useCommandsStore = create<CommandsState>((set, get) => ({
   },
   setSearchQuery: (query) => {
     const { commands } = get();
+    const needle = query.toLowerCase();
     const filtered = query
       ? commands.filter(c =>
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
-          c.site.toLowerCase().includes(query.toLowerCase()) ||
-          c.description?.toLowerCase().includes(query.toLowerCase())
+          c.name.toLowerCase().includes(needle) ||
+          c.site.toLowerCase().includes(needle) ||
+          c.description?.toLowerCase().includes(needle) ||
+          c.source?.toLowerCase().includes(needle) ||
+          c.workflow_origin?.kind?.toLowerCase().includes(needle) ||
+          c.workflow_origin?.location?.toLowerCase().includes(needle)
         )
       : commands;
     set({ searchQuery: query, filteredCommands: filtered });

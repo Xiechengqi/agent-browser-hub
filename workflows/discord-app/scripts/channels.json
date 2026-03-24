@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "site": "discord-app",
+    "name": "channels",
+    "description": "List channels in the current Discord server",
+    "domain": "localhost",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const results = [];\n  const links = document.querySelectorAll('a[href*=\"/channels/\"][data-list-item-id^=\"channels___\"]');\n  links.forEach(function(el) {\n    var label = el.getAttribute('aria-label') || '';\n    if (!label) return;\n    if (/[（(]category[）)]/i.test(label)) return;\n    var commaIdx = label.search(/[,，]/);\n    var cleaned = commaIdx !== -1 ? label.slice(commaIdx + 1).trimStart() : label;\n    var m = cleaned.match(/^(.+?)\\s*[（(](.+?)[）)]\\s*$/);\n    if (!m) return;\n    var name = m[1].trim();\n    var rawType = m[2].toLowerCase();\n    if (!name || !/^[\\x20-\\x7E]+$/.test(name)) return;\n    var type = 'Text';\n    if (rawType.includes('voice')) type = 'Voice';\n    else if (rawType.includes('forum')) type = 'Forum';\n    else if (rawType.includes('announcement')) type = 'Announcement';\n    else if (rawType.includes('stage')) type = 'Stage';\n    results.push({ Index: results.length + 1, Channel: name, Type: type });\n  });\n  return results.length > 0 ? results : [{ Index: 0, Channel: 'No channels found', Type: '—' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "Index",
+      "Channel",
+      "Type"
+    ]
+  }
+}

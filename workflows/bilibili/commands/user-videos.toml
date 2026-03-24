@@ -1,0 +1,41 @@
+name = "user-videos"
+description = "Get user's uploaded videos"
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "User UID or username"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[[params]]
+name = "order"
+type = "string"
+required = false
+positional = false
+description = "Sort: pubdate, click, stow"
+default = "pubdate"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Page number"
+default = 1
+
+[execution]
+entry = "script"
+script = "scripts/user-videos.json"
+
+[output]
+columns = ["rank", "title", "plays", "likes", "date", "url"]

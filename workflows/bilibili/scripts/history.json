@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "site": "bilibili",
+    "name": "history",
+    "description": "My watch history",
+    "domain": "www.bilibili.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of results"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.bilibili.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const ps = Math.min(${{ args.limit }}, 30);\n  const res = await fetch(\n    'https://api.bilibili.com/x/web-interface/history/cursor?ps=' + ps + '&type=archive',\n    { credentials: 'include' }\n  );\n  const payload = await res.json();\n  const list = payload?.data?.list || [];\n\n  function formatDuration(seconds) {\n    const m = Math.floor(seconds / 60);\n    const s = seconds % 60;\n    return m + ':' + s.toString().padStart(2, '0');\n  }\n\n  return list.map((item, i) => {\n    const progress = item.progress || 0;\n    const duration = item.duration || 0;\n    let progressStr;\n    if (progress < 0 || progress >= duration) {\n      progressStr = 'completed';\n    } else {\n      const pct = duration > 0 ? Math.round(progress / duration * 100) : 0;\n      progressStr = formatDuration(progress) + '/' + formatDuration(duration) + ' (' + pct + '%)';\n    }\n    return {\n      rank: i + 1,\n      title: item.title || '',\n      author: item.author_name || '',\n      progress: progressStr,\n      url: item.history?.bvid ? 'https://www.bilibili.com/video/' + item.history.bvid : '',\n    };\n  });\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "author",
+      "progress",
+      "url"
+    ]
+  }
+}

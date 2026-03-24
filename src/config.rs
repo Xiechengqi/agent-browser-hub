@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use anyhow::Result;
 
@@ -8,6 +9,43 @@ pub struct Config {
     pub vnc_url: String,
     pub vnc_username: Option<String>,
     pub vnc_password: Option<String>,
+    #[serde(default)]
+    pub workflow: WorkflowConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowConfig {
+    #[serde(default = "default_workflow_mode")]
+    pub mode: String,
+    #[serde(default = "default_fallback_to_builtin")]
+    pub fallback_to_builtin: bool,
+    #[serde(default = "default_workflow_cache_dir")]
+    pub cache_dir: String,
+    #[serde(default)]
+    pub sources: BTreeMap<String, WorkflowSourceConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowSourceConfig {
+    #[serde(rename = "type")]
+    pub source_type: String,
+    #[serde(default)]
+    pub path: Option<String>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub r#ref: Option<String>,
+}
+
+impl Default for WorkflowConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_workflow_mode(),
+            fallback_to_builtin: default_fallback_to_builtin(),
+            cache_dir: default_workflow_cache_dir(),
+            sources: BTreeMap::new(),
+        }
+    }
 }
 
 impl Default for Config {
@@ -17,6 +55,7 @@ impl Default for Config {
             vnc_url: "http://localhost:6080".to_string(),
             vnc_username: None,
             vnc_password: None,
+            workflow: WorkflowConfig::default(),
         }
     }
 }
@@ -46,4 +85,20 @@ pub fn save_config(config: &Config) -> Result<()> {
     let content = toml::to_string_pretty(config)?;
     std::fs::write(&path, content)?;
     Ok(())
+}
+
+fn default_workflow_mode() -> String {
+    "prefer-external".to_string()
+}
+
+fn default_fallback_to_builtin() -> bool {
+    true
+}
+
+fn default_workflow_cache_dir() -> String {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home)
+        .join(".cache/agent-browser-hub/workflows")
+        .display()
+        .to_string()
 }

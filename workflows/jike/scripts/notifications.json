@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "jike",
+    "name": "notifications",
+    "description": "即刻通知",
+    "domain": "web.okjike.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of notifications"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://web.okjike.com/notification"
+      },
+      {
+        "evaluate": "(() => {\n  function getNotificationData(element) {\n    for (const key of Object.keys(element)) {\n      if (key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')) {\n        let fiber = element[key];\n        for (let i = 0; i < 15 && fiber; i++) {\n          const props = fiber.memoizedProps || fiber.pendingProps;\n          if (props && props.data) {\n            const d = props.data;\n            if (d.type || d.actionType || d.notificationType) return d;\n          }\n          fiber = fiber.return;\n        }\n      }\n    }\n    return null;\n  }\n  function resolveActionLabel(type) {\n    if (!type) return '通知';\n    const upper = type.toUpperCase();\n    if (upper.includes('LIKE')) return '赞了你';\n    if (upper.includes('COMMENT')) return '评论了你';\n    if (upper.includes('FOLLOW')) return '关注了你';\n    if (upper.includes('REPOST')) return '转发了你';\n    if (upper.includes('MENTION')) return '提到了你';\n    if (upper.includes('REPLY')) return '回复了你';\n    return type;\n  }\n  const results = [];\n  const seen = new Set();\n  const elements = Array.from(document.querySelectorAll('[class*=\"_item_\"]'));\n  for (const el of elements) {\n    const data = getNotificationData(el);\n    if (!data) continue;\n    const actionType = data.actionType || data.type || data.notificationType || '';\n    const fromUser = (data.sourceUser && data.sourceUser.screenName) || (data.user && data.user.screenName) || (data.actionUser && data.actionUser.screenName) || (data.actor && data.actor.screenName) || '';\n    const targetContent = (data.targetPost && data.targetPost.content) || (data.post && data.post.content) || '';\n    const commentContent = (data.comment && data.comment.content) || data.commentContent || '';\n    const content = commentContent || targetContent;\n    const time = data.createdAt || data.updatedAt || '';\n    const key = fromUser + '\\x00' + time + '\\x00' + (data.type || data.actionType || '');\n    if (seen.has(key)) continue;\n    seen.add(key);\n    if (!fromUser && !content) continue;\n    results.push({\n      type: resolveActionLabel(actionType),\n      user: fromUser,\n      content: content.replace(/\\n/g, ' ').slice(0, 100),\n      time: time,\n    });\n  }\n  return results;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "type",
+      "user",
+      "content",
+      "time"
+    ]
+  }
+}

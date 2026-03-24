@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "site": "tiktok",
+    "name": "live",
+    "description": "Browse live streams on TikTok",
+    "domain": "www.tiktok.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of streams"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.tiktok.com/live",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  // Sidebar live list has structured data\n  const items = document.querySelectorAll('[data-e2e=\"live-side-nav-item\"]');\n  const sidebar = Array.from(items).slice(0, limit).map(function(el, i) {\n    const nameEl = el.querySelector('[data-e2e=\"live-side-nav-name\"]');\n    const countEl = el.querySelector('[data-e2e=\"person-count\"]');\n    const link = el.querySelector('a');\n    return {\n      index: i + 1,\n      streamer: nameEl ? nameEl.textContent.trim() : '',\n      viewers: countEl ? countEl.textContent.trim() : '-',\n      url: link ? link.href : '',\n    };\n  });\n\n  if (sidebar.length > 0) return sidebar;\n\n  // Fallback: main content cards\n  const cards = document.querySelectorAll('[data-e2e=\"discover-list-live-card\"]');\n  return Array.from(cards).slice(0, limit).map(function(card, i) {\n    const text = card.textContent.trim().replace(/\\s+/g, ' ');\n    const link = card.querySelector('a[href*=\"/live\"]');\n    const viewerMatch = text.match(/(\\d[\\d,.]*)\\s*watching/);\n    return {\n      index: i + 1,\n      streamer: text.replace(/LIVE.*$/, '').trim().substring(0, 40),\n      viewers: viewerMatch ? viewerMatch[1] : '-',\n      url: link ? link.href : '',\n    };\n  });\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "streamer",
+      "viewers",
+      "url"
+    ]
+  }
+}

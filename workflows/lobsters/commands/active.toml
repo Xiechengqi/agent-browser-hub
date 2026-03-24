@@ -1,0 +1,18 @@
+name = "active"
+description = "Lobste.rs most active discussions"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of stories"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/active.json"
+
+[output]
+columns = ["rank", "title", "score", "author", "comments", "tags"]

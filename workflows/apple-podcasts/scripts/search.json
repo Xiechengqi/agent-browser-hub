@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://podcasts.apple.com/us/search?term=${{ args.query | urlencode }}"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.we-lockup').forEach(el => {\n    const titleEl = el.querySelector('.we-lockup__title');\n    const linkEl = el.querySelector('a');\n    if (titleEl && linkEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: linkEl.href\n      });\n    }\n  });\n  return items;\n})()"
+    }
+  ]
+}

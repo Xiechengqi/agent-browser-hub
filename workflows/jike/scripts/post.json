@@ -1,0 +1,41 @@
+{
+  "pipeline": {
+    "site": "jike",
+    "name": "post",
+    "description": "即刻帖子详情及评论",
+    "domain": "m.okjike.com",
+    "browser": true,
+    "args": {
+      "id": {
+        "positional": true,
+        "type": "string",
+        "required": true,
+        "description": "Post ID (from post URL)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://m.okjike.com/originalPosts/${{ args.id }}"
+      },
+      {
+        "evaluate": "(() => {\n  try {\n    const el = document.querySelector('script[type=\"application/json\"]');\n    if (!el) return [];\n    const data = JSON.parse(el.textContent);\n    const pageProps = data?.props?.pageProps || {};\n    const post = pageProps.post || {};\n    const comments = pageProps.comments || [];\n\n    const result = [{\n      type: 'post',\n      author: post.user?.screenName || '',\n      content: post.content || '',\n      likes: post.likeCount || 0,\n      time: post.createdAt || '',\n    }];\n\n    for (const c of comments) {\n      result.push({\n        type: 'comment',\n        author: c.user?.screenName || '',\n        content: (c.content || '').replace(/\\n/g, ' '),\n        likes: c.likeCount || 0,\n        time: c.createdAt || '',\n      });\n    }\n\n    return result;\n  } catch (e) {\n    return [];\n  }\n})()\n"
+      },
+      {
+        "map": {
+          "type": "${{ item.type }}",
+          "author": "${{ item.author }}",
+          "content": "${{ item.content }}",
+          "likes": "${{ item.likes }}",
+          "time": "${{ item.time }}"
+        }
+      }
+    ],
+    "columns": [
+      "type",
+      "author",
+      "content",
+      "likes",
+      "time"
+    ]
+  }
+}

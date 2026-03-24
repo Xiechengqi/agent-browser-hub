@@ -1,0 +1,10 @@
+name = "joblist"
+description = ""
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/joblist.json"
+
+[output]
+columns = []

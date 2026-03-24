@@ -1,0 +1,18 @@
+name = "history"
+description = "My watch history"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/history.json"
+
+[output]
+columns = ["rank", "title", "author", "progress", "url"]

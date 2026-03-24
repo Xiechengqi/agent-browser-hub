@@ -1,0 +1,17 @@
+name = "join-group"
+description = "Join a Facebook group"
+strategy = "PUBLIC"
+
+[[params]]
+name = "group"
+type = "string"
+required = true
+positional = true
+description = "Group ID or URL path (e.g. '1876150192925481' or group name)"
+
+[execution]
+entry = "script"
+script = "scripts/join-group.json"
+
+[output]
+columns = ["status", "group"]

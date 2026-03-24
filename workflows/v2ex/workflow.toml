@@ -1,0 +1,24 @@
+schema_version = 1
+site = "v2ex"
+display_name = "V2ex"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "standard"
+default_enabled = true
+
+[auth]
+strategy = "COOKIE"
+login_required = true
+domains = ["v2ex", "www.v2ex.com"]
+
+[ui]
+tags = ["v2ex"]
+
+[commands]
+include = ["daily", "hot", "latest", "me", "member", "node", "nodes", "notifications", "replies", "topic", "user"]

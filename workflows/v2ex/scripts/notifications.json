@@ -1,0 +1,29 @@
+{
+  "pipeline": {
+    "site": "v2ex",
+    "name": "notifications",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of notifications"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.v2ex.com/notifications"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = Array.from(document.querySelectorAll('#Main .box .cell[id^=\"n_\"]'));\n  return items.map(item => {\n    let type = '通知';\n    let time = '';\n\n    const text = item.textContent || '';\n    if (text.includes('回复了你')) type = '回复';\n    else if (text.includes('感谢了你')) type = '感谢';\n    else if (text.includes('收藏了你')) type = '收藏';\n    else if (text.includes('提及你')) type = '提及';\n\n    const timeEl = item.querySelector('.snow');\n    if (timeEl) {\n      time = timeEl.textContent?.trim() || '';\n    }\n\n    let payload = '';\n    const payloadEl = item.querySelector('.payload');\n    if (payloadEl) {\n      payload = payloadEl.textContent?.trim() || '';\n    }\n\n    let content = payload;\n    if (!content) {\n      content = text.replace(/\\s+/g, ' ').trim();\n      if (time && content.includes(time)) {\n        content = content.replace(time, '').trim();\n      }\n    }\n\n    return { type, content, time };\n  });\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

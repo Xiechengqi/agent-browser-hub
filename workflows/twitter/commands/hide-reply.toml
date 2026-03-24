@@ -1,0 +1,17 @@
+name = "hide-reply"
+description = "Hide a reply on your tweet"
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "Reply tweet URL"
+
+[execution]
+entry = "script"
+script = "scripts/hide-reply.json"
+
+[output]
+columns = ["status", "message"]

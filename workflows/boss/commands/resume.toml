@@ -1,0 +1,17 @@
+name = "resume"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Encrypted UID of candidate"
+
+[execution]
+entry = "script"
+script = "scripts/resume.json"
+
+[output]
+columns = []

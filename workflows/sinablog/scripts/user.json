@@ -1,0 +1,45 @@
+{
+  "pipeline": {
+    "site": "sinablog",
+    "name": "user",
+    "description": "获取新浪博客用户的文章列表",
+    "domain": "blog.sina.com.cn",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "uid": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "新浪博客用户ID（如 1234567890）"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "返回的文章数量"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://blog.sina.com.cn/s/articlelist_${{ args.uid }}_0_1.html"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  await new Promise((resolve) => setTimeout(resolve, 1000));\n  const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const limit = ${{ args.limit }};\n  const author = normalize(document.title).split('_').map((part) => normalize(part)).filter(Boolean)[1] || '';\n  const abs = (href) => {\n    if (!href) return '';\n    if (href.startsWith('//')) return 'https:' + href;\n    if (href.startsWith('http')) return href;\n    return 'https://blog.sina.com.cn' + (href.startsWith('/') ? '' : '/') + href;\n  };\n  const results = [];\n  for (const item of Array.from(document.querySelectorAll('.articleList .articleCell'))) {\n    const link = item.querySelector('.atc_title a[href*=\"/s/blog_\"]');\n    const title = normalize(link?.textContent);\n    const url = abs(link?.getAttribute('href') || '');\n    if (!title || !url) continue;\n    results.push({\n      rank: results.length + 1,\n      articleId: url.match(/blog_([a-zA-Z0-9]+)\\.html/)?.[1] || '',\n      title,\n      author,\n      date: normalize(item.querySelector('.atc_tm')?.textContent),\n      readCount: '',\n      description: '',\n      url,\n    });\n    if (results.length >= limit) break;\n  }\n  return results;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "author",
+      "date",
+      "readCount",
+      "url"
+    ]
+  }
+}

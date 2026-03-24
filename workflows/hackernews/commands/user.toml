@@ -1,0 +1,17 @@
+name = "user"
+description = "Hacker News user profile"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "HN username"
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["username", "karma", "created", "about"]

@@ -1,0 +1,17 @@
+name = "unlike"
+description = "Unlike a TikTok video"
+strategy = "PUBLIC"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "TikTok video URL"
+
+[execution]
+entry = "script"
+script = "scripts/unlike.json"
+
+[output]
+columns = ["status", "likes", "url"]

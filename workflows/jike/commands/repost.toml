@@ -1,0 +1,24 @@
+name = "repost"
+description = "转发即刻帖子"
+strategy = "COOKIE"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "帖子 ID"
+
+[[params]]
+name = "text"
+type = "string"
+required = false
+positional = true
+description = "转发附言（可选）"
+
+[execution]
+entry = "script"
+script = "scripts/repost.json"
+
+[output]
+columns = ["status", "message"]

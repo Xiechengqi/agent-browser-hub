@@ -1,0 +1,24 @@
+name = "send"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Encrypted UID of candidate"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = false
+description = "Message text to send"
+
+[execution]
+entry = "script"
+script = "scripts/send.json"
+
+[output]
+columns = []

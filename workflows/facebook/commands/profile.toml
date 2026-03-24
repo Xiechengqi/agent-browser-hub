@@ -1,0 +1,17 @@
+name = "profile"
+description = "Get Facebook user/page profile info"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Facebook username or page name"
+
+[execution]
+entry = "script"
+script = "scripts/profile.json"
+
+[output]
+columns = ["name", "username", "friends", "followers", "url"]

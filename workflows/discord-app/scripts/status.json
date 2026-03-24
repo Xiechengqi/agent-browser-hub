@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "site": "discord-app",
+    "name": "status",
+    "description": "Check active CDP connection to Discord Desktop",
+    "domain": "localhost",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const url = window.location.href;\n  const title = document.title;\n  return [{ Status: 'Connected', Url: url, Title: title }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "Status",
+      "Url",
+      "Title"
+    ]
+  }
+}

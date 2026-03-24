@@ -1,0 +1,17 @@
+name = "topic"
+description = "linux.do 帖子详情和回复（首页）"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "int"
+required = true
+positional = true
+description = "Topic ID"
+
+[execution]
+entry = "script"
+script = "scripts/topic.json"
+
+[output]
+columns = ["author", "content", "likes", "created_at"]

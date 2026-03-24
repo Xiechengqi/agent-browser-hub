@@ -1,0 +1,48 @@
+{
+  "pipeline": {
+    "site": "zhihu",
+    "name": "search",
+    "description": "知乎搜索",
+    "domain": "www.zhihu.com",
+    "args": {
+      "query": {
+        "positional": true,
+        "type": "str",
+        "required": true,
+        "description": "Search query"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of results"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhihu.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const strip = (html) => (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/<em>/g, '').replace(/<\\/em>/g, '').trim();\n  const keyword = '${{ args.query }}';\n  const limit = ${{ args.limit }};\n  const res = await fetch('https://www.zhihu.com/api/v4/search_v3?q=' + encodeURIComponent(keyword) + '&t=general&offset=0&limit=' + limit, {\n    credentials: 'include'\n  });\n  const d = await res.json();\n  return (d?.data || [])\n    .filter(item => item.type === 'search_result')\n    .map(item => {\n      const obj = item.object || {};\n      const q = obj.question || {};\n      return {\n        type: obj.type,\n        title: strip(obj.title || q.name || ''),\n        excerpt: strip(obj.excerpt || '').substring(0, 100),\n        author: obj.author?.name || '',\n        votes: obj.voteup_count || 0,\n        url: obj.type === 'answer'\n          ? 'https://www.zhihu.com/question/' + q.id + '/answer/' + obj.id\n          : obj.type === 'article'\n          ? 'https://zhuanlan.zhihu.com/p/' + obj.id\n          : 'https://www.zhihu.com/question/' + obj.id,\n      };\n    });\n})()\n"
+      },
+      {
+        "map": {
+          "rank": "${{ index + 1 }}",
+          "title": "${{ item.title }}",
+          "type": "${{ item.type }}",
+          "author": "${{ item.author }}",
+          "votes": "${{ item.votes }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "type",
+      "author",
+      "votes"
+    ]
+  }
+}

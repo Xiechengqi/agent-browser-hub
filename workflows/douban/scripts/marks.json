@@ -1,0 +1,39 @@
+{
+  "pipeline": {
+    "site": "douban",
+    "name": "marks",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "status": {
+        "type": "string",
+        "default": "collect",
+        "description": "Mark type: collect (watched), wish (want to watch), do (watching)"
+      },
+      "limit": {
+        "type": "int",
+        "default": 50,
+        "description": "Number of marks to export (0 for all)"
+      },
+      "uid": {
+        "type": "string",
+        "required": true,
+        "description": "Douban user ID"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://movie.douban.com/people/${{ args.uid }}/${{ args.status }}?start=0&sort=time&rating=all&filter=all&mode=grid"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const results = [];\n  const items = document.querySelectorAll('.item');\n\n  items.forEach(item => {\n    const titleLink = item.querySelector('.info a[href*=\"/subject/\"]');\n    if (!titleLink) return;\n\n    const titleEl = titleLink.querySelector('em');\n    const titleText = titleEl?.textContent?.trim() || titleLink.textContent?.trim() || '';\n    const title = titleText.split('/')[0].trim();\n    const href = titleLink.href || '';\n\n    const idMatch = href.match(/subject\\/(\\d+)/);\n    const movieId = idMatch ? idMatch[1] : '';\n\n    if (!movieId || !title) return;\n\n    const ratingSpan = item.querySelector('span[class*=\"rating\"]');\n    let myRating = null;\n    if (ratingSpan) {\n      const cls = ratingSpan.className || '';\n      const ratingMatch = cls.match(/rating(\\d)-t/);\n      if (ratingMatch) {\n        myRating = parseInt(ratingMatch[1], 10) * 2;\n      }\n    }\n\n    const dateSpan = item.querySelector('.date');\n    const myDate = dateSpan?.textContent?.trim() || '';\n\n    const commentSpan = item.querySelector('.comment');\n    const myComment = commentSpan?.textContent?.trim() || '';\n\n    const introSpan = item.querySelector('.intro');\n    let year = '';\n    if (introSpan) {\n      const introText = introSpan.textContent || '';\n      const yearMatch = introText.match(/(\\d{4})/);\n      year = yearMatch ? yearMatch[1] : '';\n    }\n\n    results.push({\n      movieId,\n      title,\n      year,\n      myRating,\n      myStatus: '${{ args.status }}',\n      myComment,\n      myDate,\n      url: href || 'https://movie.douban.com/subject/' + movieId\n    });\n  });\n\n  return results;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

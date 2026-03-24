@@ -1,0 +1,26 @@
+name = "top"
+description = "Top podcasts chart on Apple Podcasts"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of podcasts (max 100)"
+default = 20
+
+[[params]]
+name = "country"
+type = "string"
+required = false
+positional = false
+description = "Country code (e.g. us, cn, gb, jp)"
+default = "us"
+
+[execution]
+entry = "script"
+script = "scripts/top.json"
+
+[output]
+columns = ["rank", "title", "author", "id"]

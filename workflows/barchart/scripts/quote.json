@@ -1,0 +1,44 @@
+{
+  "pipeline": {
+    "site": "barchart",
+    "name": "quote",
+    "description": "Barchart stock quote with price, volume, and key metrics",
+    "domain": "www.barchart.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "symbol": {
+        "type": "str",
+        "required": true,
+        "description": "Stock ticker (e.g. AAPL, MSFT, TSLA)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.barchart.com/stocks/quotes/${{ args.symbol }}/overview"
+      },
+      {
+        "wait": 4000
+      },
+      {
+        "evaluate": "(async () => {\n  const sym = '${{ args.symbol }}'.toUpperCase();\n  const csrf = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n  try {\n    const fields = 'symbol,symbolName,lastPrice,priceChange,percentChange,highPrice,lowPrice,openPrice,previousPrice,volume,averageVolume,marketCap,peRatio,earningsPerShare'.split(',');\n    const url = '/proxies/core-api/v1/quotes/get?symbol=' + encodeURIComponent(sym) + '&fields=' + fields.join(',');\n    const resp = await fetch(url, {\n      credentials: 'include',\n      headers: { 'X-CSRF-TOKEN': csrf }\n    });\n    if (resp.ok) {\n      const d = await resp.json();\n      const r = d?.data?.[0];\n      if (r) {\n        return [{\n          symbol: r.symbol || sym,\n          name: r.symbolName || sym,\n          price: r.lastPrice,\n          change: r.priceChange,\n          changePct: r.percentChange,\n          open: r.openPrice,\n          high: r.highPrice,\n          low: r.lowPrice,\n          prevClose: r.previousPrice,\n          volume: r.volume,\n          avgVolume: r.averageVolume,\n          marketCap: r.marketCap,\n          peRatio: r.peRatio,\n          eps: r.earningsPerShare\n        }];\n      }\n    }\n  } catch(e) {}\n  return [];\n})()\n"
+      }
+    ],
+    "columns": [
+      "symbol",
+      "name",
+      "price",
+      "change",
+      "changePct",
+      "open",
+      "high",
+      "low",
+      "prevClose",
+      "volume",
+      "avgVolume",
+      "marketCap",
+      "peRatio",
+      "eps"
+    ]
+  }
+}

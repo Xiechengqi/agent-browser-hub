@@ -1,0 +1,18 @@
+name = "movie-hot"
+description = ""
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of movies to return"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/movie-hot.json"
+
+[output]
+columns = []

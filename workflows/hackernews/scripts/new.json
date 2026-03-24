@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "hackernews",
+    "name": "new",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "pipeline": [
+      {
+        "navigate": "https://news.ycombinator.com/newest"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.athing').forEach(row => {\n    const titleEl = row.querySelector('.titleline > a');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent,\n        url: titleEl.href\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

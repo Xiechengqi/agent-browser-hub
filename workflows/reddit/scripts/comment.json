@@ -1,0 +1,36 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "comment",
+    "description": "Post a comment on a Reddit post",
+    "domain": "reddit.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "post-id": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Post ID (e.g. 1abc123) or fullname (t3_xxx)"
+      },
+      "text": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Comment text"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    let postId = '${{ args.post-id }}';\n    const urlMatch = postId.match(/comments\\/([a-z0-9]+)/);\n    if (urlMatch) postId = urlMatch[1];\n    const fullname = postId.startsWith('t3_') || postId.startsWith('t1_') ? postId : 't3_' + postId;\n    const text = '${{ args.text }}';\n    const meRes = await fetch('/api/me.json', { credentials: 'include' });\n    const me = await meRes.json();\n    const modhash = me?.data?.modhash || '';\n    const res = await fetch('/api/comment', {\n      method: 'POST',\n      credentials: 'include',\n      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n      body: 'parent=' + encodeURIComponent(fullname) + '&text=' + encodeURIComponent(text) + '&api_type=json' + (modhash ? '&uh=' + encodeURIComponent(modhash) : ''),\n    });\n    if (!res.ok) return [{ status: 'failed', message: 'HTTP ' + res.status }];\n    const data = await res.json();\n    const errors = data?.json?.errors;\n    if (errors && errors.length > 0) return [{ status: 'failed', message: errors.map(e => e.join(': ')).join('; ') }];\n    return [{ status: 'success', message: 'Comment posted on ' + fullname }];\n  } catch (e) {\n    return [{ status: 'failed', message: e.toString() }];\n  }\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

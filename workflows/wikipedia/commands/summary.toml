@@ -1,0 +1,17 @@
+name = "summary"
+description = "Get Wikipedia page summary"
+strategy = "PUBLIC"
+
+[[params]]
+name = "title"
+type = "string"
+required = true
+positional = false
+description = "Page title"
+
+[execution]
+entry = "script"
+script = "scripts/summary.json"
+
+[output]
+columns = ["title", "description", "extract", "url", "lang"]

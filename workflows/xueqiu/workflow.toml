@@ -1,0 +1,24 @@
+schema_version = 1
+site = "xueqiu"
+display_name = "Xueqiu"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "standard"
+default_enabled = true
+
+[auth]
+strategy = "COOKIE"
+login_required = true
+domains = ["xueqiu.com", "xueqiu"]
+
+[ui]
+tags = ["xueqiu"]
+
+[commands]
+include = ["earnings-date", "feed", "hot", "hot-stock", "search", "stock", "watchlist"]

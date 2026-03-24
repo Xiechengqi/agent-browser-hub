@@ -1,0 +1,42 @@
+{
+  "pipeline": {
+    "site": "jike",
+    "name": "comment",
+    "description": "评论即刻帖子",
+    "domain": "web.okjike.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "帖子 ID"
+      },
+      "text": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "评论内容"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://web.okjike.com/originalPost/${{ args.id }}"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const textToInsert = '${{ args.text }}';\n    const editor = document.querySelector('[class*=\"_comment_\"] [contenteditable=\"true\"]') || document.querySelector('[contenteditable=\"true\"]');\n    if (editor) {\n      editor.focus();\n      const dt = new DataTransfer();\n      dt.setData('text/plain', textToInsert);\n      editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));\n      await new Promise(r => setTimeout(r, 800));\n      if (editor.textContent?.length > 0) return { ok: true, message: 'contenteditable' };\n    }\n    const textareas = document.querySelectorAll('textarea');\n    for (const ta of textareas) {\n      const ph = ta.getAttribute('placeholder') || '';\n      if (ph.includes('评论') || ph.includes('回复') || ph.includes('说点什么')) {\n        ta.focus();\n        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;\n        setter?.call(ta, textToInsert);\n        ta.dispatchEvent(new Event('input', { bubbles: true }));\n        await new Promise(r => setTimeout(r, 500));\n        return { ok: true, message: 'textarea' };\n      }\n    }\n    if (textareas.length > 0) {\n      const ta = textareas[0];\n      ta.focus();\n      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;\n      setter?.call(ta, textToInsert);\n      ta.dispatchEvent(new Event('input', { bubbles: true }));\n      await new Promise(r => setTimeout(r, 500));\n      return { ok: true, message: 'textarea-fallback' };\n    }\n    return { ok: false, message: '未找到评论输入框' };\n  } catch (e) {\n    return { ok: false, message: e.toString() };\n  }\n})()\n"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    await new Promise(r => setTimeout(r, 500));\n    const btns = Array.from(document.querySelectorAll('button')).filter(btn => {\n      const text = btn.textContent?.trim() || '';\n      return (text === '回复' || text === '发布' || text === '发送' || text === '评论') && !btn.disabled;\n    });\n    if (btns.length === 0) return { ok: false, message: '未找到可用的回复按钮' };\n    btns[0].click();\n    return { ok: true, message: '评论发布成功' };\n  } catch (e) {\n    return { ok: false, message: e.toString() };\n  }\n})()\n"
+      },
+      {
+        "wait": 3000
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

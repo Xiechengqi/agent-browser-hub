@@ -1,0 +1,18 @@
+name = "ranking"
+description = "Bilibili video ranking board"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/ranking.json"
+
+[output]
+columns = ["rank", "title", "author", "score", "url"]

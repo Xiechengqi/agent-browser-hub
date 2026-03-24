@@ -1,0 +1,25 @@
+name = "user"
+description = "Get recent videos from a TikTok user"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "TikTok username (without @)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of videos"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["index", "views", "url"]

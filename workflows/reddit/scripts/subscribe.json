@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "subscribe",
+    "description": "Subscribe or unsubscribe to a subreddit",
+    "domain": "reddit.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "subreddit": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Subreddit name (e.g. python)"
+      },
+      "undo": {
+        "type": "bool",
+        "default": false,
+        "description": "Unsubscribe instead of subscribe"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    let sub = '${{ args.subreddit }}';\n    if (sub.startsWith('r/')) sub = sub.slice(2);\n    const undo = ${{ args.undo }};\n    const action = undo ? 'unsub' : 'sub';\n    const meRes = await fetch('/api/me.json', { credentials: 'include' });\n    const me = await meRes.json();\n    const modhash = me?.data?.modhash || '';\n    const res = await fetch('/api/subscribe', {\n      method: 'POST',\n      credentials: 'include',\n      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n      body: 'sr_name=' + encodeURIComponent(sub) + '&action=' + action + (modhash ? '&uh=' + encodeURIComponent(modhash) : ''),\n    });\n    if (!res.ok) return [{ status: 'failed', message: 'HTTP ' + res.status }];\n    const label = undo ? 'Unsubscribed from' : 'Subscribed to';\n    return [{ status: 'success', message: label + ' r/' + sub }];\n  } catch (e) {\n    return [{ status: 'failed', message: e.toString() }];\n  }\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

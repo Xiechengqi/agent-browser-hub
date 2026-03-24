@@ -1,0 +1,26 @@
+name = "ranking"
+description = "WeRead book rankings by category"
+strategy = "PUBLIC"
+
+[[params]]
+name = "category"
+type = "string"
+required = false
+positional = true
+description = "Category: all (default), rising, or numeric category ID"
+default = "all"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/ranking.json"
+
+[output]
+columns = []

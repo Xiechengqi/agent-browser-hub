@@ -1,0 +1,24 @@
+schema_version = 1
+site = "google"
+display_name = "Google"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "standard"
+default_enabled = true
+
+[auth]
+strategy = "public"
+login_required = true
+domains = ["news.google.com", "google.com", "suggestqueries.google.com", "trends.google.com"]
+
+[ui]
+tags = ["google"]
+
+[commands]
+include = ["news", "search", "suggest", "trends"]

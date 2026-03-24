@@ -1,0 +1,10 @@
+name = "tags"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/tags.json"
+
+[output]
+columns = []

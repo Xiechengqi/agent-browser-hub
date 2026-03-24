@@ -1,0 +1,41 @@
+{
+  "pipeline": {
+    "site": "zhihu",
+    "name": "hot",
+    "description": "知乎热榜",
+    "domain": "www.zhihu.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of items to return"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhihu.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const res = await fetch('https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50', {\n    credentials: 'include'\n  });\n  const text = await res.text();\n  const d = JSON.parse(\n    text.replace(/(\"id\"\\s*:\\s*)(\\d{16,})/g, '$1\"$2\"')\n  );\n  return (d?.data || []).map((item) => {\n    const t = item.target || {};\n    const questionId = t.id == null ? '' : String(t.id);\n    return {\n      title: t.title,\n      url: 'https://www.zhihu.com/question/' + questionId,\n      answer_count: t.answer_count,\n      follower_count: t.follower_count,\n      heat: item.detail_text || '',\n    };\n  });\n})()\n"
+      },
+      {
+        "map": {
+          "rank": "${{ index + 1 }}",
+          "title": "${{ item.title }}",
+          "heat": "${{ item.heat }}",
+          "answers": "${{ item.answer_count }}",
+          "url": "${{ item.url }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "heat",
+      "answers"
+    ]
+  }
+}

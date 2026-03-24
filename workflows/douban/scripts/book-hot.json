@@ -1,0 +1,29 @@
+{
+  "pipeline": {
+    "site": "douban",
+    "name": "book-hot",
+    "strategy": "PUBLIC",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of books to return"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://book.douban.com/chart"
+      },
+      {
+        "wait": 4000
+      },
+      {
+        "evaluate": "(() => {\n  const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const books = [];\n  for (const el of Array.from(document.querySelectorAll('.media.clearfix'))) {\n    try {\n      const titleEl = el.querySelector('h2 a[href*=\"/subject/\"]');\n      const title = normalize(titleEl?.textContent);\n      let url = titleEl?.getAttribute('href') || '';\n      if (!title || !url) continue;\n      if (!url.startsWith('http')) url = 'https://book.douban.com' + url;\n\n      const info = normalize(el.querySelector('.subject-abstract, .pl, .pub')?.textContent);\n      const infoParts = info.split('/').map((part) => part.trim()).filter(Boolean);\n      const ratingText = normalize(el.querySelector('.subject-rating .font-small, .rating_nums, .rating')?.textContent);\n      const quote = Array.from(el.querySelectorAll('.subject-tags .tag'))\n        .map((node) => normalize(node.textContent))\n        .filter(Boolean)\n        .join(' / ');\n\n      books.push({\n        rank: parseInt(normalize(el.querySelector('.green-num-box')?.textContent), 10) || books.length + 1,\n        title,\n        rating: parseFloat(ratingText) || 0,\n        quote,\n        author: infoParts[0] || '',\n        publisher: infoParts.find((part) => /出版社|出版公司|Press/i.test(part)) || infoParts[2] || '',\n        year: infoParts.find((part) => /\\d{4}(?:-\\d{1,2})?/.test(part))?.match(/\\d{4}/)?.[0] || '',\n        price: infoParts.find((part) => /元|USD|\\$|￥/.test(part)) || '',\n        url,\n        cover: el.querySelector('img')?.getAttribute('src') || '',\n      });\n    } catch {}\n  }\n  return books;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

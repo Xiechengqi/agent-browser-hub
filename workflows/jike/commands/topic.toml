@@ -1,0 +1,25 @@
+name = "topic"
+description = "即刻话题/圈子帖子"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "Topic ID (from topic URL, e.g. 553870e8e4b0cafb0a1bef68)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of posts"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/topic.json"
+
+[output]
+columns = ["content", "author", "likes", "comments", "time", "url"]

@@ -1,0 +1,10 @@
+name = "me"
+description = ""
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/me.json"
+
+[output]
+columns = []

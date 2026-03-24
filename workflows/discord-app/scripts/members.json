@@ -1,0 +1,21 @@
+{
+  "pipeline": {
+    "site": "discord-app",
+    "name": "members",
+    "description": "List online members in the current Discord channel",
+    "domain": "localhost",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const results = [];\n  const items = document.querySelectorAll('[class*=\"member_\"], [data-list-item-id*=\"members\"]');\n  items.forEach((item, i) => {\n    const nameEl = item.querySelector('[class*=\"username_\"], [class*=\"nameTag\"]');\n    const statusEl = item.querySelector('[class*=\"activity\"], [class*=\"customStatus\"]');\n    const name = nameEl ? nameEl.textContent.trim() : (item.textContent || '').trim().substring(0, 50);\n    const status = statusEl ? statusEl.textContent.trim() : '';\n    if (name && name.length > 0) {\n      results.push({ Index: i + 1, Name: name, Status: status || 'Online' });\n    }\n  });\n  return results.length > 0 ? results.slice(0, 50) : [{ Index: 0, Name: 'No members visible', Status: 'Toggle member list first' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "Index",
+      "Name",
+      "Status"
+    ]
+  }
+}

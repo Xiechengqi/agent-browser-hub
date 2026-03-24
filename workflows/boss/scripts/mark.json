@@ -1,0 +1,36 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "mark",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "uid": {
+        "type": "str",
+        "required": true,
+        "description": "Encrypted UID of candidate"
+      },
+      "label": {
+        "type": "str",
+        "required": true,
+        "description": "Label name or ID"
+      },
+      "remove": {
+        "type": "bool",
+        "required": false,
+        "description": "Remove label instead of adding"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/chat/index"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const encryptUid = ${{ args.uid }};\n  const labelInput = ${{ args.label }};\n  const remove = ${{ args.remove }} || false;\n  const LABEL_MAP = { '新招呼': 1, '沟通中': 2, '已约面': 3, '已获取简历': 4, '已交换电话': 5, '已交换微信': 6, '不合适': 7, '牛人发起': 8, '收藏': 11 };\n  let labelId = LABEL_MAP[labelInput] || parseInt(labelInput);\n  if (!labelId) throw new Error('Unknown label: ' + labelInput);\n  return new Promise((resolve, reject) => {\n    const xhr1 = new XMLHttpRequest();\n    xhr1.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/getBossFriendListV2.json?page=1&status=0&jobId=0', true);\n    xhr1.withCredentials = true;\n    xhr1.timeout = 15000;\n    xhr1.setRequestHeader('Accept', 'application/json');\n    xhr1.onload = () => {\n      try {\n        const data1 = JSON.parse(xhr1.responseText);\n        if (data1.code !== 0) reject(new Error(data1.message || 'API error'));\n        const friends = data1.zpData?.friendList || [];\n        const friend = friends.find(f => f.encryptUid === encryptUid);\n        if (!friend) reject(new Error('Candidate not found'));\n        const action = remove ? 'deleteMark' : 'addMark';\n        const url = `https://www.zhipin.com/wapi/zprelation/friend/label/${action}?friendId=${friend.uid}&friendSource=${friend.friendSource || 0}&labelId=${labelId}`;\n        const xhr2 = new XMLHttpRequest();\n        xhr2.open('GET', url, true);\n        xhr2.withCredentials = true;\n        xhr2.timeout = 15000;\n        xhr2.setRequestHeader('Accept', 'application/json');\n        xhr2.onload = () => {\n          try {\n            const data2 = JSON.parse(xhr2.responseText);\n            if (data2.code !== 0) reject(new Error(data2.message || 'API error'));\n            const labelName = Object.entries(LABEL_MAP).find(([, v]) => v === labelId)?.[0] || String(labelId);\n            resolve([{ status: remove ? '✅ 标签已移除' : '✅ 标签已添加', detail: `${friend.name}: ${remove ? '移除' : '添加'}标签「${labelName}」` }]);\n          } catch(e) { reject(e); }\n        };\n        xhr2.onerror = () => reject(new Error('Network Error'));\n        xhr2.ontimeout = () => reject(new Error('Timeout'));\n        xhr2.send(null);\n      } catch(e) { reject(e); }\n    };\n    xhr1.onerror = () => reject(new Error('Network Error'));\n    xhr1.ontimeout = () => reject(new Error('Timeout'));\n    xhr1.send(null);\n  });\n})()\n"
+      }
+    ]
+  }
+}

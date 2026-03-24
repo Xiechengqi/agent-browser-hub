@@ -1,0 +1,28 @@
+{
+  "pipeline": {
+    "site": "instagram",
+    "name": "follow",
+    "description": "Follow an Instagram user",
+    "domain": "www.instagram.com",
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Instagram username to follow"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.instagram.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  const headers = { 'X-IG-App-ID': '936619743392459' };\n  const opts = { credentials: 'include', headers };\n\n  // Get user ID\n  const r1 = await fetch('https://www.instagram.com/api/v1/users/web_profile_info/?username=' + encodeURIComponent(username), opts);\n  if (!r1.ok) throw new Error('User not found: ' + username);\n  const d1 = await r1.json();\n  const userId = d1?.data?.user?.id;\n  if (!userId) throw new Error('User not found: ' + username);\n\n  const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';\n  const r2 = await fetch('https://www.instagram.com/api/v1/friendships/create/' + userId + '/', {\n    method: 'POST',\n    credentials: 'include',\n    headers: { ...headers, 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },\n  });\n  if (!r2.ok) throw new Error('Failed to follow: HTTP ' + r2.status);\n  const d2 = await r2.json();\n  const status = d2?.friendship_status?.following ? 'Following' : d2?.friendship_status?.outgoing_request ? 'Request sent' : 'Followed';\n  return [{ status, username }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "username"
+    ]
+  }
+}

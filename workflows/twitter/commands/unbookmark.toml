@@ -1,0 +1,17 @@
+name = "unbookmark"
+description = "Remove a tweet from bookmarks"
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "Tweet URL"
+
+[execution]
+entry = "script"
+script = "scripts/unbookmark.json"
+
+[output]
+columns = ["status", "message"]

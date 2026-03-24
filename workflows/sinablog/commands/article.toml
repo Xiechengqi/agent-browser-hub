@@ -1,0 +1,17 @@
+name = "article"
+description = "获取新浪博客单篇文章详情"
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "文章URL（如 https://blog.sina.com.cn/s/blog_xxx.html）"
+
+[execution]
+entry = "script"
+script = "scripts/article.json"
+
+[output]
+columns = ["title", "author", "date", "category", "readCount", "commentCount"]

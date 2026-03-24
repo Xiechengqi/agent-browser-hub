@@ -1,0 +1,33 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "block",
+    "description": "Block a Twitter user",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Twitter screen name (without @)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://x.com/${{ args.username }}",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  let attempts = 0;\n\n  while (attempts < 20) {\n    const blockedIndicator = document.querySelector('[data-testid$=\"-unblock\"]');\n    if (blockedIndicator) return [{ status: 'success', message: 'Already blocking @' + username }];\n\n    const moreBtn = document.querySelector('[data-testid=\"userActions\"]');\n    if (moreBtn) break;\n\n    await new Promise(r => setTimeout(r, 500));\n    attempts++;\n  }\n\n  const moreBtn = document.querySelector('[data-testid=\"userActions\"]');\n  if (!moreBtn) return [{ status: 'failed', message: 'Could not find user actions menu' }];\n\n  moreBtn.click();\n  await new Promise(r => setTimeout(r, 1000));\n\n  const menuItems = document.querySelectorAll('[role=\"menuitem\"]');\n  let blockItem = null;\n  for (const item of menuItems) {\n    if (item.textContent && item.textContent.includes('Block')) {\n      blockItem = item;\n      break;\n    }\n  }\n\n  if (!blockItem) return [{ status: 'failed', message: 'Could not find Block option' }];\n\n  blockItem.click();\n  await new Promise(r => setTimeout(r, 1000));\n\n  const confirmBtn = document.querySelector('[data-testid=\"confirmationSheetConfirm\"]');\n  if (confirmBtn) {\n    confirmBtn.click();\n    await new Promise(r => setTimeout(r, 1500));\n  }\n\n  const verify = document.querySelector('[data-testid$=\"-unblock\"]');\n  if (verify) return [{ status: 'success', message: 'Successfully blocked @' + username }];\n  return [{ status: 'failed', message: 'Block action initiated but UI did not update' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

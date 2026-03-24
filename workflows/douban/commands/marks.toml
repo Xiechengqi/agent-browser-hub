@@ -1,0 +1,33 @@
+name = "marks"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "status"
+type = "string"
+required = false
+positional = false
+description = "Mark type: collect (watched), wish (want to watch), do (watching)"
+default = "collect"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of marks to export (0 for all)"
+default = 50
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Douban user ID"
+
+[execution]
+entry = "script"
+script = "scripts/marks.json"
+
+[output]
+columns = []

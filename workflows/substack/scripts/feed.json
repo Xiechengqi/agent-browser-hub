@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "substack",
+    "name": "feed",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "pipeline": [
+      {
+        "navigate": "https://substack.com/"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('article').forEach(article => {\n    const titleEl = article.querySelector('h3, h2');\n    const linkEl = article.querySelector('a');\n    if (titleEl && linkEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: linkEl.href\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

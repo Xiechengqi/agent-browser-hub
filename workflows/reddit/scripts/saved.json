@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "saved",
+    "description": "Browse your saved Reddit posts",
+    "domain": "reddit.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 15,
+        "description": "Number of posts to fetch"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const meRes = await fetch('/api/me.json?raw_json=1', { credentials: 'include' });\n    const me = await meRes.json();\n    const username = me?.name || me?.data?.name;\n    if (!username) throw new Error('Not logged in — cannot determine username');\n    const limit = ${{ args.limit }};\n    const res = await fetch('/user/' + username + '/saved.json?limit=' + limit + '&raw_json=1', { credentials: 'include' });\n    const d = await res.json();\n    return (d?.data?.children || []).map(c => ({\n      title: c.data.title || c.data.body?.slice(0, 100) || '-',\n      subreddit: c.data.subreddit_name_prefixed || 'r/' + (c.data.subreddit || '?'),\n      score: c.data.score || 0,\n      comments: c.data.num_comments || 0,\n      url: 'https://www.reddit.com' + (c.data.permalink || ''),\n    }));\n  } catch (e) {\n    throw new Error(e.toString());\n  }\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "title",
+      "subreddit",
+      "score",
+      "comments",
+      "url"
+    ]
+  }
+}

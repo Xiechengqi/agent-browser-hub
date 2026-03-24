@@ -1,0 +1,52 @@
+{
+  "pipeline": {
+    "site": "google",
+    "name": "news",
+    "description": "Get Google News headlines via RSS feed",
+    "domain": "news.google.com",
+    "strategy": "PUBLIC",
+    "browser": true,
+    "args": {
+      "keyword": {
+        "type": "str",
+        "positional": true,
+        "description": "Search query (omit for top stories)"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of results"
+      },
+      "lang": {
+        "type": "str",
+        "default": "en",
+        "description": "Language short code (e.g. en, zh)"
+      },
+      "region": {
+        "type": "str",
+        "default": "US",
+        "description": "Region code (e.g. US, CN)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://news.google.com/rss/search?q=${{ args.keyword }}&hl=${{ args.lang }}&gl=${{ args.region }}&ceid=${{ args.region }}:${{ args.lang }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('item').forEach(el => {\n    let title = el.querySelector('title')?.textContent?.trim() || '';\n    const link = el.querySelector('link')?.textContent?.trim() || '';\n    const pubDate = el.querySelector('pubDate')?.textContent?.trim() || '';\n    let source = el.querySelector('source')?.textContent?.trim() || '';\n    if (!source) {\n      const idx = title.lastIndexOf(' - ');\n      if (idx !== -1) {\n        source = title.slice(idx + 3);\n        title = title.slice(0, idx);\n      }\n    }\n    items.push({ title, source, date: pubDate, url: link });\n  });\n  return items;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "title",
+      "source",
+      "date",
+      "url"
+    ]
+  }
+}

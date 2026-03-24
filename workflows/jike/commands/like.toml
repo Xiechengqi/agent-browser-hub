@@ -1,0 +1,17 @@
+name = "like"
+description = "点赞即刻帖子"
+strategy = "COOKIE"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "帖子 ID"
+
+[execution]
+entry = "script"
+script = "scripts/like.json"
+
+[output]
+columns = ["status", "message"]

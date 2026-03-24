@@ -1,0 +1,17 @@
+name = "user"
+description = "View a Reddit user profile"
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = ""
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["field", "value"]

@@ -1,0 +1,17 @@
+name = "subject"
+description = "获取电影详情"
+strategy = "COOKIE"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "电影 ID"
+
+[execution]
+entry = "script"
+script = "scripts/subject.json"
+
+[output]
+columns = ["id", "title", "originalTitle", "year", "rating", "ratingCount", "genres", "directors", "casts", "summary", "url"]

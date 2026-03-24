@@ -1,0 +1,22 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://x.com/explore"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "evaluate": "(() => {\n  const searchUrl = `/search?q=${encodeURIComponent('${{ args.query }}')}&f=top`;\n  window.history.pushState({}, '', searchUrl);\n  window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));\n})()\n"
+    },
+    {
+      "wait": 5000
+    },
+    {
+      "evaluate": "(() => {\n  const results = [];\n  const seen = new Set();\n  const tweets = document.querySelectorAll('[data-testid=\"tweet\"]');\n\n  tweets.forEach(tweet => {\n    try {\n      const link = tweet.querySelector('a[href*=\"/status/\"]');\n      if (!link) return;\n      const match = link.href.match(/\\/status\\/(\\d+)/);\n      if (!match) return;\n      const id = match[1];\n      if (seen.has(id)) return;\n      seen.add(id);\n\n      const author = tweet.querySelector('[data-testid=\"User-Name\"] a')?.textContent?.replace('@', '') || 'unknown';\n      const textEl = tweet.querySelector('[data-testid=\"tweetText\"]');\n      const text = textEl ? textEl.textContent : '';\n      const url = `https://x.com/i/status/${id}`;\n\n      results.push({ id, author, text, url });\n    } catch (e) {}\n  });\n\n  return results;\n})()\n"
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

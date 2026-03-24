@@ -1,0 +1,25 @@
+{
+  "pipeline": {
+    "site": "stackoverflow",
+    "name": "search",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "args": {
+      "query": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://stackoverflow.com/search?q=${{ args.query }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.search-result').forEach(result => {\n    const titleEl = result.querySelector('.result-link a');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: 'https://stackoverflow.com' + titleEl.getAttribute('href')\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

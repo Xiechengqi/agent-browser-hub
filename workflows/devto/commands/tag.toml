@@ -1,0 +1,25 @@
+name = "tag"
+description = "Latest DEV.to articles for a specific tag"
+strategy = "PUBLIC"
+
+[[params]]
+name = "tag"
+type = "string"
+required = true
+positional = true
+description = "Tag name (e.g. javascript, python, webdev)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of articles"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/tag.json"
+
+[output]
+columns = ["rank", "title", "author", "reactions", "comments", "tags"]

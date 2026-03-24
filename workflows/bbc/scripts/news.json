@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "bbc",
+    "name": "news",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "pipeline": [
+      {
+        "navigate": "https://www.bbc.com/news"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('[data-testid=\"card-headline\"]').forEach(el => {\n    const link = el.closest('a');\n    if (link) {\n      items.push({\n        title: el.textContent.trim(),\n        url: link.href.startsWith('http') ? link.href : 'https://www.bbc.com' + link.href\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

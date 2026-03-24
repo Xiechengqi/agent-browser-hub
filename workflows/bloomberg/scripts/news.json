@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "bloomberg",
+    "name": "news",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "link": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Bloomberg story/article URL or relative Bloomberg path"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "${{ args.link }}"
+      },
+      {
+        "wait": 5000
+      },
+      {
+        "evaluate": "(() => {\n  const isRobot = /Are you a robot/i.test(document.title)\n    || /unusual activity/i.test(document.body.innerText)\n    || /click the box below to let us know you're not a robot/i.test(document.body.innerText);\n\n  if (isRobot) {\n    throw new Error('Bloomberg served bot-protection page');\n  }\n\n  const raw = document.querySelector('#__NEXT_DATA__')?.textContent;\n  if (!raw) {\n    throw new Error('No __NEXT_DATA__ found on page');\n  }\n\n  const parsed = JSON.parse(raw);\n  const story = parsed?.props?.pageProps?.story;\n  if (!story) {\n    throw new Error('No story data found in __NEXT_DATA__');\n  }\n\n  const title = story.headline || story.seoHeadline || story.seoTitle || document.querySelector('h1')?.textContent?.trim() || document.title;\n  const summary = story.summary || story.socialDescription || story.seoDescription || document.querySelector('meta[name=\"description\"]')?.getAttribute('content') || '';\n  const url = story.url || story.readingUrl || location.href;\n\n  const body = story.body;\n  const content = renderBody(body);\n\n  const mediaLinks = extractMediaLinks(story);\n\n  function renderBody(body) {\n    const blocks = Array.isArray(body?.content) ? body.content : [];\n    return blocks.map(b => renderBlock(b)).filter(Boolean).join('\\n\\n').trim();\n  }\n\n  function renderBlock(block) {\n    if (!block || typeof block !== 'object') return '';\n    if (block.type === 'paragraph') return renderInline(block.content || []);\n    if (block.type === 'heading') {\n      const text = renderInline(block.content || []);\n      return text ? '## ' + text : '';\n    }\n    if (Array.isArray(block.content)) {\n      return block.content.map(c => renderBlock(c)).filter(Boolean).join('\\n');\n    }\n    return '';\n  }\n\n  function renderInline(nodes) {\n    return (nodes || []).map(n => {\n      if (typeof n === 'string') return n;\n      if (n?.type === 'text') return n.value || '';\n      if (Array.isArray(n?.content)) return renderInline(n.content);\n      return n?.value || '';\n    }).join('');\n  }\n\n  function extractMediaLinks(story) {\n    const urls = [];\n    if (story.ledeImageUrl) urls.push(story.ledeImageUrl);\n    if (story.socialImageUrl) urls.push(story.socialImageUrl);\n    return urls.join(', ');\n  }\n\n  return [{ title, summary, link: url, mediaLinks, content }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "title",
+      "summary",
+      "link",
+      "mediaLinks",
+      "content"
+    ]
+  }
+}

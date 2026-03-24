@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "site": "facebook",
+    "name": "memories",
+    "description": "Get your Facebook memories (On This Day)",
+    "domain": "www.facebook.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of memories"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.facebook.com/onthisday",
+          "settleMs": 4000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  const articles = document.querySelectorAll('[role=\"article\"]');\n  return Array.from(articles)\n    .slice(0, limit)\n    .map((el, i) => {\n      const headerLink = el.querySelector('h2 a, h3 a, h4 a, strong a');\n      const spans = Array.from(el.querySelectorAll('div[dir=\"auto\"]'))\n        .map(s => s.textContent.trim())\n        .filter(t => t.length > 5 && t.length < 500);\n      const timeEl = el.querySelector('a[href*=\"/posts/\"] span, a[href*=\"story_fbid\"] span');\n      return {\n        index: i + 1,\n        source: headerLink ? headerLink.textContent.trim().substring(0, 50) : '-',\n        content: (spans[0] || '').replace(/\\n/g, ' ').substring(0, 150),\n        time: timeEl ? timeEl.textContent.trim() : '-',\n      };\n    })\n    .filter(item => item.content.length > 0 || item.source !== '-');\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "source",
+      "content",
+      "time"
+    ]
+  }
+}

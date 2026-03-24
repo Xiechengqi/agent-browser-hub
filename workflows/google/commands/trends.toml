@@ -1,0 +1,26 @@
+name = "trends"
+description = "Get Google Trends daily trending searches via RSS feed"
+strategy = "PUBLIC"
+
+[[params]]
+name = "region"
+type = "string"
+required = false
+positional = false
+description = "Region code (e.g. US, CN, JP)"
+default = "US"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/trends.json"
+
+[output]
+columns = ["title", "traffic", "date"]

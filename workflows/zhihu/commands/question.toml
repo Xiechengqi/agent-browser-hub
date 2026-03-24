@@ -1,0 +1,25 @@
+name = "question"
+description = "Zhihu question details and answers"
+strategy = "COOKIE"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = false
+description = "Question ID (numeric)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of answers"
+default = 5
+
+[execution]
+entry = "script"
+script = "scripts/question.json"
+
+[output]
+columns = ["rank", "author", "votes", "content"]

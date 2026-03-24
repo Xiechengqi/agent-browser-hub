@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "site": "substack",
+    "name": "publication",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "url": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Newsletter URL (e.g. https://example.substack.com)"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of articles to return"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "${{ args.url }}/archive"
+      },
+      {
+        "wait": 5000
+      },
+      {
+        "evaluate": "(async () => {\n  await new Promise((resolve) => setTimeout(resolve, 3000));\n  const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const limit = Math.max(1, Math.min(${{ args.limit }}, 50));\n  const baseUrl = '${{ args.url }}'.replace(/\\/$/, '');\n  const grouped = new Map();\n\n  for (const link of Array.from(document.querySelectorAll('a[href*=\"/p/\"]'))) {\n    const rawHref = link.getAttribute('href') || '';\n    if (!rawHref || rawHref === '/p/upgrade') continue;\n\n    const url = rawHref.startsWith('http') ? rawHref : baseUrl + rawHref;\n    const text = normalize(link.textContent);\n    if (!text) continue;\n    if (/^(subscribe|paid|home|about|latest|top|discussions)$/i.test(text)) continue;\n    if (/^[\\d,]+$/.test(text)) continue;\n\n    const entry = grouped.get(url) || { texts: new Set(), date: '' };\n    entry.texts.add(text);\n\n    const container = link.closest('article, section, div') || link.parentElement || link;\n    const containerText = normalize(container.textContent);\n    if (!entry.date) {\n      entry.date = containerText.match(/\\b(?:[A-Z]{3}\\s+\\d{1,2}|[A-Z][a-z]{2}\\s+\\d{1,2})\\b/)?.[0] || '';\n    }\n\n    grouped.set(url, entry);\n  }\n\n  const posts = [];\n  for (const [url, entry] of Array.from(grouped.entries())) {\n    const texts = Array.from(entry.texts).map((text) => normalize(text)).filter((text) => text.length > 3).sort((a, b) => a.length - b.length);\n    const title = texts[0] || '';\n    const description = texts.find((text) => text !== title) || '';\n    if (!title) continue;\n    posts.push({\n      rank: posts.length + 1,\n      title,\n      date: entry.date,\n      description: description.slice(0, 150),\n      url,\n    });\n    if (posts.length >= limit) break;\n  }\n\n  return posts;\n})()\n"
+      }
+    ]
+  }
+}

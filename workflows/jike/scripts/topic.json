@@ -1,0 +1,51 @@
+{
+  "pipeline": {
+    "site": "jike",
+    "name": "topic",
+    "description": "即刻话题/圈子帖子",
+    "domain": "m.okjike.com",
+    "browser": true,
+    "args": {
+      "id": {
+        "positional": true,
+        "type": "string",
+        "required": true,
+        "description": "Topic ID (from topic URL, e.g. 553870e8e4b0cafb0a1bef68)"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of posts"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://m.okjike.com/topics/${{ args.id }}"
+      },
+      {
+        "evaluate": "(() => {\n  try {\n    const el = document.querySelector('script[type=\"application/json\"]');\n    if (!el) return [];\n    const data = JSON.parse(el.textContent);\n    const pageProps = data?.props?.pageProps || {};\n    const posts = pageProps.posts || [];\n    return posts.map(p => ({\n      content: (p.content || '').replace(/\\n/g, ' ').slice(0, 80),\n      author: p.user?.screenName || '',\n      likes: p.likeCount || 0,\n      comments: p.commentCount || 0,\n      time: p.actionTime || p.createdAt || '',\n      id: p.id || '',\n    }));\n  } catch (e) {\n    return [];\n  }\n})()\n"
+      },
+      {
+        "map": {
+          "content": "${{ item.content }}",
+          "author": "${{ item.author }}",
+          "likes": "${{ item.likes }}",
+          "comments": "${{ item.comments }}",
+          "time": "${{ item.time }}",
+          "url": "https://web.okjike.com/originalPost/${{ item.id }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "content",
+      "author",
+      "likes",
+      "comments",
+      "time",
+      "url"
+    ]
+  }
+}

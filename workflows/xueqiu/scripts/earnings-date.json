@@ -1,0 +1,50 @@
+{
+  "pipeline": {
+    "site": "xueqiu",
+    "name": "earnings-date",
+    "description": "获取股票预计财报发布日期（公司大事）",
+    "domain": "xueqiu.com",
+    "browser": true,
+    "args": {
+      "symbol": {
+        "positional": true,
+        "type": "str",
+        "required": true,
+        "description": "股票代码，如 SH600519、SZ000858、00700"
+      },
+      "next": {
+        "type": "bool",
+        "default": false,
+        "description": "仅返回最近一次未发布的财报日期"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "返回数量，默认 10"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://xueqiu.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const symbol = ('${{ args.symbol }}' || '').toUpperCase();\n  const onlyNext = ${{ args.next }};\n  if (!symbol) throw new Error('Missing argument: symbol');\n  const resp = await fetch(\n    `https://stock.xueqiu.com/v5/stock/screener/event/list.json?symbol=${encodeURIComponent(symbol)}&page=1&size=100`,\n    { credentials: 'include' }\n  );\n  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');\n  const d = await resp.json();\n  if (!d.data || !d.data.items) throw new Error('获取失败: ' + JSON.stringify(d));\n\n  // subtype 2 = 预计财报发布\n  let items = d.data.items.filter(item => item.subtype === 2);\n\n  const now = Date.now();\n  let results = items.map(item => {\n    const ts = item.timestamp;\n    const dateStr = ts ? new Date(ts).toISOString().split('T')[0] : null;\n    const isFuture = ts && ts > now;\n    return {\n      date: dateStr,\n      report: item.message,\n      status: isFuture ? '⏳ 未发布' : '✅ 已发布',\n      _ts: ts,\n      _future: isFuture\n    };\n  });\n\n  if (onlyNext) {\n    const future = results.filter(r => r._future).sort((a, b) => a._ts - b._ts);\n    results = future.length ? [future[0]] : [];\n  }\n\n  return results;\n})()\n"
+      },
+      {
+        "map": {
+          "date": "${{ item.date }}",
+          "report": "${{ item.report }}",
+          "status": "${{ item.status }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "date",
+      "report",
+      "status"
+    ]
+  }
+}

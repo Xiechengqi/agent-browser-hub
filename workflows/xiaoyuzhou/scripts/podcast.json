@@ -1,0 +1,30 @@
+{
+  "pipeline": {
+    "site": "xiaoyuzhou",
+    "name": "podcast",
+    "description": "View a Xiaoyuzhou podcast profile",
+    "domain": "www.xiaoyuzhoufm.com",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "args": {
+      "id": {
+        "type": "str",
+        "required": true,
+        "description": "Podcast ID (from xiaoyuzhoufm.com URL)"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(async () => {\n  const id = '${{ args.id }}';\n  const url = `https://www.xiaoyuzhoufm.com/podcast/${id}`;\n  const resp = await fetch(url, {\n    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; agent-browser-hub)' }\n  });\n  if (!resp.ok) throw new Error(`HTTP ${resp.status} for podcast/${id}`);\n  const html = await resp.text();\n  const match = html.match(/<script id=\"__NEXT_DATA__\"[^>]*>([\\s\\S]*?)<\\/script>/);\n  if (!match) throw new Error('Failed to extract __NEXT_DATA__');\n  const parsed = JSON.parse(match[1]);\n  const p = parsed.props?.pageProps?.podcast;\n  if (!p) throw new Error('Podcast not found');\n  return [{\n    title: p.title,\n    author: p.author,\n    description: p.brief,\n    subscribers: p.subscriptionCount,\n    episodes: p.episodeCount,\n    updated: (p.latestEpisodePubDate || '').slice(0, 10)\n  }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "title",
+      "author",
+      "description",
+      "subscribers",
+      "episodes",
+      "updated"
+    ]
+  }
+}

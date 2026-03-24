@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "site": "discord-app",
+    "name": "send",
+    "description": "Send a message in the active Discord channel",
+    "domain": "localhost",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "text": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Message to send"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const text = '${{ args.text }}';\n  const editor = document.querySelector('[role=\"textbox\"][data-slate-editor=\"true\"], [class*=\"slateTextArea\"]');\n  if (!editor) throw new Error('Could not find Discord message input. Make sure a channel is open.');\n  editor.focus();\n  document.execCommand('insertText', false, text);\n})()\n"
+      },
+      {
+        "wait": 300
+      },
+      {
+        "evaluate": "(() => {\n  const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true });\n  document.activeElement.dispatchEvent(enterEvent);\n  return [{ Status: 'Success' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "Status"
+    ]
+  }
+}

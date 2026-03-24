@@ -1,0 +1,17 @@
+name = "detail"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "security-id"
+type = "string"
+required = true
+positional = false
+description = "Security ID from search results"
+
+[execution]
+entry = "script"
+script = "scripts/detail.json"
+
+[output]
+columns = []

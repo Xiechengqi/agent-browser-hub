@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "xueqiu",
+    "name": "hot",
+    "strategy": "COOKIE",
+    "browser": true,
+    "pipeline": [
+      {
+        "navigate": "https://xueqiu.com/"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.timeline__item').forEach(item => {\n    const titleEl = item.querySelector('.timeline__item__title');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim()\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

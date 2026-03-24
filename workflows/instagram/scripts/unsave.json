@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "instagram",
+    "name": "unsave",
+    "description": "Unsave (remove bookmark) an Instagram post",
+    "domain": "www.instagram.com",
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Username of the post author"
+      },
+      "index": {
+        "type": "int",
+        "default": 1,
+        "description": "Post index (1 = most recent)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.instagram.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  const idx = ${{ args.index }} - 1;\n  const headers = { 'X-IG-App-ID': '936619743392459' };\n  const opts = { credentials: 'include', headers };\n\n  const r1 = await fetch('https://www.instagram.com/api/v1/users/web_profile_info/?username=' + encodeURIComponent(username), opts);\n  if (!r1.ok) throw new Error('User not found: ' + username);\n  const userId = (await r1.json())?.data?.user?.id;\n\n  const r2 = await fetch('https://www.instagram.com/api/v1/feed/user/' + userId + '/?count=' + (idx + 1), opts);\n  const posts = (await r2.json())?.items || [];\n  if (idx >= posts.length) throw new Error('Post index ' + (idx + 1) + ' not found');\n  const pk = posts[idx].pk;\n  const caption = (posts[idx].caption?.text || '').substring(0, 60);\n\n  const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';\n  const r3 = await fetch('https://www.instagram.com/api/v1/web/save/' + pk + '/unsave/', {\n    method: 'POST', credentials: 'include',\n    headers: { ...headers, 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },\n  });\n  if (!r3.ok) throw new Error('Failed to unsave: HTTP ' + r3.status);\n  return [{ status: 'Unsaved', user: username, post: caption || '(post #' + (idx+1) + ')' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "user",
+      "post"
+    ]
+  }
+}

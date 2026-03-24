@@ -1,0 +1,17 @@
+name = "write"
+description = ""
+strategy = "UI"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = false
+description = "Text to append to the page"
+
+[execution]
+entry = "script"
+script = "scripts/write.json"
+
+[output]
+columns = []

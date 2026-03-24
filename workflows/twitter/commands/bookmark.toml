@@ -1,0 +1,17 @@
+name = "bookmark"
+description = "Bookmark a tweet"
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "Tweet URL"
+
+[execution]
+entry = "script"
+script = "scripts/bookmark.json"
+
+[output]
+columns = ["status", "message"]

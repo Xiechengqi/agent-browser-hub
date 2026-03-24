@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "site": "youtube",
+    "name": "video",
+    "description": "Get YouTube video metadata (title, views, description, etc.)",
+    "domain": "www.youtube.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "url": {
+        "type": "str",
+        "required": true,
+        "description": "YouTube video URL or video ID"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const input = '${{ args.url }}';\n  let videoId = input;\n  if (input.startsWith('http')) {\n    try {\n      const parsed = new URL(input);\n      if (parsed.searchParams.has('v')) videoId = parsed.searchParams.get('v');\n      else if (parsed.hostname === 'youtu.be') videoId = parsed.pathname.slice(1).split('/')[0];\n      else {\n        const pathMatch = parsed.pathname.match(/^\\/(shorts|embed|live|v)\\/([^/?]+)/);\n        if (pathMatch) videoId = pathMatch[2];\n      }\n    } catch {}\n  }\n  return videoId;\n})()\n"
+      },
+      {
+        "navigate": "https://www.youtube.com/watch?v=${{ pipeline[0] }}"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  const player = window.ytInitialPlayerResponse;\n  const yt = window.ytInitialData;\n  if (!player) return [];\n  const details = player.videoDetails || {};\n  const microformat = player.microformat?.playerMicroformatRenderer || {};\n  let fullDescription = details.shortDescription || '';\n  try {\n    const contents = yt?.contents?.twoColumnWatchNextResults?.results?.results?.contents;\n    if (contents) {\n      for (const c of contents) {\n        const desc = c.videoSecondaryInfoRenderer?.attributedDescription?.content;\n        if (desc) { fullDescription = desc; break; }\n      }\n    }\n  } catch {}\n  let likes = '';\n  try {\n    const contents = yt?.contents?.twoColumnWatchNextResults?.results?.results?.contents;\n    if (contents) {\n      for (const c of contents) {\n        const buttons = c.videoPrimaryInfoRenderer?.videoActions?.menuRenderer?.topLevelButtons;\n        if (buttons) {\n          for (const b of buttons) {\n            const toggle = b.segmentedLikeDislikeButtonViewModel?.likeButtonViewModel?.likeButtonViewModel?.toggleButtonViewModel?.toggleButtonViewModel?.defaultButtonViewModel?.buttonViewModel;\n            if (toggle?.title) { likes = toggle.title; break; }\n          }\n        }\n      }\n    }\n  } catch {}\n  let subscribers = '';\n  try {\n    const contents = yt?.contents?.twoColumnWatchNextResults?.results?.results?.contents;\n    if (contents) {\n      for (const c of contents) {\n        const owner = c.videoSecondaryInfoRenderer?.owner?.videoOwnerRenderer?.subscriberCountText?.simpleText;\n        if (owner) { subscribers = owner; break; }\n      }\n    }\n  } catch {}\n  const data = {\n    title: details.title || '',\n    channel: details.author || '',\n    channelId: details.channelId || '',\n    videoId: details.videoId || '',\n    views: details.viewCount || '',\n    likes,\n    subscribers,\n    duration: details.lengthSeconds ? details.lengthSeconds + 's' : '',\n    publishDate: microformat.publishDate || microformat.uploadDate || details.publishDate || '',\n    category: microformat.category || '',\n    description: fullDescription,\n    keywords: (details.keywords || []).join(', '),\n    isLive: details.isLiveContent || false,\n    thumbnail: details.thumbnail?.thumbnails?.slice(-1)?.[0]?.url || ''\n  };\n  return Object.entries(data).map(([field, value]) => ({ field, value: String(value) }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "field",
+      "value"
+    ]
+  }
+}

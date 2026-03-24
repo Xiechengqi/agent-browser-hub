@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "site": "douban",
+    "name": "top250",
+    "description": "豆瓣电影 Top250",
+    "domain": "movie.douban.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 250,
+        "description": "返回结果数量"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://movie.douban.com/top250"
+      },
+      {
+        "evaluate": "async () => {\n  const results = [];\n  const limit = ${{ args.limit }};\n\n  const parsePage = (doc) => {\n    const items = doc.querySelectorAll('.item');\n    for (const item of items) {\n      if (results.length >= limit) break;\n\n      const rankEl = item.querySelector('.pic em');\n      const linkEl = item.querySelector('a');\n      const titleEl = item.querySelector('.title');\n      const ratingEl = item.querySelector('.rating_num');\n\n      const href = linkEl?.href || '';\n      const matchResult = href.match(/subject\\/(\\d+)/);\n      const id = matchResult ? matchResult[1] : '';\n\n      const title = titleEl?.textContent?.trim() || '';\n      const rank = parseInt(rankEl?.textContent || '0', 10);\n      const rating = ratingEl?.textContent?.trim() || '';\n\n      if (id && title) {\n        results.push({\n          rank: rank || results.length + 1,\n          id,\n          title,\n          rating: rating ? parseFloat(rating) : 0,\n          url: href\n        });\n      }\n    }\n  };\n\n  parsePage(document);\n\n  for (let start = 25; start < 250 && results.length < limit; start += 25) {\n    const resp = await fetch(`https://movie.douban.com/top250?start=${start}`);\n    if (!resp.ok) break;\n    const html = await resp.text();\n    if (!html) break;\n\n    const doc = new DOMParser().parseFromString(html, 'text/html');\n    parsePage(doc);\n    await new Promise(r => setTimeout(r, 150));\n  }\n\n  return results;\n}\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "id",
+      "title",
+      "rating",
+      "url"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+name = "followers"
+description = "List followers of an Instagram user"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Instagram username"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of followers"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/followers.json"
+
+[output]
+columns = ["rank", "username", "name", "verified", "private"]

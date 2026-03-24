@@ -1,0 +1,32 @@
+name = "transcript"
+description = "Get YouTube video transcript/subtitles"
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = false
+description = "YouTube video URL or video ID"
+
+[[params]]
+name = "lang"
+type = "string"
+required = false
+positional = false
+description = "Language code (e.g. en, zh-Hans). Omit to auto-select"
+
+[[params]]
+name = "mode"
+type = "string"
+required = false
+positional = false
+description = "Output mode: raw (every segment)"
+default = "raw"
+
+[execution]
+entry = "script"
+script = "scripts/transcript.json"
+
+[output]
+columns = ["index", "start", "end", "text"]

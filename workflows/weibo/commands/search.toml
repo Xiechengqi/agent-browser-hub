@@ -1,0 +1,25 @@
+name = "search"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "keyword"
+type = "string"
+required = true
+positional = false
+description = "Search keyword"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results (max 50)"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = []

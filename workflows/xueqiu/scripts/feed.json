@@ -1,0 +1,22 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://xueqiu.com"
+    },
+    {
+      "evaluate": "(async () => {\n  const page = ${{ args.page }};\n  const count = ${{ args.limit }};\n  const resp = await fetch(`https://xueqiu.com/v4/statuses/home_timeline.json?page=${page}&count=${count}`, { credentials: 'include' });\n  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');\n  const d = await resp.json();\n  const strip = (html) => (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();\n  const list = d.home_timeline || d.list || [];\n  return list.map(item => {\n    const user = item.user || {};\n    return {\n      id: item.id,\n      text: strip(item.description).substring(0, 200),\n      url: 'https://xueqiu.com/' + user.id + '/' + item.id,\n      author: user.screen_name,\n      likes: item.fav_count,\n      retweets: item.retweet_count,\n      replies: item.reply_count,\n      created_at: item.created_at ? new Date(item.created_at).toISOString() : null\n    };\n  });\n})()"
+    },
+    {
+      "map": {
+        "author": "${{ item.author }}",
+        "text": "${{ item.text }}",
+        "likes": "${{ item.likes }}",
+        "replies": "${{ item.replies }}",
+        "url": "${{ item.url }}"
+      }
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

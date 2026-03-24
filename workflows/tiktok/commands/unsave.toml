@@ -1,0 +1,17 @@
+name = "unsave"
+description = "Remove a TikTok video from Favorites"
+strategy = "PUBLIC"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "TikTok video URL"
+
+[execution]
+entry = "script"
+script = "scripts/unsave.json"
+
+[output]
+columns = ["status", "url"]

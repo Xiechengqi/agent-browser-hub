@@ -1,0 +1,40 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "accept",
+    "description": "Auto-accept DM requests containing specific keywords",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Keywords to match (comma-separated)"
+      },
+      "max": {
+        "type": "int",
+        "default": 20,
+        "description": "Maximum requests to accept"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://x.com/messages/requests",
+          "settleMs": 4000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const keywords = '${{ args.query }}'.split(',').map(k => k.trim()).filter(Boolean);\n  const maxAccepts = parseInt('${{ args.max }}');\n  const results = [];\n  let acceptCount = 0;\n\n  const convs = Array.from(document.querySelectorAll('[data-testid=\"conversation\"]'));\n  if (convs.length === 0) return [{ index: 1, status: 'info', user: 'System', message: 'No message requests found' }];\n\n  for (let i = 0; i < Math.min(convs.length, maxAccepts); i++) {\n    const conv = convs[i];\n    const text = conv.innerText || '';\n    const previewMatch = keywords.some(k => text.includes(k));\n    if (!previewMatch) continue;\n\n    conv.click();\n    await new Promise(r => setTimeout(r, 2000));\n\n    const chatArea = document.querySelector('[data-testid=\"DmScrollerContainer\"]') || document.querySelector('main');\n    const chatText = chatArea ? chatArea.innerText : '';\n    const matchedKw = keywords.filter(k => chatText.includes(k));\n    if (matchedKw.length === 0) continue;\n\n    const allBtns = Array.from(document.querySelectorAll('[role=\"button\"]'));\n    const acceptBtn = allBtns.find(btn => {\n      const t = btn.innerText.trim().toLowerCase();\n      return t === 'accept' || t === '接受';\n    });\n\n    if (acceptBtn) {\n      acceptBtn.click();\n      await new Promise(r => setTimeout(r, 2000));\n      acceptCount++;\n      results.push({ index: acceptCount, status: 'accepted', user: 'User', message: 'Matched: ' + matchedKw.join(', ') });\n    }\n\n    if (acceptCount >= maxAccepts) break;\n  }\n\n  if (results.length === 0) {\n    return [{ index: 0, status: 'info', user: 'System', message: 'No requests matched keywords' }];\n  }\n  return results;\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "status",
+      "user",
+      "message"
+    ]
+  }
+}

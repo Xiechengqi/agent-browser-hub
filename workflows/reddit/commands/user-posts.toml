@@ -1,0 +1,25 @@
+name = "user-posts"
+description = "View a Reddit user's submitted posts"
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = ""
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = ""
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/user-posts.json"
+
+[output]
+columns = ["title", "subreddit", "score", "comments", "url"]

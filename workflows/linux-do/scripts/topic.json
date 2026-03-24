@@ -1,0 +1,39 @@
+{
+  "pipeline": {
+    "site": "linux-do",
+    "name": "topic",
+    "description": "linux.do 帖子详情和回复（首页）",
+    "domain": "linux.do",
+    "browser": true,
+    "args": {
+      "id": {
+        "positional": true,
+        "type": "int",
+        "required": true,
+        "description": "Topic ID"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://linux.do"
+      },
+      {
+        "evaluate": "(async () => {\n  const res = await fetch('/t/${{ args.id }}.json', { credentials: 'include' });\n  if (!res.ok) throw new Error('HTTP ' + res.status + ' - 请先登录 linux.do');\n  let data;\n  try { data = await res.json(); } catch { throw new Error('响应不是有效 JSON - 请先登录 linux.do'); }\n  const strip = (html) => (html || '').replace(/<br\\s*\\/?>/gi, ' ').replace(/<\\/(p|div|li|blockquote|h[1-6])>/gi, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#(?:(\\d+)|x([0-9a-fA-F]+));/g, (_, dec, hex) => { try { return String.fromCodePoint(dec !== undefined ? Number(dec) : parseInt(hex, 16)); } catch { return ''; } }).replace(/\\s+/g, ' ').trim();\n  const posts = data?.post_stream?.posts || [];\n  return posts.map(p => ({\n    author: p.username,\n    content: strip(p.cooked).slice(0, 200),\n    likes: p.like_count,\n    created_at: p.created_at,\n  }));\n})()\n"
+      },
+      {
+        "map": {
+          "author": "${{ item.author }}",
+          "content": "${{ item.content }}",
+          "likes": "${{ item.likes }}",
+          "created_at": "${{ item.created_at }}"
+        }
+      }
+    ],
+    "columns": [
+      "author",
+      "content",
+      "likes",
+      "created_at"
+    ]
+  }
+}

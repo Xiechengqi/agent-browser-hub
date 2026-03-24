@@ -1,0 +1,17 @@
+name = "member"
+description = "V2EX 用户资料"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Username"
+
+[execution]
+entry = "script"
+script = "scripts/member.json"
+
+[output]
+columns = ["username", "tagline", "website", "github", "twitter", "location"]

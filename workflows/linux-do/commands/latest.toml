@@ -1,0 +1,18 @@
+name = "latest"
+description = "linux.do 最新话题"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of topics"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/latest.json"
+
+[output]
+columns = ["rank", "title", "replies", "views", "likes"]

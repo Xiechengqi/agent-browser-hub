@@ -1,0 +1,33 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "like",
+    "description": "Like a specific tweet",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "url": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Tweet URL"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "${{ args.url }}",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  let attempts = 0;\n\n  while (attempts < 20) {\n    const unlikeBtn = document.querySelector('[data-testid=\"unlike\"]');\n    if (unlikeBtn) return [{ status: 'success', message: 'Tweet is already liked' }];\n\n    const likeBtn = document.querySelector('[data-testid=\"like\"]');\n    if (likeBtn) {\n      likeBtn.click();\n      await new Promise(r => setTimeout(r, 1000));\n      const verifyBtn = document.querySelector('[data-testid=\"unlike\"]');\n      if (verifyBtn) return [{ status: 'success', message: 'Tweet successfully liked' }];\n      return [{ status: 'failed', message: 'Like action initiated but UI did not update' }];\n    }\n\n    await new Promise(r => setTimeout(r, 500));\n    attempts++;\n  }\n\n  return [{ status: 'failed', message: 'Could not find Like button' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+name = "read"
+description = ""
+strategy = "UI"
+
+[execution]
+entry = "script"
+script = "scripts/read.json"
+
+[output]
+columns = []

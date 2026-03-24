@@ -1,0 +1,18 @@
+name = "creator-notes"
+description = "小红书创作者笔记列表 + 每篇数据 (标题/日期/观看/点赞/收藏/评论)"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of notes to return"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/creator-notes.json"
+
+[output]
+columns = ["rank", "id", "title", "date", "views", "likes", "collects", "comments", "url"]

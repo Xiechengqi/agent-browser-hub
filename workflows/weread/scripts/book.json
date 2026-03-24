@@ -1,0 +1,28 @@
+{
+  "pipeline": {
+    "site": "weread",
+    "name": "book",
+    "description": "View book details on WeRead",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "bookId": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Book ID (numeric, from search or shelf results)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://weread.qq.com"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(async () => {\n  const url = 'https://i.weread.qq.com/book/info?bookId=' + encodeURIComponent('${{ args.bookId }}');\n  const res = await fetch(url, { credentials: 'include' });\n  if (!res.ok) throw new Error('HTTP ' + res.status);\n  const data = await res.json();\n  const rating = data.newRating ? (data.newRating / 10).toFixed(1) + '%' : '-';\n  return [{\n    title: data.title || '',\n    author: data.author || '',\n    publisher: data.publisher || '',\n    intro: data.intro || '',\n    category: data.category || '',\n    rating: rating\n  }];\n})()\n"
+      }
+    ]
+  }
+}

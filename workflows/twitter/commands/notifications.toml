@@ -1,0 +1,18 @@
+name = "notifications"
+description = "Get Twitter/X notifications"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of notifications"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/notifications.json"
+
+[output]
+columns = ["id", "action", "text", "url"]

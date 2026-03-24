@@ -1,0 +1,27 @@
+{
+  "pipeline": {
+    "site": "discord-app",
+    "name": "read",
+    "description": "Read recent messages from the active Discord channel",
+    "domain": "localhost",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "count": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of messages to read"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.count }};\n  const results = [];\n  const msgNodes = document.querySelectorAll('[id^=\"chat-messages-\"] > div, [class*=\"messageListItem\"]');\n  const slice = Array.from(msgNodes).slice(-limit);\n  slice.forEach(node => {\n    const authorEl = node.querySelector('[class*=\"username\"], [class*=\"headerText\"] span');\n    const timeEl = node.querySelector('time');\n    const contentEl = node.querySelector('[id^=\"message-content-\"], [class*=\"messageContent\"]');\n    if (contentEl) {\n      results.push({\n        Author: authorEl ? authorEl.textContent.trim() : '—',\n        Time: timeEl ? timeEl.getAttribute('datetime') || timeEl.textContent.trim() : '',\n        Message: (contentEl.textContent || '').trim().substring(0, 300),\n      });\n    }\n  });\n  return results.length > 0 ? results : [{ Author: 'System', Time: '', Message: 'No messages found in the current channel.' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "Author",
+      "Time",
+      "Message"
+    ]
+  }
+}

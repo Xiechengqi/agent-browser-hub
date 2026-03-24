@@ -1,0 +1,19 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://xueqiu.com"
+    },
+    {
+      "evaluate": "(async () => {\n  const symbol = ('${{ args.symbol }}' || '').toUpperCase();\n  if (!symbol) throw new Error('Missing argument: symbol');\n  const resp = await fetch(`https://stock.xueqiu.com/v5/stock/batch/quote.json?symbol=${encodeURIComponent(symbol)}`, { credentials: 'include' });\n  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');\n  const d = await resp.json();\n  if (!d.data || !d.data.items || d.data.items.length === 0) throw new Error('未找到股票: ' + symbol);\n  function fmtAmount(v) {\n    if (v == null) return null;\n    if (Math.abs(v) >= 1e12) return (v / 1e12).toFixed(2) + '万亿';\n    if (Math.abs(v) >= 1e8) return (v / 1e8).toFixed(2) + '亿';\n    if (Math.abs(v) >= 1e4) return (v / 1e4).toFixed(2) + '万';\n    return v.toString();\n  }\n  const item = d.data.items[0];\n  const q = item.quote || {};\n  const m = item.market || {};\n  return [{\n    name: q.name,\n    symbol: q.symbol,\n    exchange: q.exchange,\n    currency: q.currency,\n    price: q.current,\n    change: q.chg,\n    changePercent: q.percent != null ? q.percent.toFixed(2) + '%' : null,\n    open: q.open,\n    high: q.high,\n    low: q.low,\n    prevClose: q.last_close,\n    amplitude: q.amplitude != null ? q.amplitude.toFixed(2) + '%' : null,\n    volume: q.volume,\n    amount: fmtAmount(q.amount),\n    turnover_rate: q.turnover_rate != null ? q.turnover_rate.toFixed(2) + '%' : null,\n    marketCap: fmtAmount(q.market_capital),\n    floatMarketCap: fmtAmount(q.float_market_capital),\n    ytdPercent: q.current_year_percent != null ? q.current_year_percent.toFixed(2) + '%' : null,\n    market_status: m.status || null,\n    time: q.timestamp ? new Date(q.timestamp).toISOString() : null,\n    url: 'https://xueqiu.com/S/' + q.symbol\n  }];\n})()"
+    },
+    {
+      "map": {
+        "name": "${{ item.name }}",
+        "symbol": "${{ item.symbol }}",
+        "price": "${{ item.price }}",
+        "changePercent": "${{ item.changePercent }}",
+        "marketCap": "${{ item.marketCap }}"
+      }
+    }
+  ]
+}

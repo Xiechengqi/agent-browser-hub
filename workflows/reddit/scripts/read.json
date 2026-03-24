@@ -1,0 +1,25 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "read",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "subreddit": {
+        "type": "string",
+        "default": "all"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com/r/${{ args.subreddit }}"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('[data-testid=\"post-container\"]').forEach(post => {\n    const titleEl = post.querySelector('h3');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim()\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

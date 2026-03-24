@@ -1,0 +1,17 @@
+name = "follow"
+description = "Follow an Instagram user"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Instagram username to follow"
+
+[execution]
+entry = "script"
+script = "scripts/follow.json"
+
+[output]
+columns = ["status", "username"]

@@ -1,0 +1,26 @@
+name = "flow"
+description = "Barchart unusual options activity / options flow"
+strategy = "COOKIE"
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "Filter: all, call, or put"
+default = "all"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/flow.json"
+
+[output]
+columns = ["symbol", "type", "strike", "expiration", "last", "volume", "openInterest", "volOiRatio", "iv"]

@@ -1,0 +1,10 @@
+name = "sidebar"
+description = ""
+strategy = "UI"
+
+[execution]
+entry = "script"
+script = "scripts/sidebar.json"
+
+[output]
+columns = []

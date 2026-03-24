@@ -1,0 +1,10 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://www.reddit.com"
+    },
+    {
+      "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  const name = username.startsWith('u/') ? username.slice(2) : username;\n  const res = await fetch('/user/' + encodeURIComponent(name) + '/about.json?raw_json=1', {\n    credentials: 'include'\n  });\n  const d = await res.json();\n  const u = d?.data || d || {};\n  const created = u.created_utc ? new Date(u.created_utc * 1000).toISOString().split('T')[0] : '-';\n  return [\n    { field: 'Username', value: 'u/' + (u.name || name) },\n    { field: 'Post Karma', value: String(u.link_karma || 0) },\n    { field: 'Comment Karma', value: String(u.comment_karma || 0) },\n    { field: 'Total Karma', value: String(u.total_karma || ((u.link_karma || 0) + (u.comment_karma || 0))) },\n    { field: 'Account Created', value: created },\n    { field: 'Gold', value: u.is_gold ? 'Yes' : 'No' },\n    { field: 'Verified', value: u.verified ? 'Yes' : 'No' }\n  ];\n})()"
+    }
+  ]
+}

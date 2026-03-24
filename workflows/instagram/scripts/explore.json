@@ -1,0 +1,31 @@
+{
+  "pipeline": {
+    "site": "instagram",
+    "name": "explore",
+    "description": "Instagram explore/discover trending posts",
+    "domain": "www.instagram.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of posts"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.instagram.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const limit = ${{ args.limit }};\n  const res = await fetch(\n    'https://www.instagram.com/api/v1/discover/web/explore_grid/',\n    {\n      credentials: 'include',\n      headers: { 'X-IG-App-ID': '936619743392459' }\n    }\n  );\n  if (!res.ok) throw new Error('HTTP ' + res.status + ' - make sure you are logged in to Instagram');\n  const data = await res.json();\n  const posts = [];\n  for (const sec of (data?.sectional_items || [])) {\n    for (const m of (sec?.layout_content?.medias || [])) {\n      const media = m?.media;\n      if (media) posts.push({\n        user: media.user?.username || '',\n        caption: (media.caption?.text || '').replace(/\\n/g, ' ').substring(0, 100),\n        likes: media.like_count ?? 0,\n        comments: media.comment_count ?? 0,\n        type: media.media_type === 1 ? 'photo' : media.media_type === 2 ? 'video' : 'carousel',\n      });\n    }\n  }\n  return posts.slice(0, limit).map((p, i) => ({ rank: i + 1, ...p }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "user",
+      "caption",
+      "likes",
+      "comments",
+      "type"
+    ]
+  }
+}

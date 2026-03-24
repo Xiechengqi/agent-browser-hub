@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "v2ex",
+    "name": "me",
+    "strategy": "COOKIE",
+    "browser": true,
+    "pipeline": [
+      {
+        "navigate": "https://www.v2ex.com/"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  // Wait for Cloudflare challenge if present\n  for (let i = 0; i < 5; i++) {\n    if (!document.title.includes('Just a moment')) break;\n    await new Promise(r => setTimeout(r, 1500));\n  }\n\n  let username = 'Unknown';\n  const navLinks = Array.from(document.querySelectorAll('a.top')).map(a => a.textContent?.trim());\n  if (navLinks.length > 1 && navLinks[0] === '首页') {\n    username = navLinks[1] || 'Unknown';\n  }\n\n  if (username === 'Unknown') {\n    const profileEl = document.querySelector('a[href^=\"/member/\"]');\n    if (profileEl && profileEl.textContent && profileEl.textContent.trim().length > 0) {\n      username = profileEl.textContent.trim();\n    }\n  }\n\n  let balance = '0';\n  const balanceLink = document.querySelector('a.balance_area');\n  if (balanceLink) {\n    balance = Array.from(balanceLink.childNodes)\n      .filter(n => n.nodeType === 3)\n      .map(n => n.textContent?.trim())\n      .join(' ')\n      .trim();\n  }\n\n  let unread_notifications = '0';\n  const notesEl = document.querySelector('a[href=\"/notifications\"]');\n  if (notesEl) {\n    const text = notesEl.textContent?.trim() || '';\n    const match = text.match(/(\\d+)\\s*未读提醒/);\n    if (match) {\n      unread_notifications = match[1];\n    }\n  }\n\n  let daily_reward_ready = false;\n  const dailyEl = document.querySelector('a[href^=\"/mission/daily\"]');\n  if (dailyEl && dailyEl.textContent?.includes('领取今日的登录奖励')) {\n    daily_reward_ready = true;\n  }\n\n  return [{\n    username,\n    balance,\n    unread_notifications,\n    daily_reward_ready: daily_reward_ready ? '是' : '否'\n  }];\n})()\n"
+      }
+    ]
+  }
+}

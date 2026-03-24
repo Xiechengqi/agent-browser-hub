@@ -1,0 +1,17 @@
+name = "creator-note-detail"
+description = "小红书单篇笔记详情页数据 (笔记信息 + 核心/互动数据 + 观看来源 + 观众画像 + 趋势数据)"
+strategy = "COOKIE"
+
+[[params]]
+name = "note-id"
+type = "string"
+required = true
+positional = false
+description = "Note ID (from creator-notes or note-detail page URL)"
+
+[execution]
+entry = "script"
+script = "scripts/creator-note-detail.json"
+
+[output]
+columns = ["section", "metric", "value", "extra"]

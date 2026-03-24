@@ -1,0 +1,20 @@
+{
+  "pipeline": {
+    "site": "discord-app",
+    "name": "servers",
+    "description": "List all Discord servers (guilds) in the sidebar",
+    "domain": "localhost",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const results = [];\n  const items = document.querySelectorAll('[data-list-item-id*=\"guildsnav___\"], [class*=\"listItem_\"]');\n  items.forEach((item, i) => {\n    const nameAttr = item.querySelector('[data-dnd-name]');\n    const ariaLabel = item.getAttribute('aria-label') || (item.querySelector('[aria-label]') || {}).getAttribute?.('aria-label');\n    const name = nameAttr ? nameAttr.getAttribute('data-dnd-name') : (ariaLabel || (item.textContent || '').trim());\n    if (name && name.length > 0) {\n      results.push({ Index: i + 1, Server: name.substring(0, 80) });\n    }\n  });\n  return results.length > 0 ? results : [{ Index: 0, Server: 'No servers found' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "Index",
+      "Server"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "pipeline": {
+    "site": "xiaohongshu",
+    "name": "creator-stats",
+    "description": "小红书创作者数据总览 (观看/点赞/收藏/评论/分享/涨粉，含每日趋势)",
+    "domain": "creator.xiaohongshu.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "period": {
+        "type": "str",
+        "default": "seven",
+        "description": "Stats period: seven or thirty"
+      }
+    },
+    "columns": [
+      "metric",
+      "total",
+      "trend"
+    ],
+    "pipeline": [
+      {
+        "navigate": "https://creator.xiaohongshu.com/new/home"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const resp = await fetch('/api/galaxy/creator/data/note_detail_new', {\n      credentials: 'include',\n    });\n    if (!resp.ok) throw new Error('HTTP ' + resp.status + '. Are you logged into creator.xiaohongshu.com?');\n    const data = await resp.json();\n    if (!data || !data.data) throw new Error('Unexpected response structure');\n\n    const period = ${{ JSON.stringify(args.period) }} || 'seven';\n    const stats = data.data[period];\n    if (!stats) throw new Error('No data for period \"' + period + '\". Available: ' + Object.keys(data.data).join(', '));\n\n    const formatTrend = (list) => {\n      if (!list || !list.length) return '-';\n      return list.map(d => d.count).join(' → ');\n    };\n\n    return [\n      { metric: '观看数 (views)', total: stats.view_count ?? 0, trend: formatTrend(stats.view_list) },\n      { metric: '平均观看时长 (avg view time ms)', total: stats.view_time_avg ?? 0, trend: formatTrend(stats.view_time_list) },\n      { metric: '主页访问 (home views)', total: stats.home_view_count ?? 0, trend: formatTrend(stats.home_view_list) },\n      { metric: '点赞数 (likes)', total: stats.like_count ?? 0, trend: formatTrend(stats.like_list) },\n      { metric: '收藏数 (collects)', total: stats.collect_count ?? 0, trend: formatTrend(stats.collect_list) },\n      { metric: '评论数 (comments)', total: stats.comment_count ?? 0, trend: formatTrend(stats.comment_list) },\n      { metric: '弹幕数 (danmaku)', total: stats.danmaku_count ?? 0, trend: '-' },\n      { metric: '分享数 (shares)', total: stats.share_count ?? 0, trend: formatTrend(stats.share_list) },\n      { metric: '涨粉数 (new followers)', total: stats.rise_fans_count ?? 0, trend: formatTrend(stats.rise_fans_list) },\n    ];\n  } catch (e) {\n    throw new Error(e.message);\n  }\n})()\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+name = "publish"
+description = "小红书发布图文笔记 (creator center UI automation)"
+strategy = "COOKIE"
+
+[[params]]
+name = "title"
+type = "string"
+required = true
+positional = false
+description = "笔记标题 (最多20字)"
+
+[[params]]
+name = "content"
+type = "string"
+required = true
+positional = false
+description = "笔记正文"
+
+[[params]]
+name = "images"
+type = "string"
+required = false
+positional = false
+description = "图片路径，逗号分隔，最多9张 (jpg/png/gif/webp)"
+
+[[params]]
+name = "topics"
+type = "string"
+required = false
+positional = false
+description = "话题标签，逗号分隔，不含 # 号"
+
+[[params]]
+name = "draft"
+type = "bool"
+required = false
+positional = false
+description = "保存为草稿，不直接发布"
+default = false
+
+[execution]
+entry = "script"
+script = "scripts/publish.json"
+
+[output]
+columns = ["status", "detail"]

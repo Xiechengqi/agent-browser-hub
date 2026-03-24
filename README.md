@@ -4,8 +4,9 @@
 
 **特性：**
 - 🚀 单一二进制文件，无依赖
-- 🎯 38+ 内置命令，覆盖 20+ 站点
-- 📝 基于 YAML 的脚本定义
+- 🎯 260+ 内置命令，覆盖 44 个站点
+- 📦 基于 workflow package 的命令元数据
+- 📝 YAML 作为兼容执行资产保留
 - 🔧 模板引擎和过滤器
 - 📊 多种输出格式（JSON、YAML、表格、CSV、Markdown）
 - 🌐 Web UI + REST API
@@ -145,12 +146,32 @@ curl -X POST http://localhost:3133/api/execute/hackernews/top \
 
 ```bash
 curl -H "Authorization: Bearer <token>" \
-  http://localhost:3133/api/scripts
+  http://localhost:3133/api/commands
 ```
 
-## 创建自定义脚本
+## 创建自定义命令
 
-在 `scripts/{站点}/{命令}.yaml` 创建 YAML 文件：
+新命令默认必须先定义在 `workflows/{站点}/commands/{命令}.toml`。
+
+在迁移阶段，执行实现可以暂时复用 `scripts/{站点}/{命令}.yaml`：
+
+```toml
+name = "mycommand"
+description = "My custom command"
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+
+[execution]
+entry = "pipeline"
+pipeline = "../../scripts/mysite/mycommand.yaml"
+```
+
+对应的 YAML 执行资产示例：
 
 ```yaml
 site: mysite
@@ -180,6 +201,25 @@ pipeline:
       })()
   - limit: ${{ args.limit }}
 ```
+
+更多规范见 [docs/workflow-governance.md](docs/workflow-governance.md) 和 [docs/workflow-package-spec.md](docs/workflow-package-spec.md)。
+
+迁移和发布相关文档：
+
+- [docs/workflow-roadmap.md](docs/workflow-roadmap.md)
+- [docs/workflow-verification-plan.md](docs/workflow-verification-plan.md)
+- [docs/workflow-source-lifecycle-plan.md](docs/workflow-source-lifecycle-plan.md)
+- [docs/opencli-site-migration-execution-plan.md](docs/opencli-site-migration-execution-plan.md)
+- [docs/priority-site-decision-records.md](docs/priority-site-decision-records.md)
+- [docs/full-site-migration-tracker.md](docs/full-site-migration-tracker.md)
+
+## 发布前检查
+
+```bash
+python3 tools/validate_workflows.py
+```
+
+发布清单见 [docs/release-checklist.md](docs/release-checklist.md)。
 
 ### 模板引擎
 
@@ -263,10 +303,9 @@ src/
 ├── registry.rs         # 命令注册表
 └── server/mod.rs       # Web 服务器 + API
 
-scripts/                # YAML 脚本（38+）
+scripts/                # 兼容执行资产
 ```
 
 ## 许可证
 
 Apache-2.0
-

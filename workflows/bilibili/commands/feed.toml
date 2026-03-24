@@ -1,0 +1,7 @@
+name = "feed"
+description = "Get bilibili feed with WBI signature"
+strategy = "COOKIE"
+
+[execution]
+entry = "native"
+native = "bilibili_feed"

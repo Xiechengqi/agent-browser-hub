@@ -1,0 +1,33 @@
+name = "earnings-date"
+description = "获取股票预计财报发布日期（公司大事）"
+strategy = "PUBLIC"
+
+[[params]]
+name = "symbol"
+type = "string"
+required = true
+positional = true
+description = "股票代码，如 SH600519、SZ000858、00700"
+
+[[params]]
+name = "next"
+type = "bool"
+required = false
+positional = false
+description = "仅返回最近一次未发布的财报日期"
+default = false
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "返回数量，默认 10"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/earnings-date.json"
+
+[output]
+columns = ["date", "report", "status"]

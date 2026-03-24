@@ -1,0 +1,10 @@
+name = "random"
+description = "Open a random Wikipedia article"
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/random.json"
+
+[output]
+columns = ["title", "url"]

@@ -1,0 +1,25 @@
+name = "following"
+description = "List accounts an Instagram user is following"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Instagram username"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of accounts"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/following.json"
+
+[output]
+columns = ["rank", "username", "name", "verified", "private"]

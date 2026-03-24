@@ -1,0 +1,26 @@
+{
+  "pipeline": {
+    "site": "xiaohongshu",
+    "name": "creator-profile",
+    "description": "小红书创作者账号信息 (粉丝/关注/获赞/成长等级)",
+    "domain": "creator.xiaohongshu.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "columns": [
+      "field",
+      "value"
+    ],
+    "pipeline": [
+      {
+        "navigate": "https://creator.xiaohongshu.com/new/home"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const resp = await fetch('/api/galaxy/creator/home/personal_info', {\n      credentials: 'include',\n    });\n    if (!resp.ok) throw new Error('HTTP ' + resp.status + '. Are you logged into creator.xiaohongshu.com?');\n    const data = await resp.json();\n    if (!data || !data.data) throw new Error('Unexpected response structure');\n\n    const d = data.data;\n    const grow = d.grow_info || {};\n\n    return [\n      { field: 'Name', value: d.name ?? '' },\n      { field: 'Followers', value: d.fans_count ?? 0 },\n      { field: 'Following', value: d.follow_count ?? 0 },\n      { field: 'Likes & Collects', value: d.faved_count ?? 0 },\n      { field: 'Creator Level', value: grow.level ?? 0 },\n      { field: 'Level Progress', value: (grow.fans_count ?? 0) + '/' + (grow.max_fans_count ?? 0) + ' fans' },\n      { field: 'Bio', value: (d.personal_desc ?? '').replace(/\\n/g, ' | ') },\n    ];\n  } catch (e) {\n    throw new Error(e.message);\n  }\n})()\n"
+      }
+    ]
+  }
+}

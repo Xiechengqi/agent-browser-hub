@@ -1,0 +1,49 @@
+name = "search"
+description = "Search Reddit Posts"
+strategy = "COOKIE"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+description = ""
+
+[[params]]
+name = "subreddit"
+type = "string"
+required = false
+positional = false
+description = "Search within a specific subreddit"
+default = ""
+
+[[params]]
+name = "sort"
+type = "string"
+required = false
+positional = false
+description = "Sort order: relevance, hot, top, new, comments"
+default = "relevance"
+
+[[params]]
+name = "time"
+type = "string"
+required = false
+positional = false
+description = "Time filter: hour, day, week, month, year, all"
+default = "all"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = ""
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["title", "subreddit", "author", "score", "comments", "url"]

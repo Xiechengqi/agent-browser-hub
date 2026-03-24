@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "upvote",
+    "description": "Upvote or downvote a Reddit post",
+    "domain": "reddit.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "post-id": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "Post ID (e.g. 1abc123) or fullname (t3_xxx)"
+      },
+      "direction": {
+        "type": "string",
+        "default": "up",
+        "description": "Vote direction (up, down, none)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    let postId = '${{ args.post-id }}';\n    const urlMatch = postId.match(/comments\\/([a-z0-9]+)/);\n    if (urlMatch) postId = urlMatch[1];\n    const fullname = postId.startsWith('t3_') || postId.startsWith('t1_') ? postId : 't3_' + postId;\n    const dir = '${{ args.direction }}';\n    const direction = dir === 'down' ? -1 : dir === 'none' ? 0 : 1;\n    const configEl = document.getElementById('config');\n    let modhash = '';\n    if (configEl) modhash = configEl.querySelector('[name=\"uh\"]')?.getAttribute('content') || '';\n    if (!modhash) {\n      const meRes = await fetch('/api/me.json', { credentials: 'include' });\n      const me = await meRes.json();\n      modhash = me?.data?.modhash || '';\n    }\n    const res = await fetch('/api/vote', {\n      method: 'POST',\n      credentials: 'include',\n      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n      body: 'id=' + encodeURIComponent(fullname) + '&dir=' + direction + (modhash ? '&uh=' + encodeURIComponent(modhash) : ''),\n    });\n    if (!res.ok) return [{ status: 'failed', message: 'HTTP ' + res.status }];\n    const labels = { '1': 'Upvoted', '-1': 'Downvoted', '0': 'Vote removed' };\n    return [{ status: 'success', message: (labels[String(direction)] || 'Voted') + ' ' + fullname }];\n  } catch (e) {\n    return [{ status: 'failed', message: e.toString() }];\n  }\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+name = "events"
+description = "Browse Facebook event categories"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of categories"
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/events.json"
+
+[output]
+columns = ["index", "name"]

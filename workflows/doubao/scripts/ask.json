@@ -1,0 +1,37 @@
+{
+  "pipeline": {
+    "site": "doubao",
+    "name": "ask",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "text": {
+        "type": "str",
+        "required": true,
+        "description": "Prompt to send"
+      },
+      "timeout": {
+        "type": "int",
+        "required": false,
+        "description": "Max seconds to wait (default 60)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.doubao.com/chat"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "((inputText) => {\n  const isVisible = (el) => {\n    if (!(el instanceof HTMLElement)) return false;\n    const style = window.getComputedStyle(el);\n    if (style.display === 'none' || style.visibility === 'hidden') return false;\n    const rect = el.getBoundingClientRect();\n    return rect.width > 0 && rect.height > 0;\n  };\n  const candidates = ['textarea[data-testid=\"chat_input_input\"]', '[data-testid=\"chat_input\"] textarea', '.chat-input textarea', 'textarea[placeholder*=\"发消息\"]', 'textarea[placeholder*=\"Message\"]', 'textarea'];\n  let composer = null;\n  for (const selector of candidates) {\n    const node = Array.from(document.querySelectorAll(selector)).find(isVisible);\n    if (node) { composer = node; break; }\n  }\n  if (!(composer instanceof HTMLTextAreaElement || composer instanceof HTMLInputElement)) throw new Error('Could not find Doubao textarea');\n  composer.focus();\n  const proto = composer instanceof HTMLTextAreaElement ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;\n  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;\n  setter?.call(composer, inputText);\n  composer.dispatchEvent(new Event('input', { bubbles: true }));\n  const root = document.querySelector('[data-testid=\"chat_input\"], .chat-input') || document.body;\n  const buttons = Array.from(root.querySelectorAll('button, [role=\"button\"]')).filter(isVisible);\n  const target = buttons[buttons.length - 1];\n  if (target) target.click();\n})(${{ args.text }})\n"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const timeout = ${{ args.timeout }} || 60;\n  const promptText = ${{ args.text }};\n  return { timeout, promptText };\n})()\n"
+      }
+    ]
+  }
+}

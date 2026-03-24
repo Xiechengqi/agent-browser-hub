@@ -1,0 +1,17 @@
+name = "quote"
+description = "Yahoo Finance stock quote"
+strategy = "COOKIE"
+
+[[params]]
+name = "symbol"
+type = "string"
+required = true
+positional = false
+description = "Stock ticker (e.g. AAPL, MSFT, TSLA)"
+
+[execution]
+entry = "script"
+script = "scripts/quote.json"
+
+[output]
+columns = ["symbol", "name", "price", "change", "changePercent", "open", "high", "low", "volume", "marketCap"]

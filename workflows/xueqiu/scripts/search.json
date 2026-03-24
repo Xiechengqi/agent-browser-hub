@@ -1,0 +1,49 @@
+{
+  "pipeline": {
+    "site": "xueqiu",
+    "name": "search",
+    "description": "搜索雪球股票（代码或名称）",
+    "domain": "xueqiu.com",
+    "browser": true,
+    "args": {
+      "query": {
+        "positional": true,
+        "type": "str",
+        "required": true,
+        "description": "搜索关键词，如 茅台、AAPL、腾讯"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "返回数量，默认 10"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://xueqiu.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const query = '${{ args.query }}';\n  const count = ${{ args.limit }};\n  const resp = await fetch(`https://xueqiu.com/stock/search.json?code=${encodeURIComponent(query)}&size=${count}`, {credentials: 'include'});\n  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');\n  const d = await resp.json();\n  return (d.stocks || []).map(s => {\n    let symbol = '';\n    if (s.exchange === 'SH' || s.exchange === 'SZ' || s.exchange === 'BJ') {\n      symbol = s.code.startsWith(s.exchange) ? s.code : s.exchange + s.code;\n    } else {\n      symbol = s.code;\n    }\n    return {\n      symbol: symbol,\n      name: s.name,\n      exchange: s.exchange,\n      price: s.current,\n      changePercent: s.percentage != null ? s.percentage.toFixed(2) + '%' : null,\n      url: 'https://xueqiu.com/S/' + symbol\n    };\n  });\n})()\n"
+      },
+      {
+        "map": {
+          "symbol": "${{ item.symbol }}",
+          "name": "${{ item.name }}",
+          "exchange": "${{ item.exchange }}",
+          "price": "${{ item.price }}",
+          "changePercent": "${{ item.changePercent }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "symbol",
+      "name",
+      "exchange",
+      "price",
+      "changePercent"
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+name = "chatlist"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Page number (default 1)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results (default 20)"
+
+[[params]]
+name = "job-id"
+type = "string"
+required = false
+positional = false
+description = "Filter by job ID (0=all)"
+
+[execution]
+entry = "script"
+script = "scripts/chatlist.json"
+
+[output]
+columns = []

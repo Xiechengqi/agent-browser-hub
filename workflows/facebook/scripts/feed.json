@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "facebook",
+    "name": "feed",
+    "description": "Get your Facebook news feed",
+    "domain": "www.facebook.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of posts"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.facebook.com/",
+          "settleMs": 4000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  const posts = document.querySelectorAll('[role=\"article\"]');\n  return Array.from(posts)\n    .filter(el => {\n      const text = el.textContent.trim();\n      // Filter out \"People you may know\" suggestions (both CN and EN)\n      return text.length > 30 &&\n        !text.startsWith('可能认识') &&\n        !text.startsWith('People you may know') &&\n        !text.startsWith('People You May Know');\n    })\n    .slice(0, limit)\n    .map((el, i) => {\n      // Author from header link\n      const headerLink = el.querySelector('h2 a, h3 a, h4 a, strong a');\n      const author = headerLink ? headerLink.textContent.trim() : '';\n\n      // Post text: grab visible spans, filter noise\n      const spans = Array.from(el.querySelectorAll('div[dir=\"auto\"]'))\n        .map(s => s.textContent.trim())\n        .filter(t => t.length > 10 && t.length < 500);\n      const content = spans.length > 0 ? spans[0] : '';\n\n      // Engagement: find like/comment/share counts (CN + EN)\n      const allText = el.textContent;\n      const likesMatch = allText.match(/所有心情：([\\d,.\\s]*[\\d万亿KMk]+)/) ||\n                         allText.match(/All:\\s*([\\d,.KMk]+)/) ||\n                         allText.match(/([\\d,.KMk]+)\\s*(?:likes?|reactions?)/i);\n      const commentsMatch = allText.match(/([\\d,.]+\\s*[万亿]?)\\s*条评论/) ||\n                            allText.match(/([\\d,.KMk]+)\\s*comments?/i);\n      const sharesMatch = allText.match(/([\\d,.]+\\s*[万亿]?)\\s*次分享/) ||\n                          allText.match(/([\\d,.KMk]+)\\s*shares?/i);\n\n      return {\n        index: i + 1,\n        author: author.substring(0, 50),\n        content: content.replace(/\\n/g, ' ').substring(0, 120),\n        likes: likesMatch ? likesMatch[1] : '-',\n        comments: commentsMatch ? commentsMatch[1] : '-',\n        shares: sharesMatch ? sharesMatch[1] : '-',\n      };\n    });\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "author",
+      "content",
+      "likes",
+      "comments",
+      "shares"
+    ]
+  }
+}

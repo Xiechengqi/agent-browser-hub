@@ -1,0 +1,17 @@
+name = "topic"
+description = "V2EX 主题详情和回复"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "Topic ID"
+
+[execution]
+entry = "script"
+script = "scripts/topic.json"
+
+[output]
+columns = ["title", "replies", "url"]

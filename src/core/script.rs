@@ -18,6 +18,8 @@ pub struct Script {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub domain: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub strategy: Option<Strategy>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser: Option<bool>,
@@ -51,7 +53,7 @@ impl Script {
                 id: format!("{}-{}", site, name),
                 name: name.to_string(),
                 description: String::new(),
-                domain: site.to_string(),
+                domain: self.domain.clone().unwrap_or_else(|| site.to_string()),
                 strategy: self.strategy.clone().unwrap_or_default(),
                 timeout: 30,
                 params: self.extract_params(),

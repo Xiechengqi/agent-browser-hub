@@ -1,0 +1,45 @@
+{
+  "pipeline": {
+    "site": "bilibili",
+    "name": "following",
+    "description": "Get Bilibili user following list",
+    "domain": "www.bilibili.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "uid": {
+        "type": "str",
+        "required": false,
+        "description": "Target user ID (defaults to logged-in user)"
+      },
+      "page": {
+        "type": "int",
+        "default": 1,
+        "description": "Page number"
+      },
+      "limit": {
+        "type": "int",
+        "default": 50,
+        "description": "Results per page (max 50)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.bilibili.com"
+      },
+      {
+        "evaluate": "(async () => {\n  // Resolve UID - default to self\n  let uid = '${{ args.uid }}';\n  if (!uid || uid === '' || uid === 'undefined' || uid === 'null') {\n    const navRes = await fetch('https://api.bilibili.com/x/web-interface/nav', { credentials: 'include' });\n    const nav = await navRes.json();\n    uid = String(nav?.data?.mid || '');\n    if (!uid) throw new Error('Not logged in');\n  }\n\n  const pn = ${{ args.page }};\n  const ps = Math.min(${{ args.limit }}, 50);\n\n  const res = await fetch(\n    'https://api.bilibili.com/x/relation/followings?vmid=' + uid + '&pn=' + pn + '&ps=' + ps + '&order=desc',\n    { credentials: 'include' }\n  );\n  const payload = await res.json();\n\n  if (payload.code !== 0) {\n    throw new Error('Failed to get following list: ' + payload.message);\n  }\n\n  const list = payload.data?.list || [];\n  return list.map((u) => ({\n    mid: u.mid,\n    name: u.uname,\n    sign: (u.sign || '').slice(0, 40),\n    following: u.attribute === 6 ? 'mutual' : 'following',\n    fans: u.official_verify?.desc || '',\n  }));\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "mid",
+      "name",
+      "sign",
+      "following",
+      "fans"
+    ]
+  }
+}

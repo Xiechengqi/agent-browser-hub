@@ -1,0 +1,26 @@
+schema_version = 1
+site = "twitter"
+display_name = "Twitter / X"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "advanced"
+default_enabled = true
+
+[auth]
+strategy = "INTERCEPT"
+login_required = true
+domains = ["x.com"]
+
+[ui]
+icon = "twitter"
+category = "social"
+tags = ["social", "timeline", "auth"]
+
+[commands]
+include = ["accept", "article", "block", "bookmark", "bookmarks", "delete", "follow", "followers", "following", "hide-reply", "like", "notifications", "post", "profile", "reply", "search", "thread", "timeline", "trending", "unblock", "unbookmark", "unfollow"]

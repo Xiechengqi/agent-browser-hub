@@ -1,0 +1,31 @@
+name = "batchgreet"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "job-id"
+type = "string"
+required = false
+positional = false
+description = "Filter by encrypted job ID"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max candidates to greet (default 5)"
+
+[[params]]
+name = "text"
+type = "string"
+required = false
+positional = false
+description = "Custom greeting message"
+
+[execution]
+entry = "script"
+script = "scripts/batchgreet.json"
+
+[output]
+columns = []

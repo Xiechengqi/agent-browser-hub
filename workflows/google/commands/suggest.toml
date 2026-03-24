@@ -1,0 +1,25 @@
+name = "suggest"
+description = "Get Google search suggestions"
+strategy = "PUBLIC"
+
+[[params]]
+name = "keyword"
+type = "string"
+required = true
+positional = true
+description = "Search query"
+
+[[params]]
+name = "lang"
+type = "string"
+required = false
+positional = false
+description = "Language code"
+default = "zh-CN"
+
+[execution]
+entry = "script"
+script = "scripts/suggest.json"
+
+[output]
+columns = ["suggestion"]

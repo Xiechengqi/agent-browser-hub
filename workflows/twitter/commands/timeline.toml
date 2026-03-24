@@ -1,0 +1,26 @@
+name = "timeline"
+description = "Fetch Twitter timeline (for-you or following)"
+strategy = "COOKIE"
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "Timeline type (for-you or following)"
+default = "for-you"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of tweets"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/timeline.json"
+
+[output]
+columns = ["id", "author", "text", "likes", "retweets", "url"]

@@ -1,0 +1,17 @@
+name = "paper"
+description = ""
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = false
+description = ""
+
+[execution]
+entry = "script"
+script = "scripts/paper.json"
+
+[output]
+columns = ["title", "authors", "abstract", "url"]

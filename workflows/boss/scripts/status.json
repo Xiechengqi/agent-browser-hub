@@ -1,0 +1,20 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "status",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/chat/index"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  return [{ Status: 'Connected', Url: window.location.href, Title: document.title }];\n})()\n"
+      }
+    ]
+  }
+}

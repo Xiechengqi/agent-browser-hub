@@ -1,0 +1,17 @@
+name = "video"
+description = "Get YouTube video metadata (title, views, description, etc.)"
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = false
+description = "YouTube video URL or video ID"
+
+[execution]
+entry = "script"
+script = "scripts/video.json"
+
+[output]
+columns = ["field", "value"]

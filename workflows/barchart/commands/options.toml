@@ -1,0 +1,33 @@
+name = "options"
+description = "Barchart options chain with greeks, IV, volume, and open interest"
+strategy = "COOKIE"
+
+[[params]]
+name = "symbol"
+type = "string"
+required = true
+positional = false
+description = "Stock ticker (e.g. AAPL)"
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "Option type: Call or Put"
+default = "Call"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max number of strikes to return"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/options.json"
+
+[output]
+columns = ["strike", "bid", "ask", "last", "change", "volume", "openInterest", "iv", "delta", "gamma", "theta", "vega", "expiration"]

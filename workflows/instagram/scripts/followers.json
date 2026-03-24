@@ -1,0 +1,36 @@
+{
+  "pipeline": {
+    "site": "instagram",
+    "name": "followers",
+    "description": "List followers of an Instagram user",
+    "domain": "www.instagram.com",
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Instagram username"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of followers"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.instagram.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  const limit = ${{ args.limit }};\n  const headers = { 'X-IG-App-ID': '936619743392459' };\n  const opts = { credentials: 'include', headers };\n\n  const r1 = await fetch(\n    'https://www.instagram.com/api/v1/users/web_profile_info/?username=' + encodeURIComponent(username),\n    opts\n  );\n  if (!r1.ok) throw new Error('HTTP ' + r1.status + ' - make sure you are logged in to Instagram');\n  const d1 = await r1.json();\n  const userId = d1?.data?.user?.id;\n  if (!userId) throw new Error('User not found: ' + username);\n\n  const r2 = await fetch(\n    'https://www.instagram.com/api/v1/friendships/' + userId + '/followers/?count=' + limit,\n    opts\n  );\n  if (!r2.ok) throw new Error('Failed to fetch followers: HTTP ' + r2.status);\n  const d2 = await r2.json();\n  return (d2?.users || []).slice(0, limit).map((u, i) => ({\n    rank: i + 1,\n    username: u.username || '',\n    name: u.full_name || '',\n    verified: u.is_verified ? 'Yes' : 'No',\n    private: u.is_private ? 'Yes' : 'No',\n  }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "username",
+      "name",
+      "verified",
+      "private"
+    ]
+  }
+}

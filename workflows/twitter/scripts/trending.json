@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "trending",
+    "description": "Twitter/X trending topics",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of trends"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://x.com/explore/tabs/trending",
+          "settleMs": 3000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = parseInt('${{ args.limit }}');\n  const items = [];\n  const cells = document.querySelectorAll('[data-testid=\"trend\"]');\n\n  cells.forEach(cell => {\n    const text = cell.textContent || '';\n    if (text.includes('Promoted')) return;\n\n    const spans = cell.querySelectorAll('span');\n    let topic = '';\n    for (const span of spans) {\n      const t = span.textContent.trim();\n      if (t && !t.match(/^\\d+$/) && !t.includes('Trending') && !t.includes('posts')) {\n        topic = t;\n        break;\n      }\n    }\n\n    if (topic) items.push({ rank: items.length + 1, topic, tweets: 'N/A', category: '' });\n  });\n\n  return items.slice(0, limit);\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "topic",
+      "tweets",
+      "category"
+    ]
+  }
+}

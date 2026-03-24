@@ -1,0 +1,56 @@
+{
+  "pipeline": {
+    "site": "coupang",
+    "name": "search",
+    "description": "Search Coupang products with logged-in browser session",
+    "domain": "www.coupang.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "str",
+        "required": true,
+        "description": "Search keyword"
+      },
+      "page": {
+        "type": "int",
+        "default": 1,
+        "description": "Search result page number"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Max results (max 50)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.coupang.com/np/search?q=${{ args.query }}&channel=user&page=${{ args.page }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const times = 2;\n  const delayMs = 1500;\n  let scrolled = 0;\n  const interval = setInterval(() => {\n    window.scrollBy(0, window.innerHeight);\n    scrolled++;\n    if (scrolled >= times) clearInterval(interval);\n  }, delayMs);\n})()\n"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  const limit = Math.min(${{ args.limit }}, 50);\n  const parseNum = (value) => {\n    const text = String(value || '').trim().replace(/[^\\d.]/g, '');\n    if (!text) return null;\n    const num = Number(text);\n    return Number.isFinite(num) ? num : null;\n  };\n  const cards = Array.from(new Set([\n    ...document.querySelectorAll('li.search-product'),\n    ...document.querySelectorAll('[class*=\"search-product\"]'),\n    ...document.querySelectorAll('[class*=\"ProductUnit_productUnit\"]'),\n    ...document.querySelectorAll('[data-product-id]'),\n    ...document.querySelectorAll('a[href*=\"/vp/products/\"]')\n  ])).slice(0, limit * 3);\n  const items = [];\n  for (const el of cards) {\n    const root = el.closest('li, div, article') || el;\n    const productId = root.getAttribute('data-product-id') || root.querySelector('a[href*=\"/vp/products/\"]')?.getAttribute('href')?.match(/\\/vp\\/products\\/(\\d+)/)?.[1] || '';\n    const title = root.querySelector('[class*=\"productName\"], .name, .title')?.textContent?.trim() || '';\n    const priceEl = root.querySelector('[class*=\"price\"]');\n    const price = priceEl ? parseNum(priceEl.textContent) : null;\n    const rating = parseNum(root.querySelector('[class*=\"rating\"]')?.textContent);\n    const reviewCount = parseNum(root.querySelector('[class*=\"review\"]')?.textContent);\n    const rocket = root.querySelector('img[alt*=\"로켓\"]') ? '로켓배송' : '';\n    const deliveryType = root.textContent.includes('무료배송') ? '무료배송' : '';\n    const deliveryPromise = root.textContent.match(/(오늘도착|내일도착|새벽도착)/)?.[1] || '';\n    const url = productId ? `https://www.coupang.com/vp/products/${productId}` : '';\n    if (title && url) {\n      items.push({\n        rank: items.length + 1,\n        title,\n        price,\n        unit_price: '',\n        rating,\n        review_count: reviewCount,\n        rocket,\n        delivery_type: deliveryType,\n        delivery_promise: deliveryPromise,\n        url\n      });\n    }\n  }\n  return items.slice(0, limit);\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "price",
+      "unit_price",
+      "rating",
+      "review_count",
+      "rocket",
+      "delivery_type",
+      "delivery_promise",
+      "url"
+    ]
+  }
+}

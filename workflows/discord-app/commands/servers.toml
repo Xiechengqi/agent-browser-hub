@@ -1,0 +1,10 @@
+name = "servers"
+description = "List all Discord servers (guilds) in the sidebar"
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/servers.json"
+
+[output]
+columns = ["Index", "Server"]

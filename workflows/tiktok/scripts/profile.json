@@ -1,0 +1,37 @@
+{
+  "pipeline": {
+    "site": "tiktok",
+    "name": "profile",
+    "description": "Get TikTok user profile info",
+    "domain": "www.tiktok.com",
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "TikTok username (without @)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.tiktok.com/explore",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  const res = await fetch('https://www.tiktok.com/@' + encodeURIComponent(username), { credentials: 'include' });\n  if (!res.ok) throw new Error('User not found: ' + username);\n  const html = await res.text();\n  const idx = html.indexOf('__UNIVERSAL_DATA_FOR_REHYDRATION__');\n  if (idx === -1) throw new Error('Could not parse profile data');\n  const start = html.indexOf('>', idx) + 1;\n  const end = html.indexOf('</script>', start);\n  const data = JSON.parse(html.substring(start, end));\n  const ud = data['__DEFAULT_SCOPE__'] && data['__DEFAULT_SCOPE__']['webapp.user-detail'];\n  const u = ud && ud.userInfo && ud.userInfo.user;\n  const s = ud && ud.userInfo && ud.userInfo.stats;\n  if (!u) throw new Error('User not found: ' + username);\n  return [{\n    username: u.uniqueId || username,\n    name: u.nickname || '',\n    bio: (u.signature || '').replace(/\\n/g, ' ').substring(0, 120),\n    followers: s && s.followerCount || 0,\n    following: s && s.followingCount || 0,\n    likes: s && s.heartCount || 0,\n    videos: s && s.videoCount || 0,\n    verified: u.verified ? 'Yes' : 'No',\n  }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "username",
+      "name",
+      "followers",
+      "following",
+      "likes",
+      "videos",
+      "verified",
+      "bio"
+    ]
+  }
+}

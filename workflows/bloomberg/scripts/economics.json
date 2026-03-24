@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "bloomberg",
+    "name": "economics",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "pipeline": [
+      {
+        "navigate": "https://www.bloomberg.com/economics"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('article').forEach(article => {\n    const titleEl = article.querySelector('a[data-component=\"headline-link\"]');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: titleEl.href\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+name = "publication"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "Newsletter URL (e.g. https://example.substack.com)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of articles to return"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/publication.json"
+
+[output]
+columns = []

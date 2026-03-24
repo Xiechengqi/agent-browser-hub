@@ -1,0 +1,25 @@
+name = "tag"
+description = "Lobste.rs stories by tag"
+strategy = "PUBLIC"
+
+[[params]]
+name = "tag"
+type = "string"
+required = true
+positional = true
+description = "Tag name (e.g. programming, rust, security, ai)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of stories"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/tag.json"
+
+[output]
+columns = ["rank", "title", "score", "author", "comments", "tags"]

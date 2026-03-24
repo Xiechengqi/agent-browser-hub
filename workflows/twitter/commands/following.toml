@@ -1,0 +1,25 @@
+name = "following"
+description = "Get accounts a Twitter/X user is following"
+strategy = "COOKIE"
+
+[[params]]
+name = "user"
+type = "string"
+required = false
+positional = true
+description = "Twitter username (leave empty for logged-in user)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of accounts"
+default = 50
+
+[execution]
+entry = "script"
+script = "scripts/following.json"
+
+[output]
+columns = ["screen_name", "name", "bio", "followers"]

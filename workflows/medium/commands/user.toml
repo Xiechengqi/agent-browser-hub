@@ -1,0 +1,25 @@
+name = "user"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Medium username (e.g. @username or username)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of articles to return"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = []

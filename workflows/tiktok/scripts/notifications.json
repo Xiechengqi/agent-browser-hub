@@ -1,0 +1,42 @@
+{
+  "pipeline": {
+    "site": "tiktok",
+    "name": "notifications",
+    "description": "Get TikTok notifications (likes, comments, mentions, followers)",
+    "domain": "www.tiktok.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 15,
+        "description": "Number of notifications"
+      },
+      "type": {
+        "type": "str",
+        "default": "all",
+        "description": "Notification type",
+        "choices": [
+          "all",
+          "likes",
+          "comments",
+          "mentions",
+          "followers"
+        ]
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.tiktok.com/following",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const limit = ${{ args.limit }};\n  const type = '${{ args.type }}';\n  const wait = (ms) => new Promise(r => setTimeout(r, ms));\n\n  // Click inbox icon to open notifications panel\n  const inboxIcon = document.querySelector('[data-e2e=\"inbox-icon\"]');\n  if (inboxIcon) inboxIcon.click();\n  await wait(1500);\n\n  // Click specific tab if needed\n  if (type !== 'all') {\n    const tab = document.querySelector('[data-e2e=\"' + type + '\"]');\n    if (tab) {\n      tab.click();\n      await wait(1500);\n    }\n  }\n\n  const items = document.querySelectorAll('[data-e2e=\"inbox-list\"] > div, [data-e2e=\"inbox-list\"] [role=\"button\"]');\n  return Array.from(items)\n    .filter(el => el.textContent.trim().length > 5)\n    .slice(0, limit)\n    .map((el, i) => ({\n      index: i + 1,\n      text: el.textContent.trim().replace(/\\s+/g, ' ').substring(0, 150),\n    }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "text"
+    ]
+  }
+}

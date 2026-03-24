@@ -1,0 +1,10 @@
+name = "news"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/news.json"
+
+[output]
+columns = []

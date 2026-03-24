@@ -1,0 +1,17 @@
+name = "stats"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "job-id"
+type = "string"
+required = false
+positional = false
+description = "Encrypted job ID (show all if empty)"
+
+[execution]
+entry = "script"
+script = "scripts/stats.json"
+
+[output]
+columns = []

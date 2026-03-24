@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "site": "tiktok",
+    "name": "explore",
+    "description": "Get trending TikTok videos from explore page",
+    "domain": "www.tiktok.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of videos"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.tiktok.com/explore",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  const links = Array.from(document.querySelectorAll('a[href*=\"/video/\"]'));\n  const seen = new Set();\n  const results = [];\n  for (const a of links) {\n    const href = a.href;\n    if (seen.has(href)) continue;\n    seen.add(href);\n    const match = href.match(/@([^/]+)\\/video\\/(\\d+)/);\n    results.push({\n      rank: results.length + 1,\n      author: match ? match[1] : '',\n      views: a.textContent.trim() || '-',\n      url: href,\n    });\n    if (results.length >= limit) break;\n  }\n  return results;\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "author",
+      "views",
+      "url"
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "subreddit",
+    "description": "Get posts from a specific Subreddit",
+    "domain": "reddit.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "name": {
+        "type": "string",
+        "positional": true,
+        "required": true
+      },
+      "sort": {
+        "type": "string",
+        "default": "hot",
+        "description": "Sorting method: hot, new, top, rising, controversial"
+      },
+      "time": {
+        "type": "string",
+        "default": "all",
+        "description": "Time filter for top/controversial: hour, day, week, month, year, all"
+      },
+      "limit": {
+        "type": "int",
+        "default": 15
+      }
+    },
+    "columns": [
+      "title",
+      "author",
+      "upvotes",
+      "comments",
+      "url"
+    ],
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com"
+      },
+      {
+        "evaluate": "(async () => {\n  let sub = '${{ args.name }}';\n  if (sub.startsWith('r/')) sub = sub.slice(2);\n  const sort = '${{ args.sort }}';\n  const time = '${{ args.time }}';\n  const limit = ${{ args.limit }};\n  let url = '/r/' + sub + '/' + sort + '.json?limit=' + limit + '&raw_json=1';\n  if ((sort === 'top' || sort === 'controversial') && time) {\n    url += '&t=' + time;\n  }\n  const res = await fetch(url, { credentials: 'include' });\n  const j = await res.json();\n  return j?.data?.children || [];\n})()\n"
+      },
+      {
+        "map": {
+          "title": "${{ item.data.title }}",
+          "author": "${{ item.data.author }}",
+          "upvotes": "${{ item.data.score }}",
+          "comments": "${{ item.data.num_comments }}",
+          "url": "https://www.reddit.com${{ item.data.permalink }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

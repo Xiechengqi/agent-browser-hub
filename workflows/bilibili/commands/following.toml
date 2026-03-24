@@ -1,0 +1,33 @@
+name = "following"
+description = "Get Bilibili user following list"
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = false
+positional = false
+description = "Target user ID (defaults to logged-in user)"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Page number"
+default = 1
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Results per page (max 50)"
+default = 50
+
+[execution]
+entry = "script"
+script = "scripts/following.json"
+
+[output]
+columns = ["mid", "name", "sign", "following", "fans"]

@@ -1,0 +1,10 @@
+name = "daily"
+description = ""
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/daily.json"
+
+[output]
+columns = []

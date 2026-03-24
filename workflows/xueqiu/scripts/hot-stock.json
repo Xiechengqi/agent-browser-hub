@@ -1,0 +1,50 @@
+{
+  "pipeline": {
+    "site": "xueqiu",
+    "name": "hot-stock",
+    "description": "获取雪球热门股票榜",
+    "domain": "xueqiu.com",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "返回数量，默认 20，最大 50"
+      },
+      "type": {
+        "type": "str",
+        "default": "10",
+        "description": "榜单类型 10=人气榜(默认) 12=关注榜"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://xueqiu.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const count = ${{ args.limit }};\n  const type = '${{ args.type }}';\n  const resp = await fetch(`https://stock.xueqiu.com/v5/stock/hot_stock/list.json?size=${count}&type=${type}`, {credentials: 'include'});\n  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' Hint: Not logged in?');\n  const d = await resp.json();\n  if (!d.data || !d.data.items) throw new Error('获取失败');\n  return d.data.items.map((s, i) => ({\n    rank: i + 1,\n    symbol: s.symbol,\n    name: s.name,\n    price: s.current,\n    changePercent: s.percent != null ? s.percent.toFixed(2) + '%' : null,\n    heat: s.value,\n    rank_change: s.rank_change,\n    url: 'https://xueqiu.com/S/' + s.symbol\n  }));\n})()\n"
+      },
+      {
+        "map": {
+          "rank": "${{ item.rank }}",
+          "symbol": "${{ item.symbol }}",
+          "name": "${{ item.name }}",
+          "price": "${{ item.price }}",
+          "changePercent": "${{ item.changePercent }}",
+          "heat": "${{ item.heat }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "symbol",
+      "name",
+      "price",
+      "changePercent",
+      "heat"
+    ]
+  }
+}

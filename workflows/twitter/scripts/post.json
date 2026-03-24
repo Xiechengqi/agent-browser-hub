@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://x.com/compose/tweet"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "evaluate": "(async () => {\n  const box = document.querySelector('[data-testid=\"tweetTextarea_0\"]');\n  if (!box) {\n    return [{ status: 'failed', message: 'Could not find tweet composer' }];\n  }\n  box.focus();\n  const textToInsert = ${{ args.text | json }};\n  const dataTransfer = new DataTransfer();\n  dataTransfer.setData('text/plain', textToInsert);\n  box.dispatchEvent(new ClipboardEvent('paste', {\n    clipboardData: dataTransfer,\n    bubbles: true,\n    cancelable: true\n  }));\n  await new Promise(r => setTimeout(r, 1000));\n  const btn = document.querySelector('[data-testid=\"tweetButton\"]') || document.querySelector('[data-testid=\"tweetButtonInline\"]');\n  if (btn && !btn.disabled) {\n    btn.click();\n    await new Promise(r => setTimeout(r, 3000));\n    return [{ status: 'success', message: 'Tweet posted successfully' }];\n  }\n  return [{ status: 'failed', message: 'Tweet button disabled or not found' }];\n})()"
+    }
+  ]
+}

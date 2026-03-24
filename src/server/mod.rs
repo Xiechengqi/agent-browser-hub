@@ -1,10 +1,10 @@
 use axum::{
-    Router, Json,
-    extract::{Path, Query, State, Request},
-    http::{StatusCode, header},
+    extract::{Path, Query, Request, State},
+    http::{header, StatusCode},
     middleware::{self, Next},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
+    Json, Router,
 };
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
@@ -69,7 +69,11 @@ impl LogBuffer {
 
     async fn get_entries(&self, limit: usize) -> Vec<LogEntry> {
         let entries = self.entries.lock().await;
-        let start = if entries.len() > limit { entries.len() - limit } else { 0 };
+        let start = if entries.len() > limit {
+            entries.len() - limit
+        } else {
+            0
+        };
         entries.iter().skip(start).cloned().collect()
     }
 }
@@ -103,15 +107,27 @@ struct ApiResponse<T: Serialize> {
 
 impl<T: Serialize> ApiResponse<T> {
     fn success(message: impl Into<String>, data: T) -> Self {
-        Self { success: true, message: message.into(), data: Some(data) }
+        Self {
+            success: true,
+            message: message.into(),
+            data: Some(data),
+        }
     }
 
     fn success_no_data(message: impl Into<String>) -> Self {
-        Self { success: true, message: message.into(), data: None }
+        Self {
+            success: true,
+            message: message.into(),
+            data: None,
+        }
     }
 
     fn error(message: impl Into<String>) -> Self {
-        Self { success: false, message: message.into(), data: None }
+        Self {
+            success: false,
+            message: message.into(),
+            data: None,
+        }
     }
 }
 
@@ -162,13 +178,24 @@ fn generate_token() -> Result<String, jsonwebtoken::errors::Error> {
         .expect("valid timestamp")
         .timestamp() as usize;
 
-    let claims = Claims { sub: "admin".to_string(), exp };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET.as_bytes()))
+    let claims = Claims {
+        sub: "admin".to_string(),
+        exp,
+    };
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+    )
 }
 
 fn verify_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    decode::<Claims>(token, &DecodingKey::from_secret(JWT_SECRET.as_bytes()), &Validation::default())
-        .map(|data| data.claims)
+    decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &Validation::default(),
+    )
+    .map(|data| data.claims)
 }
 
 // ============================================================================
@@ -176,7 +203,10 @@ fn verify_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
 // ============================================================================
 
 async fn auth_middleware(req: Request, next: Next) -> Result<Response, StatusCode> {
-    let auth_header = req.headers().get("Authorization").and_then(|h| h.to_str().ok());
+    let auth_header = req
+        .headers()
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok());
 
     if let Some(auth) = auth_header {
         if let Some(token) = auth.strip_prefix("Bearer ") {
@@ -210,14 +240,20 @@ async fn login(
     let password = state.password.lock().await;
 
     if req.password != *password {
-        state.logs.push("WARN", "Login failed: incorrect password".into()).await;
+        state
+            .logs
+            .push("WARN", "Login failed: incorrect password".into())
+            .await;
         return Json(ApiResponse::error("Password incorrect"));
     }
 
     match generate_token() {
         Ok(token) => {
             state.logs.push("INFO", "Login successful".into()).await;
-            Json(ApiResponse::success("Login successful", LoginResponse { token }))
+            Json(ApiResponse::success(
+                "Login successful",
+                LoginResponse { token },
+            ))
         }
         Err(_) => Json(ApiResponse::error("Failed to generate token")),
     }
@@ -239,10 +275,14 @@ async fn update_password(
         vnc_url: state.vnc_url.lock().await.clone(),
         vnc_username: state.vnc_username.lock().await.clone(),
         vnc_password: state.vnc_password.lock().await.clone(),
+        workflow: crate::config::load_config().workflow,
     };
 
     if let Err(e) = crate::config::save_config(&config) {
-        state.logs.push("ERROR", format!("Failed to save config: {}", e)).await;
+        state
+            .logs
+            .push("ERROR", format!("Failed to save config: {}", e))
+            .await;
     }
 
     state.logs.push("INFO", "Password updated".into()).await;
@@ -262,7 +302,10 @@ async fn get_version() -> Json<ApiResponse<VersionInfo>> {
     {
         Ok(client) => {
             match client
-                .get(format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO))
+                .get(format!(
+                    "https://api.github.com/repos/{}/releases/latest",
+                    GITHUB_REPO
+                ))
                 .header("User-Agent", "agent-browser-hub")
                 .send()
                 .await
@@ -274,14 +317,17 @@ async fn get_version() -> Json<ApiResponse<VersionInfo>> {
         Err(_) => None,
     };
 
-    Json(ApiResponse::success("ok", VersionInfo {
-        current,
-        latest,
-        commit: GIT_COMMIT.to_string(),
-        commit_date: GIT_COMMIT_DATE.to_string(),
-        commit_message: GIT_COMMIT_MSG.to_string(),
-        build_time: BUILD_TIME.to_string(),
-    }))
+    Json(ApiResponse::success(
+        "ok",
+        VersionInfo {
+            current,
+            latest,
+            commit: GIT_COMMIT.to_string(),
+            commit_date: GIT_COMMIT_DATE.to_string(),
+            commit_message: GIT_COMMIT_MSG.to_string(),
+            build_time: BUILD_TIME.to_string(),
+        },
+    ))
 }
 
 // ============================================================================
@@ -293,15 +339,23 @@ async fn get_settings(State(state): State<AppState>) -> Json<ApiResponse<serde_j
     let vnc_url = state.vnc_url.lock().await.clone();
     let vnc_username = state.vnc_username.lock().await.clone();
     let vnc_password = state.vnc_password.lock().await.clone();
-    Json(ApiResponse::success("ok", serde_json::json!({
-        "password": password,
-        "vnc_url": vnc_url,
-        "vnc_username": vnc_username,
-        "vnc_password": vnc_password
-    })))
+    let workflow = crate::config::load_config().workflow;
+    Json(ApiResponse::success(
+        "ok",
+        serde_json::json!({
+            "password": password,
+            "vnc_url": vnc_url,
+            "vnc_username": vnc_username,
+            "vnc_password": vnc_password,
+            "workflow": workflow
+        }),
+    ))
 }
 
-async fn update_settings(State(state): State<AppState>, Json(req): Json<serde_json::Value>) -> Json<ApiResponse<String>> {
+async fn update_settings(
+    State(state): State<AppState>,
+    Json(req): Json<serde_json::Value>,
+) -> Json<ApiResponse<String>> {
     if let Some(password) = req.get("password").and_then(|v| v.as_str()) {
         *state.password.lock().await = password.to_string();
     }
@@ -315,11 +369,26 @@ async fn update_settings(State(state): State<AppState>, Json(req): Json<serde_js
         *state.vnc_password.lock().await = vnc_password.as_str().map(|s| s.to_string());
     }
 
+    let workflow = match req.get("workflow") {
+        Some(value) => match serde_json::from_value::<crate::config::WorkflowConfig>(value.clone())
+        {
+            Ok(workflow) => workflow,
+            Err(e) => {
+                return Json(ApiResponse::error(format!(
+                    "Invalid workflow config: {}",
+                    e
+                )))
+            }
+        },
+        None => crate::config::load_config().workflow,
+    };
+
     let config = crate::config::Config {
         password: state.password.lock().await.clone(),
         vnc_url: state.vnc_url.lock().await.clone(),
         vnc_username: state.vnc_username.lock().await.clone(),
         vnc_password: state.vnc_password.lock().await.clone(),
+        workflow,
     };
 
     if let Err(e) = crate::config::save_config(&config) {
@@ -339,11 +408,19 @@ async fn upgrade() -> Json<ApiResponse<String>> {
         .build()
     {
         Ok(c) => c,
-        Err(e) => return Json(ApiResponse::error(format!("Failed to create HTTP client: {}", e))),
+        Err(e) => {
+            return Json(ApiResponse::error(format!(
+                "Failed to create HTTP client: {}",
+                e
+            )))
+        }
     };
 
     let release: GitHubRelease = match client
-        .get(format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO))
+        .get(format!(
+            "https://api.github.com/repos/{}/releases/latest",
+            GITHUB_REPO
+        ))
         .header("User-Agent", "agent-browser-hub")
         .send()
         .await
@@ -352,15 +429,35 @@ async fn upgrade() -> Json<ApiResponse<String>> {
             let status = r.status();
             let text = match r.text().await {
                 Ok(t) => t,
-                Err(e) => return Json(ApiResponse::error(format!("Failed to read response: {}", e))),
+                Err(e) => {
+                    return Json(ApiResponse::error(format!(
+                        "Failed to read response: {}",
+                        e
+                    )))
+                }
             };
-            eprintln!("[upgrade] GitHub API response (status {}): {}", status, &text[..text.len().min(500)]);
+            eprintln!(
+                "[upgrade] GitHub API response (status {}): {}",
+                status,
+                &text[..text.len().min(500)]
+            );
             match serde_json::from_str(&text) {
                 Ok(rel) => rel,
-                Err(e) => return Json(ApiResponse::error(format!("Failed to parse release info: {} (response: {})", e, &text[..text.len().min(200)]))),
+                Err(e) => {
+                    return Json(ApiResponse::error(format!(
+                        "Failed to parse release info: {} (response: {})",
+                        e,
+                        &text[..text.len().min(200)]
+                    )))
+                }
             }
-        },
-        Err(e) => return Json(ApiResponse::error(format!("Failed to fetch release info: {}", e))),
+        }
+        Err(e) => {
+            return Json(ApiResponse::error(format!(
+                "Failed to fetch release info: {}",
+                e
+            )))
+        }
     };
 
     let asset_name = if cfg!(target_arch = "x86_64") {
@@ -373,7 +470,11 @@ async fn upgrade() -> Json<ApiResponse<String>> {
 
     let download_url = match release.assets.iter().find(|a| a.name == asset_name) {
         Some(a) => a.browser_download_url.clone(),
-        None => return Json(ApiResponse::error("No binary found for current architecture")),
+        None => {
+            return Json(ApiResponse::error(
+                "No binary found for current architecture",
+            ))
+        }
     };
 
     eprintln!("[upgrade] Downloading from: {}", download_url);
@@ -382,7 +483,12 @@ async fn upgrade() -> Json<ApiResponse<String>> {
         .build()
     {
         Ok(c) => c,
-        Err(e) => return Json(ApiResponse::error(format!("Failed to create download client: {}", e))),
+        Err(e) => {
+            return Json(ApiResponse::error(format!(
+                "Failed to create download client: {}",
+                e
+            )))
+        }
     };
 
     let binary_data = match download_client
@@ -393,11 +499,19 @@ async fn upgrade() -> Json<ApiResponse<String>> {
     {
         Ok(r) => {
             if !r.status().is_success() {
-                return Json(ApiResponse::error(format!("Download failed: {}", r.status())));
+                return Json(ApiResponse::error(format!(
+                    "Download failed: {}",
+                    r.status()
+                )));
             }
             match r.bytes().await {
                 Ok(b) => b,
-                Err(e) => return Json(ApiResponse::error(format!("Failed to download binary: {}", e))),
+                Err(e) => {
+                    return Json(ApiResponse::error(format!(
+                        "Failed to download binary: {}",
+                        e
+                    )))
+                }
             }
         }
         Err(e) => return Json(ApiResponse::error(format!("Failed to download: {}", e))),
@@ -405,18 +519,28 @@ async fn upgrade() -> Json<ApiResponse<String>> {
 
     let temp_path = "/tmp/agent-browser-hub-new";
     if let Err(e) = std::fs::write(temp_path, &binary_data) {
-        return Json(ApiResponse::error(format!("Failed to write temp file: {}", e)));
+        return Json(ApiResponse::error(format!(
+            "Failed to write temp file: {}",
+            e
+        )));
     }
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Err(e) = std::fs::set_permissions(temp_path, std::fs::Permissions::from_mode(0o755)) {
-            return Json(ApiResponse::error(format!("Failed to set permissions: {}", e)));
+        if let Err(e) = std::fs::set_permissions(temp_path, std::fs::Permissions::from_mode(0o755))
+        {
+            return Json(ApiResponse::error(format!(
+                "Failed to set permissions: {}",
+                e
+            )));
         }
     }
 
-    let verify = tokio::process::Command::new(temp_path).arg("--help").output().await;
+    let verify = tokio::process::Command::new(temp_path)
+        .arg("--help")
+        .output()
+        .await;
     if verify.is_err() {
         let _ = std::fs::remove_file(temp_path);
         return Json(ApiResponse::error("New binary verification failed"));
@@ -424,7 +548,12 @@ async fn upgrade() -> Json<ApiResponse<String>> {
 
     let current_exe = match std::env::current_exe() {
         Ok(p) => p,
-        Err(e) => return Json(ApiResponse::error(format!("Failed to get current exe: {}", e))),
+        Err(e) => {
+            return Json(ApiResponse::error(format!(
+                "Failed to get current exe: {}",
+                e
+            )))
+        }
     };
 
     let backup_path = format!("{}.bak", current_exe.display());
@@ -433,21 +562,32 @@ async fn upgrade() -> Json<ApiResponse<String>> {
     }
 
     if let Err(e) = std::fs::remove_file(&current_exe) {
-        return Json(ApiResponse::error(format!("Failed to remove old binary: {}", e)));
+        return Json(ApiResponse::error(format!(
+            "Failed to remove old binary: {}",
+            e
+        )));
     }
 
     if let Err(e) = std::fs::copy(temp_path, &current_exe) {
         let _ = std::fs::copy(&backup_path, &current_exe);
-        return Json(ApiResponse::error(format!("Failed to copy new binary: {}", e)));
+        return Json(ApiResponse::error(format!(
+            "Failed to copy new binary: {}",
+            e
+        )));
     }
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Err(e) = std::fs::set_permissions(&current_exe, std::fs::Permissions::from_mode(0o755)) {
+        if let Err(e) =
+            std::fs::set_permissions(&current_exe, std::fs::Permissions::from_mode(0o755))
+        {
             let _ = std::fs::remove_file(&current_exe);
             let _ = std::fs::copy(&backup_path, &current_exe);
-            return Json(ApiResponse::error(format!("Failed to set permissions: {}", e)));
+            return Json(ApiResponse::error(format!(
+                "Failed to set permissions: {}",
+                e
+            )));
         }
     }
 
@@ -462,21 +602,31 @@ async fn upgrade() -> Json<ApiResponse<String>> {
         {
             use std::os::unix::process::CommandExt;
             let args: Vec<String> = std::env::args().collect();
-            let err = std::process::Command::new(&current_exe).args(&args[1..]).exec();
+            let err = std::process::Command::new(&current_exe)
+                .args(&args[1..])
+                .exec();
             eprintln!("[upgrade] Failed to exec new binary: {}", err);
 
             if std::fs::remove_file(&current_exe).is_ok() {
                 if std::fs::copy(&backup_path, &current_exe).is_ok() {
                     use std::os::unix::fs::PermissionsExt;
-                    let _ = std::fs::set_permissions(&current_exe, std::fs::Permissions::from_mode(0o755));
-                    let _ = std::process::Command::new(&current_exe).args(&args[1..]).exec();
+                    let _ = std::fs::set_permissions(
+                        &current_exe,
+                        std::fs::Permissions::from_mode(0o755),
+                    );
+                    let _ = std::process::Command::new(&current_exe)
+                        .args(&args[1..])
+                        .exec();
                 }
             }
             std::process::exit(1);
         }
     });
 
-    Json(ApiResponse::success("Upgrade complete, restarting...", new_version))
+    Json(ApiResponse::success(
+        "Upgrade complete, restarting...",
+        new_version,
+    ))
 }
 
 async fn upgrade_component(
@@ -485,21 +635,36 @@ async fn upgrade_component(
 ) -> Json<ApiResponse<String>> {
     match component.as_str() {
         "agent-browser-hub" => {
-            state.logs.push("INFO", "Upgrading agent-browser-hub...".into()).await;
+            state
+                .logs
+                .push("INFO", "Upgrading agent-browser-hub...".into())
+                .await;
             upgrade().await
         }
         "agent-browser" => {
-            state.logs.push("INFO", "Upgrading agent-browser...".into()).await;
+            state
+                .logs
+                .push("INFO", "Upgrading agent-browser...".into())
+                .await;
             upgrade_agent_browser(state).await
         }
-        _ => Json(ApiResponse::error(format!("Unknown component: {}", component))),
+        _ => Json(ApiResponse::error(format!(
+            "Unknown component: {}",
+            component
+        ))),
     }
 }
 
 async fn upgrade_agent_browser(state: AppState) -> Json<ApiResponse<String>> {
     let download_url = "https://github.com/Xiechengqi/agent-browser/releases/download/latest/agent-browser-linux-x64";
 
-    state.logs.push("INFO", format!("Downloading agent-browser from: {}", download_url)).await;
+    state
+        .logs
+        .push(
+            "INFO",
+            format!("Downloading agent-browser from: {}", download_url),
+        )
+        .await;
 
     let client = match reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
@@ -507,7 +672,10 @@ async fn upgrade_agent_browser(state: AppState) -> Json<ApiResponse<String>> {
     {
         Ok(c) => c,
         Err(e) => {
-            state.logs.push("ERROR", format!("HTTP client error: {}", e)).await;
+            state
+                .logs
+                .push("ERROR", format!("HTTP client error: {}", e))
+                .await;
             return Json(ApiResponse::error(format!("HTTP client error: {}", e)));
         }
     };
@@ -527,25 +695,37 @@ async fn upgrade_agent_browser(state: AppState) -> Json<ApiResponse<String>> {
             match r.bytes().await {
                 Ok(b) => b,
                 Err(e) => {
-                    state.logs.push("ERROR", format!("Download error: {}", e)).await;
+                    state
+                        .logs
+                        .push("ERROR", format!("Download error: {}", e))
+                        .await;
                     return Json(ApiResponse::error(format!("Download error: {}", e)));
                 }
             }
         }
         Err(e) => {
-            state.logs.push("ERROR", format!("Request error: {}", e)).await;
+            state
+                .logs
+                .push("ERROR", format!("Request error: {}", e))
+                .await;
             return Json(ApiResponse::error(format!("Request error: {}", e)));
         }
     };
 
-    state.logs.push("INFO", format!("Downloaded {} bytes", binary_data.len())).await;
+    state
+        .logs
+        .push("INFO", format!("Downloaded {} bytes", binary_data.len()))
+        .await;
 
     // Find agent-browser binary path
     let ab_path = which_agent_browser();
     let temp_path = "/tmp/agent-browser-new";
 
     if let Err(e) = std::fs::write(temp_path, &binary_data) {
-        state.logs.push("ERROR", format!("Write temp file failed: {}", e)).await;
+        state
+            .logs
+            .push("ERROR", format!("Write temp file failed: {}", e))
+            .await;
         return Json(ApiResponse::error(format!("Write failed: {}", e)));
     }
 
@@ -563,16 +743,28 @@ async fn upgrade_agent_browser(state: AppState) -> Json<ApiResponse<String>> {
     let backup_path = format!("{}.bak", ab_path);
     if std::path::Path::new(&ab_path).exists() {
         if let Err(e) = std::fs::copy(&ab_path, &backup_path) {
-            state.logs.push("WARN", format!("Backup failed: {}", e)).await;
+            state
+                .logs
+                .push("WARN", format!("Backup failed: {}", e))
+                .await;
         }
         if let Err(e) = std::fs::remove_file(&ab_path) {
-            state.logs.push("ERROR", format!("Remove old binary failed: {}", e)).await;
-            return Json(ApiResponse::error(format!("Remove old binary failed: {}", e)));
+            state
+                .logs
+                .push("ERROR", format!("Remove old binary failed: {}", e))
+                .await;
+            return Json(ApiResponse::error(format!(
+                "Remove old binary failed: {}",
+                e
+            )));
         }
     }
 
     if let Err(e) = std::fs::copy(temp_path, &ab_path) {
-        state.logs.push("ERROR", format!("Replace binary failed: {}", e)).await;
+        state
+            .logs
+            .push("ERROR", format!("Replace binary failed: {}", e))
+            .await;
         let _ = std::fs::copy(&backup_path, &ab_path);
         return Json(ApiResponse::error(format!("Replace failed: {}", e)));
     }
@@ -584,12 +776,18 @@ async fn upgrade_agent_browser(state: AppState) -> Json<ApiResponse<String>> {
     }
 
     let _ = std::fs::remove_file(temp_path);
-    state.logs.push("INFO", "agent-browser upgraded successfully".into()).await;
+    state
+        .logs
+        .push("INFO", "agent-browser upgraded successfully".into())
+        .await;
     Json(ApiResponse::success("agent-browser upgraded", "ok".into()))
 }
 
 fn which_agent_browser() -> String {
-    if let Ok(output) = std::process::Command::new("which").arg("agent-browser").output() {
+    if let Ok(output) = std::process::Command::new("which")
+        .arg("agent-browser")
+        .output()
+    {
         if output.status.success() {
             let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
             if !path.is_empty() {
@@ -598,6 +796,28 @@ fn which_agent_browser() -> String {
         }
     }
     "/usr/local/bin/agent-browser".to_string()
+}
+
+fn extract_execute_params(req: &HashMap<String, Value>) -> HashMap<String, Value> {
+    if let Some(params) = req.get("params").and_then(|value| value.as_object()) {
+        return params
+            .iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+    }
+
+    req.iter()
+        .filter(|(key, _)| key.as_str() != "format")
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect()
+}
+
+fn extract_execute_format(req: &HashMap<String, Value>) -> (&str, crate::core::OutputFormat) {
+    let format_str = req
+        .get("format")
+        .and_then(|value| value.as_str())
+        .unwrap_or("json");
+    (format_str, crate::core::OutputFormat::from_str(format_str))
 }
 
 // ============================================================================
@@ -609,66 +829,194 @@ async fn execute_script(
     Path((site, name)): Path<(String, String)>,
     Json(req): Json<HashMap<String, Value>>,
 ) -> Json<Value> {
-    state.logs.push("INFO", format!("Execute: {}/{}", site, name)).await;
+    state
+        .logs
+        .push("INFO", format!("Execute: {}/{}", site, name))
+        .await;
 
-    if !site.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-        || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    if !site
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
-        state.logs.push("ERROR", format!("Invalid script path: {}/{}", site, name)).await;
+        state
+            .logs
+            .push("ERROR", format!("Invalid script path: {}/{}", site, name))
+            .await;
         return Json(serde_json::json!({"success": false, "error": "Invalid script path"}));
     }
 
-    let script_path = format!("scripts/{}/{}.yaml", site, name);
-    if !std::path::Path::new(&script_path).exists() {
-        state.logs.push("ERROR", format!("Script not found: {}", script_path)).await;
-        return Json(serde_json::json!({"success": false, "error": format!("Script not found: {}/{}", site, name)}));
-    }
+    let params = extract_execute_params(&req);
+    let (format_str, output_format) = extract_execute_format(&req);
+    state
+        .logs
+        .push(
+            "DEBUG",
+            format!("Params: {:?}, format: {}", params, format_str),
+        )
+        .await;
 
-    let yaml_content = match std::fs::read_to_string(&script_path) {
-        Ok(c) => c,
+    let registry = match crate::registry::build_default_registry() {
+        Ok(registry) => registry,
         Err(e) => {
-            state.logs.push("ERROR", format!("Read failed: {}", e)).await;
-            return Json(serde_json::json!({"success": false, "error": format!("Read failed: {}", e)}));
+            state
+                .logs
+                .push("ERROR", format!("Build registry failed: {}", e))
+                .await;
+            return Json(
+                serde_json::json!({"success": false, "error": format!("Build registry failed: {}", e)}),
+            );
         }
     };
 
-    let script: crate::core::Script = match serde_yaml::from_str(&yaml_content) {
-        Ok(s) => s,
+    let Some(entry) = registry.get(&site, &name) else {
+        state
+            .logs
+            .push("ERROR", format!("Command not found: {}/{}", site, name))
+            .await;
+        return Json(
+            serde_json::json!({"success": false, "error": format!("Command not found: {}/{}", site, name)}),
+        );
+    };
+
+    let resolved = match crate::registry::resolve_command_entry(entry) {
+        Ok(resolved) => resolved,
         Err(e) => {
-            state.logs.push("ERROR", format!("Parse YAML failed: {}", e)).await;
-            return Json(serde_json::json!({"success": false, "error": format!("Parse failed: {}", e)}));
+            state
+                .logs
+                .push("ERROR", format!("Resolve command failed: {}", e))
+                .await;
+            return Json(
+                serde_json::json!({"success": false, "error": format!("Resolve command failed: {}", e)}),
+            );
+        }
+    };
+
+    let script = match resolved {
+        crate::registry::ResolvedCommand::Pipeline(script) => script,
+        crate::registry::ResolvedCommand::WorkflowScript(target) => {
+            match crate::workflow::runtime::execute_workflow_script(target, params.clone()).await {
+                Ok(result) => {
+                    state
+                        .logs
+                        .push("INFO", format!("Execute OK: {}/{}", site, name))
+                        .await;
+                    let formatted = crate::core::output::format_output(&result, &output_format)
+                        .unwrap_or_else(|_| {
+                            serde_json::to_string_pretty(&result).unwrap_or_default()
+                        });
+                    return Json(serde_json::json!({"success": true, "data": formatted}));
+                }
+                Err(e) => {
+                    state
+                        .logs
+                        .push("ERROR", format!("Execute failed {}/{}: {}", site, name, e))
+                        .await;
+                    return Json(
+                        serde_json::json!({"success": false, "error": format!("Execution failed: {}", e)}),
+                    );
+                }
+            }
+        }
+        crate::registry::ResolvedCommand::WorkflowNative(target) => {
+            match crate::workflow::runtime::execute_native_dispatch(
+                crate::workflow::runtime::NativeDispatchTarget::Workflow {
+                    site: target.site,
+                    name: target.name,
+                    handler: target.handler,
+                },
+                params.clone(),
+            )
+            .await
+            {
+                Ok(result) => {
+                    state
+                        .logs
+                        .push("INFO", format!("Execute OK: {}/{}", site, name))
+                        .await;
+                    let formatted = crate::core::output::format_output(&result, &output_format)
+                        .unwrap_or_else(|_| {
+                            serde_json::to_string_pretty(&result).unwrap_or_default()
+                        });
+                    return Json(serde_json::json!({"success": true, "data": formatted}));
+                }
+                Err(e) => {
+                    state
+                        .logs
+                        .push("ERROR", format!("Execute failed {}/{}: {}", site, name, e))
+                        .await;
+                    return Json(
+                        serde_json::json!({"success": false, "error": format!("Execution failed: {}", e)}),
+                    );
+                }
+            }
+        }
+        crate::registry::ResolvedCommand::Native(handler) => {
+            match crate::workflow::runtime::execute_native_dispatch(
+                crate::workflow::runtime::NativeDispatchTarget::Registered { handler },
+                params.clone(),
+            )
+            .await
+            {
+                Ok(result) => {
+                    state
+                        .logs
+                        .push("INFO", format!("Execute OK: {}/{}", site, name))
+                        .await;
+                    let formatted = crate::core::output::format_output(&result, &output_format)
+                        .unwrap_or_else(|_| {
+                            serde_json::to_string_pretty(&result).unwrap_or_default()
+                        });
+                    return Json(serde_json::json!({"success": true, "data": formatted}));
+                }
+                Err(e) => {
+                    state
+                        .logs
+                        .push("ERROR", format!("Execute failed {}/{}: {}", site, name, e))
+                        .await;
+                    return Json(
+                        serde_json::json!({"success": false, "error": format!("Execution failed: {}", e)}),
+                    );
+                }
+            }
         }
     };
 
     let executor = match crate::core::Executor::new().await {
         Ok(e) => e,
         Err(e) => {
-            state.logs.push("ERROR", format!("Executor init failed: {}", e)).await;
-            return Json(serde_json::json!({"success": false, "error": format!("Executor failed: {}", e)}));
+            state
+                .logs
+                .push("ERROR", format!("Executor init failed: {}", e))
+                .await;
+            return Json(
+                serde_json::json!({"success": false, "error": format!("Executor failed: {}", e)}),
+            );
         }
     };
 
-    let params = req.get("params").and_then(|v| v.as_object()).map(|m| {
-        m.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
-    }).unwrap_or_default();
-
-    let format_str = req.get("format").and_then(|v| v.as_str()).unwrap_or("json");
-    let output_format = crate::core::OutputFormat::from_str(format_str);
-
-    state.logs.push("DEBUG", format!("Params: {:?}, format: {}", params, format_str)).await;
-
     match executor.execute(&script, params).await {
         Ok(result) => {
-            state.logs.push("INFO", format!("Execute OK: {}/{}", site, name)).await;
+            state
+                .logs
+                .push("INFO", format!("Execute OK: {}/{}", site, name))
+                .await;
             let formatted = crate::core::output::format_output(&result.result, &output_format)
-                .unwrap_or_else(|_| serde_json::to_string_pretty(&result.result).unwrap_or_default());
+                .unwrap_or_else(|_| {
+                    serde_json::to_string_pretty(&result.result).unwrap_or_default()
+                });
             Json(serde_json::json!({
                 "success": true,
                 "data": formatted
             }))
         }
         Err(e) => {
-            state.logs.push("ERROR", format!("Execute failed {}/{}: {}", site, name, e)).await;
+            state
+                .logs
+                .push("ERROR", format!("Execute failed {}/{}: {}", site, name, e))
+                .await;
             Json(serde_json::json!({"success": false, "error": format!("Execution failed: {}", e)}))
         }
     }
@@ -676,78 +1024,84 @@ async fn execute_script(
 
 async fn list_scripts() -> Json<Vec<Value>> {
     let mut scripts = Vec::new();
-    let scripts_dir = std::path::Path::new("scripts");
+    let registry = match crate::registry::build_default_registry() {
+        Ok(registry) => registry,
+        Err(_) => return Json(Vec::new()),
+    };
 
-    if let Ok(sites) = std::fs::read_dir(scripts_dir) {
-        for site_entry in sites.flatten() {
-            if !site_entry.path().is_dir() { continue; }
-            let site = site_entry.file_name().to_string_lossy().to_string();
+    for entry in registry.list() {
+        match &entry.source {
+            crate::registry::CommandSource::Workflow {
+                command_file,
+                origin,
+                ..
+            } => {
+                if let Ok(content) = std::fs::read_to_string(command_file) {
+                    if let Ok(command) =
+                        toml::from_str::<crate::workflow::WorkflowCommandManifest>(&content)
+                    {
+                        let params: Vec<Value> = command
+                            .params
+                            .iter()
+                            .map(|param| {
+                                serde_json::json!({
+                                    "name": param.name,
+                                    "type": param.type_,
+                                    "required": param.required,
+                                    "default": param.default,
+                                    "description": param.description,
+                                })
+                            })
+                            .collect();
 
-            if let Ok(files) = std::fs::read_dir(site_entry.path()) {
-                for file_entry in files.flatten() {
-                    let path = file_entry.path();
-                    if path.extension().and_then(|e| e.to_str()) != Some("yaml") { continue; }
-
-                    let name = path.file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("")
-                        .to_string();
-
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        if let Ok(yaml) = serde_yaml::from_str::<Value>(&content) {
-                            let description = yaml["meta"]["description"].as_str()
-                                .or_else(|| yaml["description"].as_str())
-                                .unwrap_or("")
-                                .to_string();
-                            let strategy = yaml["config"]["strategy"].as_str()
-                                .or_else(|| yaml["strategy"].as_str())
-                                .unwrap_or("PUBLIC")
-                                .to_string();
-
-                            // Parse params from "args" (map) or "params" (array)
-                            let mut params = Vec::new();
-                            if let Some(args) = yaml["args"].as_object() {
-                                for (arg_name, arg_val) in args {
-                                    params.push(serde_json::json!({
-                                        "name": arg_name,
-                                        "type": arg_val["type"].as_str().unwrap_or("string"),
-                                        "required": arg_val["required"].as_bool().unwrap_or(false),
-                                        "default": arg_val.get("default"),
-                                        "description": arg_val["description"].as_str().unwrap_or(""),
-                                    }));
-                                }
-                            } else if let Some(p_arr) = yaml["params"].as_array() {
-                                for p in p_arr {
-                                    params.push(serde_json::json!({
-                                        "name": p["name"].as_str().unwrap_or(""),
-                                        "type": p["type"].as_str().unwrap_or("string"),
-                                        "required": p["required"].as_bool().unwrap_or(false),
-                                        "default": p.get("default"),
-                                        "description": p["description"].as_str().unwrap_or(""),
-                                    }));
-                                }
+                        scripts.push(serde_json::json!({
+                            "site": entry.site,
+                            "name": entry.name,
+                            "description": entry.description,
+                            "strategy": entry.strategy.clone().unwrap_or_else(|| "PUBLIC".to_string()),
+                            "params": params,
+                            "source": entry.source_label,
+                            "workflow_origin": {
+                                "kind": format!("{:?}", origin.kind),
+                                "location": origin.location,
+                                "fallbackActive": origin.fallback_active,
                             }
-
-                            scripts.push(serde_json::json!({
-                                "site": site,
-                                "name": name,
-                                "description": description,
-                                "strategy": strategy,
-                                "params": params,
-                            }));
-                        }
+                        }));
                     }
                 }
+            }
+            crate::registry::CommandSource::Native(_) => {
+                scripts.push(serde_json::json!({
+                    "site": entry.site,
+                    "name": entry.name,
+                    "description": entry.description,
+                    "strategy": entry.strategy.clone().unwrap_or_else(|| "NATIVE".to_string()),
+                    "params": [],
+                    "source": entry.source_label,
+                }));
             }
         }
     }
 
     scripts.sort_by(|a, b| {
-        let key = |v: &Value| format!("{}/{}", v["site"].as_str().unwrap_or(""), v["name"].as_str().unwrap_or(""));
+        let key = |v: &Value| {
+            format!(
+                "{}/{}",
+                v["site"].as_str().unwrap_or(""),
+                v["name"].as_str().unwrap_or("")
+            )
+        };
         key(a).cmp(&key(b))
     });
 
     Json(scripts)
+}
+
+async fn list_workflow_sources() -> Json<Vec<crate::workflow::WorkflowSourceStatus>> {
+    let config = crate::config::load_config();
+    let mut sources = crate::workflow::inspect_external_sources(&config.workflow, "workflows");
+    sources.sort_by(|a, b| a.site.cmp(&b.site));
+    Json(sources)
 }
 
 // ============================================================================
@@ -787,7 +1141,8 @@ async fn serve_static(path: &str) -> Response {
                 if !path.contains('.') {
                     if let Some(index) = Assets::get("index.html") {
                         let mime = mime_guess::from_path("index.html").first_or_octet_stream();
-                        return ([(header::CONTENT_TYPE, mime.as_ref())], index.data).into_response();
+                        return ([(header::CONTENT_TYPE, mime.as_ref())], index.data)
+                            .into_response();
                     }
                 }
                 StatusCode::NOT_FOUND.into_response()
@@ -819,7 +1174,10 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
         logs: LogBuffer::default(),
     };
 
-    state.logs.push("INFO", format!("Server starting on port {}", port)).await;
+    state
+        .logs
+        .push("INFO", format!("Server starting on port {}", port))
+        .await;
 
     // Public routes (no auth)
     let public_routes = Router::new()
@@ -832,6 +1190,7 @@ pub async fn start(port: u16) -> anyhow::Result<()> {
         .route("/api/password", post(update_password))
         .route("/api/settings", get(get_settings))
         .route("/api/settings", post(update_settings))
+        .route("/api/workflow/sources", get(list_workflow_sources))
         .route("/api/upgrade", post(upgrade))
         .route("/api/upgrade/:component", post(upgrade_component))
         .route("/api/logs", get(get_logs))

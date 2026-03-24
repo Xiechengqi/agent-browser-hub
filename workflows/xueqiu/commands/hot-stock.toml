@@ -1,0 +1,26 @@
+name = "hot-stock"
+description = "获取雪球热门股票榜"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "返回数量，默认 20，最大 50"
+default = 20
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "榜单类型 10=人气榜(默认) 12=关注榜"
+default = "10"
+
+[execution]
+entry = "script"
+script = "scripts/hot-stock.json"
+
+[output]
+columns = ["rank", "symbol", "name", "price", "changePercent", "heat"]

@@ -1,0 +1,24 @@
+schema_version = 1
+site = "jike"
+display_name = "Jike"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "standard"
+default_enabled = true
+
+[auth]
+strategy = "COOKIE"
+login_required = true
+domains = ["web.okjike.com", "m.okjike.com"]
+
+[ui]
+tags = ["jike"]
+
+[commands]
+include = ["comment", "create", "feed", "like", "notifications", "post", "repost", "search", "topic", "user"]

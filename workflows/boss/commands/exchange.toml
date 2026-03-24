@@ -1,0 +1,24 @@
+name = "exchange"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Encrypted UID of candidate"
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "Exchange type (phone or wechat, default phone)"
+
+[execution]
+entry = "script"
+script = "scripts/exchange.json"
+
+[output]
+columns = []

@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "stackoverflow",
+    "name": "tags",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "pipeline": [
+      {
+        "navigate": "https://stackoverflow.com/tags"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.s-tag').forEach(tag => {\n    items.push({\n      name: tag.textContent.trim(),\n      url: 'https://stackoverflow.com/questions/tagged/' + tag.textContent.trim()\n    });\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

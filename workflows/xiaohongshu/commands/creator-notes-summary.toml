@@ -1,0 +1,18 @@
+name = "creator-notes-summary"
+description = "小红书最近笔记批量摘要 (列表 + 单篇关键数据汇总)"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of recent notes to summarize"
+default = 3
+
+[execution]
+entry = "script"
+script = "scripts/creator-notes-summary.json"
+
+[output]
+columns = ["rank", "id", "title", "views", "likes", "collects", "comments", "shares", "avg_view_time", "rise_fans", "top_source", "top_interest", "url"]

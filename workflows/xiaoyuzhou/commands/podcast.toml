@@ -1,0 +1,17 @@
+name = "podcast"
+description = "View a Xiaoyuzhou podcast profile"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = false
+description = "Podcast ID (from xiaoyuzhoufm.com URL)"
+
+[execution]
+entry = "script"
+script = "scripts/podcast.json"
+
+[output]
+columns = ["title", "author", "description", "subscribers", "episodes", "updated"]

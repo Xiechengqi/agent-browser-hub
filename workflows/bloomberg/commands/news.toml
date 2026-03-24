@@ -1,0 +1,17 @@
+name = "news"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "link"
+type = "string"
+required = true
+positional = true
+description = "Bloomberg story/article URL or relative Bloomberg path"
+
+[execution]
+entry = "script"
+script = "scripts/news.json"
+
+[output]
+columns = ["title", "summary", "link", "mediaLinks", "content"]

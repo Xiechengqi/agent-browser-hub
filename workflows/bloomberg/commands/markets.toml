@@ -1,0 +1,10 @@
+name = "markets"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/markets.json"
+
+[output]
+columns = []

@@ -1,0 +1,10 @@
+name = "feeds"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/feeds.json"
+
+[output]
+columns = ["name", "url"]

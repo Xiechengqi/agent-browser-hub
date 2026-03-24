@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://dev.to/"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.crayons-story').forEach(story => {\n    const titleEl = story.querySelector('h2 a, h3 a');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim(),\n        url: 'https://dev.to' + titleEl.getAttribute('href')\n      });\n    }\n  });\n  return items;\n})()"
+    }
+  ]
+}

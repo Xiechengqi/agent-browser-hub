@@ -1,0 +1,26 @@
+schema_version = 1
+site = "wikipedia"
+display_name = "Wikipedia"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "simple"
+default_enabled = true
+
+[auth]
+strategy = "PUBLIC"
+login_required = false
+domains = ["en.wikipedia.org"]
+
+[ui]
+icon = "book-open"
+category = "knowledge"
+tags = ["reference", "public", "encyclopedia"]
+
+[commands]
+include = ["random", "search", "summary", "trending"]

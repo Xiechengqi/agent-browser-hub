@@ -1,0 +1,41 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "search",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "query": {
+        "type": "str",
+        "required": true,
+        "description": "Search keyword"
+      },
+      "city": {
+        "type": "str",
+        "required": false,
+        "description": "City name or code (default 北京)"
+      },
+      "page": {
+        "type": "int",
+        "required": false,
+        "description": "Page number (default 1)"
+      },
+      "limit": {
+        "type": "int",
+        "required": false,
+        "description": "Number of results (default 15)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/geek/job?query=${{ args.query }}&city=101010100"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "(() => {\n  const query = ${{ args.query }};\n  const page = ${{ args.page }} || 1;\n  const limit = ${{ args.limit }} || 15;\n  const cityCode = '101010100';\n  return new Promise((resolve, reject) => {\n    const xhr = new XMLHttpRequest();\n    const url = `https://www.zhipin.com/wapi/zpgeek/search/joblist.json?scene=1&query=${encodeURIComponent(query)}&city=${cityCode}&page=${page}&pageSize=15`;\n    xhr.open('GET', url, true);\n    xhr.withCredentials = true;\n    xhr.timeout = 15000;\n    xhr.setRequestHeader('Accept', 'application/json');\n    xhr.onload = () => {\n      try {\n        const data = JSON.parse(xhr.responseText);\n        if (data.code !== 0) reject(new Error(data.message || 'API error'));\n        const jobs = data.zpData?.jobList || [];\n        resolve(jobs.slice(0, limit).map(j => ({\n          name: j.jobName,\n          salary: j.salaryDesc,\n          company: j.brandName,\n          area: [j.cityName, j.areaDistrict, j.businessDistrict].filter(Boolean).join('·'),\n          experience: j.jobExperience,\n          degree: j.jobDegree,\n          skills: (j.skills || []).join(','),\n          boss: j.bossName + ' · ' + j.bossTitle,\n          security_id: j.securityId || '',\n          url: 'https://www.zhipin.com/job_detail/' + j.encryptJobId + '.html'\n        })));\n      } catch(e) { reject(e); }\n    };\n    xhr.onerror = () => reject(new Error('Network Error'));\n    xhr.ontimeout = () => reject(new Error('Timeout'));\n    xhr.send(null);\n  });\n})()\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "pipeline": {
+    "site": "grok",
+    "name": "ask",
+    "description": "Send a message to Grok and get response",
+    "domain": "grok.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "prompt": {
+        "type": "str",
+        "required": true,
+        "description": "Prompt to send to Grok"
+      },
+      "timeout": {
+        "type": "int",
+        "default": 120,
+        "description": "Max seconds to wait for response"
+      },
+      "new": {
+        "type": "bool",
+        "default": false,
+        "description": "Start a new chat before sending"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://grok.com/"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  const prompt = '${{ args.prompt }}';\n  const timeoutMs = ${{ args.timeout }} * 1000;\n  try {\n    const box = document.querySelector('textarea');\n    if (!box) return [{ response: '[SEND FAILED] no textarea' }];\n    box.focus();\n    box.value = '';\n    document.execCommand('selectAll');\n    document.execCommand('insertText', false, prompt);\n    await new Promise(r => setTimeout(r, 1500));\n    const btn = document.querySelector('button[aria-label=\"提交\"]');\n    if (btn && !btn.disabled) {\n      btn.click();\n    } else {\n      const sub = [...document.querySelectorAll('button[type=\"submit\"]')].find(b => !b.disabled);\n      if (sub) sub.click();\n      else box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));\n    }\n  } catch (e) {\n    return [{ response: '[SEND FAILED] ' + e.toString() }];\n  }\n  const startTime = Date.now();\n  let lastText = '';\n  let stableCount = 0;\n  while (Date.now() - startTime < timeoutMs) {\n    await new Promise(r => setTimeout(r, 3000));\n    const bubbles = document.querySelectorAll('div.message-bubble, [data-testid=\"message-bubble\"]');\n    if (bubbles.length < 2) continue;\n    const last = bubbles[bubbles.length - 1];\n    const text = (last.innerText || '').trim();\n    if (text && text.length > 2) {\n      if (text === lastText) {\n        stableCount++;\n        if (stableCount >= 2) return [{ response: text }];\n      } else {\n        stableCount = 0;\n      }\n    }\n    lastText = text || '';\n  }\n  if (lastText) return [{ response: lastText }];\n  return [{ response: '[NO RESPONSE]' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "response"
+    ]
+  }
+}

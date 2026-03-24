@@ -1,0 +1,24 @@
+name = "chatmsg"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = false
+description = "Encrypted UID from chatlist"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Page number (default 1)"
+
+[execution]
+entry = "script"
+script = "scripts/chatmsg.json"
+
+[output]
+columns = []

@@ -1,0 +1,17 @@
+name = "post"
+description = "Post a new tweet"
+strategy = "COOKIE"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = true
+description = "The text content of the tweet"
+
+[execution]
+entry = "script"
+script = "scripts/post.json"
+
+[output]
+columns = ["status", "message"]

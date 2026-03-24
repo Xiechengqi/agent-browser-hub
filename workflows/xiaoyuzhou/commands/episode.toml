@@ -1,0 +1,17 @@
+name = "episode"
+description = "View details of a Xiaoyuzhou podcast episode"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = false
+description = "Episode ID (eid from podcast-episodes output)"
+
+[execution]
+entry = "script"
+script = "scripts/episode.json"
+
+[output]
+columns = ["title", "podcast", "duration", "plays", "comments", "likes", "date"]

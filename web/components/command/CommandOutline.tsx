@@ -23,7 +23,7 @@ export default function CommandOutline() {
   return (
     <div className="hidden xl:block fixed right-8 top-32 w-48 max-h-[calc(100vh-10rem)] overflow-y-auto">
       <div className="bg-white rounded-xl border border-slate-200 shadow-soft p-4">
-        <h3 className="text-sm font-bold text-slate-900 mb-3">站点导航</h3>
+        <h3 className="text-sm font-bold text-slate-900 mb-3">Workflow Sites</h3>
         <nav className="space-y-1">
           {sites.map((site) => (
             <button

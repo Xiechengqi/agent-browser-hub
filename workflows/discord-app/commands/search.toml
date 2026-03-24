@@ -1,0 +1,17 @@
+name = "search"
+description = "Search messages in the current Discord server/channel"
+strategy = "COOKIE"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+description = "Search query"
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["Index", "Author", "Message"]

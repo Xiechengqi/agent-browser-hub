@@ -1,0 +1,25 @@
+name = "node"
+description = "V2EX 节点话题列表"
+strategy = "PUBLIC"
+
+[[params]]
+name = "name"
+type = "string"
+required = true
+positional = true
+description = "Node name (e.g. python, javascript, apple)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of topics (API returns max 20)"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/node.json"
+
+[output]
+columns = ["rank", "title", "author", "replies", "url"]

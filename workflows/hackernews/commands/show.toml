@@ -1,0 +1,10 @@
+name = "show"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/show.json"
+
+[output]
+columns = []

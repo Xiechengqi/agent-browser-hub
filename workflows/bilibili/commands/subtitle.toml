@@ -1,0 +1,24 @@
+name = "subtitle"
+description = "Get Bilibili video subtitles"
+strategy = "COOKIE"
+
+[[params]]
+name = "bvid"
+type = "string"
+required = true
+positional = false
+description = "Video BVID"
+
+[[params]]
+name = "lang"
+type = "string"
+required = false
+positional = false
+description = "Subtitle language code (e.g. zh-CN, en-US, ai-zh), defaults to first available"
+
+[execution]
+entry = "script"
+script = "scripts/subtitle.json"
+
+[output]
+columns = ["index", "from", "to", "content"]

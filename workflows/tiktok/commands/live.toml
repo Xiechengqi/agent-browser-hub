@@ -1,0 +1,18 @@
+name = "live"
+description = "Browse live streams on TikTok"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of streams"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/live.json"
+
+[output]
+columns = ["index", "streamer", "viewers", "url"]

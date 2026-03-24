@@ -1,0 +1,39 @@
+{
+  "pipeline": {
+    "site": "sinablog",
+    "name": "hot",
+    "description": "获取新浪博客热门文章/推荐",
+    "domain": "blog.sina.com.cn",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "返回的文章数量"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://blog.sina.com.cn/"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  await new Promise((resolve) => setTimeout(resolve, 1500));\n  const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const limit = ${{ args.limit }};\n  const abs = (href) => {\n    if (!href) return '';\n    if (href.startsWith('//')) return 'https:' + href;\n    if (href.startsWith('http')) return href;\n    return 'https://blog.sina.com.cn' + (href.startsWith('/') ? '' : '/') + href;\n  };\n  const parseArticle = (doc, fallback) => {\n    const title = normalize(doc.querySelector('.articalTitle h2, .title h2, h1, h2.titName')?.textContent) || fallback.title;\n    const titleParts = normalize(doc.title).split('_').map((part) => normalize(part)).filter(Boolean);\n    const timeText = normalize(doc.querySelector('.time, .articalInfo .time')?.textContent).replace(/[()]/g, '');\n    const articleId = fallback.url.match(/blog_([a-zA-Z0-9]+)\\.html/)?.[1] || '';\n    return {\n      articleId,\n      title,\n      author: titleParts[1] || title.split(/[：:]/)[0] || '',\n      date: timeText || '',\n      readCount: '',\n      description: normalize(doc.querySelector('.articalContent, .blog_content, .content, #sina_keyword_ad_area2')?.textContent).slice(0, 150),\n    };\n  };\n\n  const seeds = [];\n  const seen = new Set();\n  for (const link of Array.from(document.querySelectorAll('.day-hot-rank .art-list a[href*=\"/s/blog_\"], .hot-rank .art-list a[href*=\"/s/blog_\"]'))) {\n    const title = normalize(link.textContent);\n    const url = abs(link.getAttribute('href') || '');\n    if (!title || !url || seen.has(url)) continue;\n    seen.add(url);\n    seeds.push({ rank: seeds.length + 1, title, url });\n    if (seeds.length >= limit) break;\n  }\n\n  const results = [];\n  for (const item of seeds) {\n    let merged = {\n      rank: item.rank,\n      articleId: item.url.match(/blog_([a-zA-Z0-9]+)\\.html/)?.[1] || '',\n      title: item.title,\n      author: '',\n      date: '',\n      readCount: '',\n      description: '',\n      url: item.url,\n    };\n    try {\n      const resp = await fetch(item.url, { credentials: 'include' });\n      if (resp.ok) {\n        const html = await resp.text();\n        const doc = new DOMParser().parseFromString(html, 'text/html');\n        merged = Object.assign(merged, parseArticle(doc, item));\n      }\n    } catch {}\n    results.push(merged);\n  }\n  return results;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "author",
+      "date",
+      "readCount",
+      "url"
+    ]
+  }
+}

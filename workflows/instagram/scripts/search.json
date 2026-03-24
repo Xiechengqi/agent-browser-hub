@@ -1,0 +1,36 @@
+{
+  "pipeline": {
+    "site": "instagram",
+    "name": "search",
+    "description": "Search Instagram users",
+    "domain": "www.instagram.com",
+    "args": {
+      "query": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Search query"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of results"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.instagram.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const query = '${{ args.query }}';\n  const limit = ${{ args.limit }};\n  const res = await fetch(\n    'https://www.instagram.com/web/search/topsearch/?query=' + encodeURIComponent(query) + '&context=user',\n    {\n      credentials: 'include',\n      headers: { 'X-IG-App-ID': '936619743392459' }\n    }\n  );\n  if (!res.ok) throw new Error('HTTP ' + res.status + ' - make sure you are logged in to Instagram');\n  const data = await res.json();\n  const users = (data?.users || []).slice(0, limit);\n  return users.map((item, i) => ({\n    rank: i + 1,\n    username: item.user?.username || '',\n    name: item.user?.full_name || '',\n    verified: item.user?.is_verified ? 'Yes' : 'No',\n    private: item.user?.is_private ? 'Yes' : 'No',\n  }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "username",
+      "name",
+      "verified",
+      "private"
+    ]
+  }
+}

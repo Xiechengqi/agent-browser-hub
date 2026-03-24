@@ -1,0 +1,10 @@
+name = "new"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/new.json"
+
+[output]
+columns = []

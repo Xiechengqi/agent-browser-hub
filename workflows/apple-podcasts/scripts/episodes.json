@@ -1,0 +1,15 @@
+{
+  "pipeline": [
+    {
+      "fetch": {
+        "url": "https://itunes.apple.com/lookup?id=${{ args.id | urlencode }}&entity=podcastEpisode&limit=${{ args.limit }}"
+      }
+    },
+    {
+      "evaluate": "(() => {\n  const data = ${{ data | json }};\n  const episodes = (data.results || []).filter(r => r.kind === 'podcast-episode');\n  function formatDuration(ms) {\n    if (!ms || !Number.isFinite(ms)) return '-';\n    const totalSec = Math.round(ms / 1000);\n    const m = Math.floor(totalSec / 60);\n    const s = totalSec % 60;\n    return m + ':' + String(s).padStart(2, '0');\n  }\n  function formatDate(iso) {\n    if (!iso) return '-';\n    return iso.slice(0, 10);\n  }\n  return episodes.map(ep => ({\n    title: ep.trackName,\n    duration: formatDuration(ep.trackTimeMillis),\n    date: formatDate(ep.releaseDate)\n  }));\n})()"
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

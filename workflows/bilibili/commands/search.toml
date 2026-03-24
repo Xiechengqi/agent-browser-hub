@@ -1,0 +1,41 @@
+name = "search"
+description = "Search Bilibili videos or users"
+strategy = "COOKIE"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = "Search keyword"
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "video or user"
+default = "video"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Result page"
+default = 1
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = ["rank", "title", "author", "score", "url"]

@@ -1,0 +1,25 @@
+name = "user"
+description = "V2EX 用户发帖列表"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Username"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of topics (API returns max 20)"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["rank", "title", "node", "replies", "url"]

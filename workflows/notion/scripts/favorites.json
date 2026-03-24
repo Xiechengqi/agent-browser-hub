@@ -1,0 +1,14 @@
+{
+  "pipeline": {
+    "site": "notion",
+    "name": "favorites",
+    "strategy": "UI",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const results = [];\n  const headerContainer = document.querySelector('.notion-outliner-bookmarks-header-container');\n  if (headerContainer) {\n    let section = headerContainer.parentElement;\n    if (section && section.children.length === 1) section = section.parentElement;\n    if (section) {\n      const treeItems = section.querySelectorAll('[role=\"treeitem\"]');\n      treeItems.forEach((item) => {\n        const titleEl = item.querySelector('div.notranslate:not(.notion-record-icon)');\n        const title = titleEl ? titleEl.textContent.trim() : (item.textContent || '').trim().substring(0, 80);\n        const iconEl = item.querySelector('.notion-record-icon');\n        const icon = iconEl ? iconEl.textContent.trim().substring(0, 4) : '';\n        if (title && title.length > 0) {\n          results.push({ Index: results.length + 1, Title: title, Icon: icon || '📄' });\n        }\n      });\n    }\n  }\n  if (results.length === 0) {\n    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);\n    let node, favEl = null;\n    while (node = walker.nextNode()) {\n      const text = node.textContent.trim();\n      if (text === 'Favorites' || text === '收藏' || text === '收藏夹') {\n        favEl = node.parentElement;\n        break;\n      }\n    }\n    if (favEl) {\n      let section = favEl;\n      for (let i = 0; i < 6; i++) {\n        const p = section.parentElement;\n        if (!p || p === document.body) break;\n        const treeItems = p.querySelectorAll(':scope > [role=\"treeitem\"]');\n        if (treeItems.length > 0) { section = p; break; }\n        section = p;\n      }\n      const treeItems = section.querySelectorAll('[role=\"treeitem\"]');\n      treeItems.forEach((item) => {\n        const text = (item.textContent || '').trim().substring(0, 120);\n        if (text && text.length > 1 && !text.match(/^(Favorites|收藏夹?)$/)) {\n          results.push({ Index: results.length + 1, Title: text, Icon: '📄' });\n        }\n      });\n    }\n  }\n  return results.length > 0 ? results : [{ Index: 0, Title: 'No favorites found. Make sure sidebar is visible and you have favorites.', Icon: '⚠️' }];\n})()\n"
+      }
+    ]
+  }
+}

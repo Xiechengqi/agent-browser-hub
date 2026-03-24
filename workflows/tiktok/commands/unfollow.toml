@@ -1,0 +1,17 @@
+name = "unfollow"
+description = "Unfollow a TikTok user"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "TikTok username (without @)"
+
+[execution]
+entry = "script"
+script = "scripts/unfollow.json"
+
+[output]
+columns = ["status", "username"]

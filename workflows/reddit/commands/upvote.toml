@@ -1,0 +1,25 @@
+name = "upvote"
+description = "Upvote or downvote a Reddit post"
+strategy = "COOKIE"
+
+[[params]]
+name = "post-id"
+type = "string"
+required = true
+positional = true
+description = "Post ID (e.g. 1abc123) or fullname (t3_xxx)"
+
+[[params]]
+name = "direction"
+type = "string"
+required = false
+positional = false
+description = "Vote direction (up, down, none)"
+default = "up"
+
+[execution]
+entry = "script"
+script = "scripts/upvote.json"
+
+[output]
+columns = ["status", "message"]

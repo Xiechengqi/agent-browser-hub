@@ -1,0 +1,17 @@
+name = "book"
+description = "View book details on WeRead"
+strategy = "COOKIE"
+
+[[params]]
+name = "bookId"
+type = "string"
+required = true
+positional = true
+description = "Book ID (numeric, from search or shelf results)"
+
+[execution]
+entry = "script"
+script = "scripts/book.json"
+
+[output]
+columns = []

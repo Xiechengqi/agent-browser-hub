@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "weibo",
+    "name": "search",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "keyword": {
+        "type": "string",
+        "required": true,
+        "description": "Search keyword"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of results (max 50)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://s.weibo.com/weibo?q=${{ args.keyword }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const clean = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const absoluteUrl = (href) => {\n    if (!href) return '';\n    if (href.startsWith('http://') || href.startsWith('https://')) return href;\n    if (href.startsWith('//')) return window.location.protocol + href;\n    if (href.startsWith('/')) return window.location.origin + href;\n    return href;\n  };\n\n  const cards = Array.from(document.querySelectorAll('.card-wrap'));\n  const rows = [];\n\n  for (const card of cards) {\n    const contentEl =\n      card.querySelector('[node-type=\"feed_list_content_full\"]') ||\n      card.querySelector('[node-type=\"feed_list_content\"]') ||\n      card.querySelector('.txt');\n    const authorEl =\n      card.querySelector('.info .name') ||\n      card.querySelector('.name');\n    const timeEl = card.querySelector('.from a');\n    const urlEl =\n      card.querySelector('.from a[href*=\"/detail/\"]') ||\n      card.querySelector('.from a[href*=\"/status/\"]') ||\n      timeEl;\n\n    const title = clean(contentEl && contentEl.textContent);\n    if (!title) continue;\n\n    rows.push({\n      rank: rows.length + 1,\n      title,\n      author: clean(authorEl && authorEl.textContent),\n      time: clean(timeEl && timeEl.textContent),\n      url: absoluteUrl(urlEl && urlEl.getAttribute('href')),\n    });\n  }\n\n  return rows;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

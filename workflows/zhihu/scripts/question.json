@@ -1,0 +1,39 @@
+{
+  "pipeline": {
+    "site": "zhihu",
+    "name": "question",
+    "description": "Zhihu question details and answers",
+    "domain": "www.zhihu.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "id": {
+        "type": "str",
+        "required": true,
+        "description": "Question ID (numeric)"
+      },
+      "limit": {
+        "type": "int",
+        "default": 5,
+        "description": "Number of answers"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhihu.com/question/${{ args.id }}"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(async () => {\n  const id = '${{ args.id }}';\n  const limit = ${{ args.limit }};\n  const stripHtml = (html) => (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();\n  const [qResp, aResp] = await Promise.all([\n    fetch(`https://www.zhihu.com/api/v4/questions/${id}?include=data[*].detail,excerpt,answer_count,follower_count,visit_count`, {credentials: 'include'}),\n    fetch(`https://www.zhihu.com/api/v4/questions/${id}/answers?limit=${limit}&offset=0&sort_by=default&include=data[*].content,voteup_count,comment_count,author`, {credentials: 'include'})\n  ]);\n  if (!qResp.ok || !aResp.ok) return [];\n  const q = await qResp.json();\n  const a = await aResp.json();\n  const answers = (a.data || []).slice(0, limit).map((ans, i) => ({\n    rank: i + 1,\n    author: ans.author?.name || 'anonymous',\n    votes: ans.voteup_count || 0,\n    content: stripHtml(ans.content || '').slice(0, 200)\n  }));\n  return answers;\n})()\n"
+      }
+    ],
+    "columns": [
+      "rank",
+      "author",
+      "votes",
+      "content"
+    ]
+  }
+}

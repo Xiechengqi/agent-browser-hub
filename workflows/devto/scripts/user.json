@@ -1,0 +1,26 @@
+{
+  "pipeline": [
+    {
+      "fetch": {
+        "url": "https://dev.to/api/articles",
+        "params": {
+          "username": "${{ args.username }}",
+          "per_page": "${{ args.limit }}"
+        }
+      }
+    },
+    {
+      "map": {
+        "rank": "${{ index + 1 }}",
+        "title": "${{ item.title }}",
+        "reactions": "${{ item.public_reactions_count }}",
+        "comments": "${{ item.comments_count }}",
+        "tags": "${{ item.tag_list | join(', ') }}",
+        "url": "${{ item.url }}"
+      }
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "pipeline": {
+    "site": "sinafinance",
+    "name": "news",
+    "strategy": "COOKIE",
+    "browser": true,
+    "pipeline": [
+      {
+        "navigate": "https://finance.sina.com.cn/"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const items = [];\n  document.querySelectorAll('.feed-card-item').forEach(item => {\n    const titleEl = item.querySelector('h2, .title');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent.trim()\n      });\n    }\n  });\n  return items;\n})()\n"
+      }
+    ]
+  }
+}

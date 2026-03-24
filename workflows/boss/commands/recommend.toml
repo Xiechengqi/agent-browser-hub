@@ -1,0 +1,17 @@
+name = "recommend"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results (default 20)"
+
+[execution]
+entry = "script"
+script = "scripts/recommend.json"
+
+[output]
+columns = []

@@ -1,0 +1,33 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "unblock",
+    "description": "Unblock a Twitter user",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Twitter screen name (without @)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://x.com/${{ args.username }}",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  let attempts = 0;\n\n  while (attempts < 20) {\n    const followBtn = document.querySelector('[data-testid$=\"-follow\"]');\n    if (followBtn) return [{ status: 'success', message: 'Not blocking @' + username }];\n\n    const unblockBtn = document.querySelector('[data-testid$=\"-unblock\"]');\n    if (unblockBtn) {\n      unblockBtn.click();\n      await new Promise(r => setTimeout(r, 1000));\n\n      const confirmBtn = document.querySelector('[data-testid=\"confirmationSheetConfirm\"]');\n      if (confirmBtn) {\n        confirmBtn.click();\n        await new Promise(r => setTimeout(r, 1000));\n      }\n\n      const verify = document.querySelector('[data-testid$=\"-follow\"]');\n      if (verify) return [{ status: 'success', message: 'Successfully unblocked @' + username }];\n      return [{ status: 'failed', message: 'Unblock action initiated but UI did not update' }];\n    }\n\n    await new Promise(r => setTimeout(r, 500));\n    attempts++;\n  }\n\n  return [{ status: 'failed', message: 'Could not find Unblock button' }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

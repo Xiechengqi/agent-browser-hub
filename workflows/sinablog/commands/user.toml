@@ -1,0 +1,25 @@
+name = "user"
+description = "获取新浪博客用户的文章列表"
+strategy = "COOKIE"
+
+[[params]]
+name = "uid"
+type = "string"
+required = true
+positional = true
+description = "新浪博客用户ID（如 1234567890）"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "返回的文章数量"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/user.json"
+
+[output]
+columns = ["rank", "title", "author", "date", "readCount", "url"]

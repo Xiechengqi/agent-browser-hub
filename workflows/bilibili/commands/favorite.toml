@@ -1,0 +1,26 @@
+name = "favorite"
+description = "My default favorites list"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results"
+default = 20
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Page number"
+default = 1
+
+[execution]
+entry = "script"
+script = "scripts/favorite.json"
+
+[output]
+columns = ["rank", "title", "author", "plays", "url"]

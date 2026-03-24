@@ -1,0 +1,10 @@
+name = "creator-profile"
+description = "小红书创作者账号信息 (粉丝/关注/获赞/成长等级)"
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/creator-profile.json"
+
+[output]
+columns = ["field", "value"]

@@ -1,0 +1,37 @@
+{
+  "pipeline": {
+    "site": "tiktok",
+    "name": "user",
+    "description": "Get recent videos from a TikTok user",
+    "domain": "www.tiktok.com",
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "TikTok username (without @)"
+      },
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Number of videos"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.tiktok.com/@${{ args.username }}",
+          "settleMs": 6000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  const username = '${{ args.username }}';\n  const links = Array.from(document.querySelectorAll('a[href*=\"/video/\"]'));\n  const seen = {};\n  const results = [];\n  for (const a of links) {\n    const href = a.href;\n    if (seen[href]) continue;\n    seen[href] = true;\n    results.push({\n      index: results.length + 1,\n      views: a.textContent.trim() || '-',\n      url: href,\n    });\n    if (results.length >= limit) break;\n  }\n  if (results.length === 0) throw new Error('No videos found for @' + username);\n  return results;\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "views",
+      "url"
+    ]
+  }
+}

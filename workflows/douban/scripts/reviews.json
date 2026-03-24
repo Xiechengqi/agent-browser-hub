@@ -1,0 +1,34 @@
+{
+  "pipeline": {
+    "site": "douban",
+    "name": "reviews",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of reviews to export"
+      },
+      "uid": {
+        "type": "string",
+        "required": true,
+        "description": "Douban user ID"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://movie.douban.com/people/${{ args.uid }}/reviews?start=0&sort=time"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const reviews = [];\n\n  document.querySelectorAll('.tlst').forEach(el => {\n    const movieLinkEl = el.querySelector('.ilst a');\n    const reviewTitleEl = el.querySelector('.nlst a[title]');\n    const ratingEl = el.querySelector('.clst span[class*=\"allstar\"]');\n    const contentEl = el.querySelector('.review-short span');\n    const votesEl = el.querySelector('.review-short .pl span');\n\n    const movieHref = movieLinkEl?.href || '';\n    const movieId = movieHref.match(/subject\\/(\\d+)/)?.[1] || '';\n    const movieTitle = movieLinkEl?.getAttribute('title') || movieLinkEl?.textContent?.trim() || '';\n\n    const reviewHref = reviewTitleEl?.href || '';\n    const reviewId = reviewHref.match(/reviews\\/(\\d+)/)?.[1] || '';\n    const title = reviewTitleEl?.textContent?.trim() || '';\n\n    let myRating = 0;\n    if (ratingEl) {\n      const cls = ratingEl.className || '';\n      const ratingMatch = cls.match(/allstar(\\d)0/);\n      if (ratingMatch) {\n        myRating = parseInt(ratingMatch[1], 10) * 2;\n      }\n    }\n\n    const votesText = votesEl?.textContent || '';\n    const votesMatch = votesText.match(/(\\d+)/);\n    const votes = votesMatch ? parseInt(votesMatch[1], 10) : 0;\n\n    reviews.push({\n      reviewId,\n      movieId,\n      movieTitle,\n      title,\n      content: contentEl?.textContent?.trim() || '',\n      myRating,\n      votes,\n      url: reviewHref,\n    });\n  });\n\n  return reviews;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

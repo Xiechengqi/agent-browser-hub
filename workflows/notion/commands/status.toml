@@ -1,0 +1,10 @@
+name = "status"
+description = ""
+strategy = "UI"
+
+[execution]
+entry = "script"
+script = "scripts/status.json"
+
+[output]
+columns = []

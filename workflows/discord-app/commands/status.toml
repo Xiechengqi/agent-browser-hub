@@ -1,0 +1,10 @@
+name = "status"
+description = "Check active CDP connection to Discord Desktop"
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/status.json"
+
+[output]
+columns = ["Status", "Url", "Title"]

@@ -1,0 +1,17 @@
+{
+  "pipeline": {
+    "site": "bloomberg",
+    "name": "feeds",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  return [\n    { name: 'main', url: 'https://feeds.bloomberg.com/news.rss' },\n    { name: 'markets', url: 'https://feeds.bloomberg.com/markets/news.rss' },\n    { name: 'economics', url: 'https://feeds.bloomberg.com/economics/news.rss' },\n    { name: 'industries', url: 'https://feeds.bloomberg.com/industries/news.rss' },\n    { name: 'tech', url: 'https://feeds.bloomberg.com/technology/news.rss' },\n    { name: 'politics', url: 'https://feeds.bloomberg.com/politics/news.rss' },\n    { name: 'businessweek', url: 'https://feeds.bloomberg.com/businessweek/news.rss' },\n    { name: 'opinions', url: 'https://feeds.bloomberg.com/bview/news.rss' }\n  ];\n})()\n"
+      }
+    ],
+    "columns": [
+      "name",
+      "url"
+    ]
+  }
+}

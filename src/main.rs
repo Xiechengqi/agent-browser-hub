@@ -1,6 +1,5 @@
 use agent_browser_hub::cli::{Cli, Commands};
 use agent_browser_hub::server;
-use agent_browser_hub::registry::Registry;
 use agent_browser_hub::GITHUB_REPO;
 use clap::Parser;
 
@@ -23,7 +22,11 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Upgrade) => {
             cli_upgrade().await?;
         }
-        Some(Commands::Run { script, format, params }) => {
+        Some(Commands::Run {
+            script,
+            format,
+            params,
+        }) => {
             cli_run(&script, &format, params).await?;
         }
         None => {
@@ -36,9 +39,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn cli_list() -> anyhow::Result<()> {
-    let mut registry = Registry::new();
-    registry.discover_yaml_scripts("scripts")?;
-    agent_browser_hub::commands::register_all(&mut registry);
+    let registry = agent_browser_hub::registry::build_default_registry()?;
 
     println!("Available scripts:");
     let commands = registry.list();
@@ -46,7 +47,14 @@ fn cli_list() -> anyhow::Result<()> {
         println!("  (no scripts found)");
     } else {
         for cmd in commands {
-            println!("  {}/{:<20} - {}", cmd.site, cmd.name, cmd.description);
+            let strategy = cmd
+                .strategy
+                .clone()
+                .unwrap_or_else(|| "UNKNOWN".to_string());
+            println!(
+                "  {}/{:<20} [{}|{}] - {}",
+                cmd.site, cmd.name, strategy, cmd.source_label, cmd.description
+            );
         }
     }
     Ok(())
@@ -59,13 +67,12 @@ async fn cli_run(script: &str, format: &str, params: Vec<String>) -> anyhow::Res
     }
     let (site, command) = (parts[0], parts[1]);
 
-    let script_path = format!("scripts/{}/{}.yaml", site, command);
-    if !std::path::Path::new(&script_path).exists() {
-        anyhow::bail!("Script not found: {}", script_path);
-    }
+    let registry = agent_browser_hub::registry::build_default_registry()?;
 
-    let yaml_content = std::fs::read_to_string(&script_path)?;
-    let script: agent_browser_hub::core::Script = serde_yaml::from_str(&yaml_content)?;
+    let entry = registry
+        .get(site, command)
+        .ok_or_else(|| anyhow::anyhow!("Command not found: {}/{}", site, command))?;
+    let resolved = agent_browser_hub::registry::resolve_command_entry(entry)?;
 
     let mut param_map = std::collections::HashMap::new();
     let mut i = 0;
@@ -73,7 +80,10 @@ async fn cli_run(script: &str, format: &str, params: Vec<String>) -> anyhow::Res
         if params[i].starts_with("--") {
             let key = params[i].trim_start_matches("--");
             if i + 1 < params.len() {
-                param_map.insert(key.to_string(), serde_json::Value::String(params[i + 1].clone()));
+                param_map.insert(
+                    key.to_string(),
+                    serde_json::Value::String(params[i + 1].clone()),
+                );
                 i += 2;
             } else {
                 i += 1;
@@ -83,13 +93,55 @@ async fn cli_run(script: &str, format: &str, params: Vec<String>) -> anyhow::Res
         }
     }
 
-    let executor = agent_browser_hub::core::Executor::new().await?;
-    let result = executor.execute(&script, param_map).await?;
-
     let output_format = agent_browser_hub::core::OutputFormat::from_str(format);
-    let formatted = agent_browser_hub::core::output::format_output(&result.result, &output_format)?;
-    println!("{}", formatted);
-    Ok(())
+
+    match resolved {
+        agent_browser_hub::registry::ResolvedCommand::Pipeline(script) => {
+            let executor = agent_browser_hub::core::Executor::new().await?;
+            let result = executor.execute(&script, param_map).await?;
+            let formatted =
+                agent_browser_hub::core::output::format_output(&result.result, &output_format)?;
+            println!("{}", formatted);
+            Ok(())
+        }
+        agent_browser_hub::registry::ResolvedCommand::WorkflowScript(target) => {
+            let result =
+                agent_browser_hub::workflow::runtime::execute_workflow_script(target, param_map)
+                    .await?;
+            let formatted =
+                agent_browser_hub::core::output::format_output(&result, &output_format)?;
+            println!("{}", formatted);
+            Ok(())
+        }
+        agent_browser_hub::registry::ResolvedCommand::WorkflowNative(target) => {
+            let result = agent_browser_hub::workflow::runtime::execute_native_dispatch(
+                agent_browser_hub::workflow::runtime::NativeDispatchTarget::Workflow {
+                    site: target.site,
+                    name: target.name,
+                    handler: target.handler,
+                },
+                param_map,
+            )
+            .await?;
+            let formatted =
+                agent_browser_hub::core::output::format_output(&result, &output_format)?;
+            println!("{}", formatted);
+            Ok(())
+        }
+        agent_browser_hub::registry::ResolvedCommand::Native(name) => {
+            let result = agent_browser_hub::workflow::runtime::execute_native_dispatch(
+                agent_browser_hub::workflow::runtime::NativeDispatchTarget::Registered {
+                    handler: name,
+                },
+                param_map,
+            )
+            .await?;
+            let formatted =
+                agent_browser_hub::core::output::format_output(&result, &output_format)?;
+            println!("{}", formatted);
+            Ok(())
+        }
+    }
 }
 
 async fn cli_upgrade() -> anyhow::Result<()> {
@@ -99,7 +151,6 @@ async fn cli_upgrade() -> anyhow::Result<()> {
         .timeout(std::time::Duration::from_secs(60))
         .build()?;
 
-    // 1. Fetch latest release
     let release: serde_json::Value = client
         .get(format!(
             "https://api.github.com/repos/{}/releases/latest",
@@ -115,7 +166,6 @@ async fn cli_upgrade() -> anyhow::Result<()> {
     println!("Current: v{}", VERSION);
     println!("Latest:  {}", tag);
 
-    // 2. Find asset
     let asset_name = if cfg!(target_arch = "x86_64") {
         "agent-browser-hub-linux-amd64"
     } else if cfg!(target_arch = "aarch64") {
@@ -124,7 +174,9 @@ async fn cli_upgrade() -> anyhow::Result<()> {
         anyhow::bail!("Unsupported architecture");
     };
 
-    let assets = release["assets"].as_array().ok_or_else(|| anyhow::anyhow!("No assets"))?;
+    let assets = release["assets"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("No assets"))?;
     let download_url = assets
         .iter()
         .find(|a| a["name"].as_str() == Some(asset_name))
@@ -133,7 +185,6 @@ async fn cli_upgrade() -> anyhow::Result<()> {
 
     println!("Downloading {}...", asset_name);
 
-    // 3. Download
     let download_client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
         .build()?;
@@ -152,14 +203,12 @@ async fn cli_upgrade() -> anyhow::Result<()> {
     let temp_path = "/tmp/agent-browser-hub-new";
     std::fs::write(temp_path, &binary_data)?;
 
-    // 4. Make executable
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(temp_path, std::fs::Permissions::from_mode(0o755))?;
     }
 
-    // 5. Verify
     let output = tokio::process::Command::new(temp_path)
         .arg("version")
         .output()
@@ -170,7 +219,6 @@ async fn cli_upgrade() -> anyhow::Result<()> {
         anyhow::bail!("New binary verification failed");
     }
 
-    // 6. Replace
     let current_exe = std::env::current_exe()?;
     let backup_path = format!("{}.bak", current_exe.display());
 

@@ -1,0 +1,24 @@
+name = "reply"
+description = "Reply to a specific tweet"
+strategy = "COOKIE"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "Tweet URL"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = true
+description = "Reply text"
+
+[execution]
+entry = "script"
+script = "scripts/reply.json"
+
+[output]
+columns = ["status", "message"]

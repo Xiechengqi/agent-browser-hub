@@ -1,0 +1,17 @@
+name = "new"
+description = ""
+strategy = "UI"
+
+[[params]]
+name = "title"
+type = "string"
+required = false
+positional = false
+description = "Page title (optional)"
+
+[execution]
+entry = "script"
+script = "scripts/new.json"
+
+[output]
+columns = []

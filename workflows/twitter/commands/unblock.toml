@@ -1,0 +1,17 @@
+name = "unblock"
+description = "Unblock a Twitter user"
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Twitter screen name (without @)"
+
+[execution]
+entry = "script"
+script = "scripts/unblock.json"
+
+[output]
+columns = ["status", "message"]

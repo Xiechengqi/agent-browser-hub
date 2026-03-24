@@ -1,0 +1,10 @@
+name = "me"
+description = "My Bilibili profile info"
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/me.json"
+
+[output]
+columns = ["name", "uid", "level", "coins", "followers", "following"]

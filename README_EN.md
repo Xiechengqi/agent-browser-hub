@@ -4,8 +4,9 @@ Browser automation scripts hub powered by Rust + [agent-browser](https://github.
 
 **Features:**
 - 🚀 Single binary, no dependencies
-- 🎯 38+ built-in commands across 20+ sites
-- 📝 YAML-based script definitions
+- 🎯 260+ built-in commands across 44 sites
+- 📦 Workflow-package-first command metadata
+- 📝 YAML retained as a compatibility execution asset
 - 🔧 Template engine with filters
 - 📊 Multiple output formats (JSON, YAML, Table, CSV, Markdown)
 - 🌐 Web UI + REST API
@@ -145,12 +146,32 @@ curl -X POST http://localhost:3133/api/execute/hackernews/top \
 
 ```bash
 curl -H "Authorization: Bearer <token>" \
-  http://localhost:3133/api/scripts
+  http://localhost:3133/api/commands
 ```
 
-## Creating Custom Scripts
+## Creating Custom Commands
 
-Create a YAML file in `scripts/{site}/{command}.yaml`:
+New commands must start in `workflows/{site}/commands/{command}.toml`.
+
+During migration, the execution asset may still point to `scripts/{site}/{command}.yaml`:
+
+```toml
+name = "mycommand"
+description = "My custom command"
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = true
+
+[execution]
+entry = "pipeline"
+pipeline = "../../scripts/mysite/mycommand.yaml"
+```
+
+Example YAML execution asset:
 
 ```yaml
 site: mysite
@@ -180,6 +201,16 @@ pipeline:
       })()
   - limit: ${{ args.limit }}
 ```
+
+See [docs/workflow-governance.md](docs/workflow-governance.md) and [docs/workflow-package-spec.md](docs/workflow-package-spec.md) for the migration rules and package shape.
+
+## Pre-Release Check
+
+```bash
+python3 tools/validate_workflows.py
+```
+
+See [docs/release-checklist.md](docs/release-checklist.md) for the release checklist.
 
 ### Template Engine
 
@@ -263,7 +294,7 @@ src/
 ├── registry.rs         # Command registry
 └── server/mod.rs       # Web server + API
 
-scripts/                # YAML scripts (38+)
+scripts/                # compatibility execution assets
 ```
 
 ## License

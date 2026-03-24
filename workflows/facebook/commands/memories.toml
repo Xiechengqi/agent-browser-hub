@@ -1,0 +1,18 @@
+name = "memories"
+description = "Get your Facebook memories (On This Day)"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of memories"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/memories.json"
+
+[output]
+columns = ["index", "source", "content", "time"]

@@ -1,0 +1,17 @@
+name = "send"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = false
+description = "Message to send"
+
+[execution]
+entry = "script"
+script = "scripts/send.json"
+
+[output]
+columns = []

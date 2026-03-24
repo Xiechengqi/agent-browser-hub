@@ -1,0 +1,25 @@
+name = "user-comments"
+description = "View a Reddit user's comment history"
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = ""
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = ""
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/user-comments.json"
+
+[output]
+columns = ["subreddit", "score", "body", "url"]

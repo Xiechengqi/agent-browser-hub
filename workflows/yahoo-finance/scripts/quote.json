@@ -1,0 +1,40 @@
+{
+  "pipeline": {
+    "site": "yahoo-finance",
+    "name": "quote",
+    "description": "Yahoo Finance stock quote",
+    "domain": "finance.yahoo.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "symbol": {
+        "type": "str",
+        "required": true,
+        "description": "Stock ticker (e.g. AAPL, MSFT, TSLA)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://finance.yahoo.com/quote/${{ args.symbol }}/"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(async () => {\n  const sym = '${{ args.symbol }}'.toUpperCase();\n  try {\n    const chartUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?interval=1d&range=1d';\n    const resp = await fetch(chartUrl);\n    if (resp.ok) {\n      const d = await resp.json();\n      const chart = d?.chart?.result?.[0];\n      if (chart) {\n        const meta = chart.meta || {};\n        const prevClose = meta.previousClose || meta.chartPreviousClose;\n        const price = meta.regularMarketPrice;\n        const change = price != null && prevClose != null ? (price - prevClose) : null;\n        const changePct = change != null && prevClose ? ((change / prevClose) * 100) : null;\n        return [{\n          symbol: meta.symbol || sym,\n          name: meta.shortName || meta.longName || sym,\n          price: price != null ? Number(price.toFixed(2)) : null,\n          change: change != null ? change.toFixed(2) : null,\n          changePercent: changePct != null ? changePct.toFixed(2) + '%' : null,\n          open: chart.indicators?.quote?.[0]?.open?.[0] || null,\n          high: meta.regularMarketDayHigh || null,\n          low: meta.regularMarketDayLow || null,\n          volume: meta.regularMarketVolume || null,\n          marketCap: null\n        }];\n      }\n    }\n  } catch(e) {}\n  return [];\n})()\n"
+      }
+    ],
+    "columns": [
+      "symbol",
+      "name",
+      "price",
+      "change",
+      "changePercent",
+      "open",
+      "high",
+      "low",
+      "volume",
+      "marketCap"
+    ]
+  }
+}

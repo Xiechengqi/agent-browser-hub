@@ -1,0 +1,31 @@
+{
+  "pipeline": {
+    "site": "facebook",
+    "name": "notifications",
+    "description": "Get recent Facebook notifications",
+    "domain": "www.facebook.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 15,
+        "description": "Number of notifications"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "https://www.facebook.com/notifications",
+          "settleMs": 3000
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }};\n  const items = document.querySelectorAll('[role=\"listitem\"]');\n  return Array.from(items)\n    .filter(el => el.querySelectorAll('a').length > 0)\n    .slice(0, limit)\n    .map((el, i) => {\n      const raw = el.textContent.trim().replace(/\\s+/g, ' ');\n      // Remove leading \"未读\" and trailing \"标记为已读\"\n      const cleaned = raw.replace(/^未读/, '').replace(/标记为已读$/, '').replace(/^Unread/, '').replace(/Mark as read$/, '').trim();\n      // Try to extract time (last segment like \"11小时\", \"5天\", \"1周\")\n      const timeMatch = cleaned.match(/(\\d+\\s*(?:分钟|小时|天|周|个月|minutes?|hours?|days?|weeks?|months?))\\s*$/);\n      const time = timeMatch ? timeMatch[1] : '';\n      const text = timeMatch ? cleaned.slice(0, -timeMatch[0].length).trim() : cleaned;\n      return {\n        index: i + 1,\n        text: text.substring(0, 150),\n        time: time || '-',\n      };\n    });\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "text",
+      "time"
+    ]
+  }
+}

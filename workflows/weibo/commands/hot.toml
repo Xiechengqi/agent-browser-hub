@@ -1,0 +1,10 @@
+name = "hot"
+description = ""
+strategy = "COOKIE"
+
+[execution]
+entry = "script"
+script = "scripts/hot.json"
+
+[output]
+columns = []

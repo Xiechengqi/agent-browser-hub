@@ -1,0 +1,10 @@
+name = "best"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/best.json"
+
+[output]
+columns = []

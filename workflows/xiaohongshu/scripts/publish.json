@@ -1,0 +1,91 @@
+{
+  "pipeline": {
+    "site": "xiaohongshu",
+    "name": "publish",
+    "description": "小红书发布图文笔记 (creator center UI automation)",
+    "domain": "creator.xiaohongshu.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "title": {
+        "type": "str",
+        "required": true,
+        "description": "笔记标题 (最多20字)"
+      },
+      "content": {
+        "type": "str",
+        "required": true,
+        "description": "笔记正文"
+      },
+      "images": {
+        "type": "str",
+        "required": false,
+        "description": "图片路径，逗号分隔，最多9张 (jpg/png/gif/webp)"
+      },
+      "topics": {
+        "type": "str",
+        "required": false,
+        "description": "话题标签，逗号分隔，不含 # 号"
+      },
+      "draft": {
+        "type": "bool",
+        "default": false,
+        "description": "保存为草稿，不直接发布"
+      }
+    },
+    "columns": [
+      "status",
+      "detail"
+    ],
+    "pipeline": [
+      {
+        "navigate": "https://creator.xiaohongshu.com/publish/publish?from=menu_left"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(() => {\n  if (!location.href.includes('creator.xiaohongshu.com')) {\n    throw new Error('Redirected away from creator center — session may have expired.');\n  }\n  return true;\n})()\n"
+      },
+      {
+        "evaluate": "(() => {\n  const allEls = document.querySelectorAll('[class*=\"tab\"], [class*=\"note-type\"], [class*=\"type-item\"]');\n  for (const el of allEls) {\n    const text = el.innerText || el.textContent || '';\n    if ((text.includes('图文') || text.includes('图片')) && el.offsetParent !== null) {\n      el.click();\n      return true;\n    }\n  }\n  return false;\n})()\n"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "(async () => {\n  const imagesArg = ${{ JSON.stringify(args.images || '') }};\n  if (!imagesArg) return { ok: true, count: 0, skipped: true };\n\n  // Note: In pipeline mode, image file reading must be handled by the runtime.\n  // This evaluate step expects the runtime to have pre-processed image paths\n  // into base64 data available via a runtime-provided mechanism.\n  // For now, we validate the input and signal that images were requested.\n  return { ok: true, count: 0, note: 'Image upload requires runtime file access support' };\n})()\n"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(() => {\n  const title = ${{ JSON.stringify(args.title) }};\n  if (!title) throw new Error('--title is required');\n  if (title.length > 20) throw new Error('Title is ' + title.length + ' chars — must be ≤ 20');\n\n  const selectors = [\n    'input[maxlength=\"20\"]',\n    'input[class*=\"title\"]',\n    'input[placeholder*=\"标题\"]',\n    'input[placeholder*=\"title\" i]',\n    '.title-input input',\n    '.note-title input',\n    'input[maxlength]',\n  ];\n\n  for (const sel of selectors) {\n    const candidates = document.querySelectorAll(sel);\n    for (const el of candidates) {\n      if (!el || el.offsetParent === null) continue;\n      el.focus();\n      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {\n        el.value = '';\n        document.execCommand('selectAll', false);\n        document.execCommand('insertText', false, title);\n        el.dispatchEvent(new Event('input', { bubbles: true }));\n        el.dispatchEvent(new Event('change', { bubbles: true }));\n      }\n      return { ok: true };\n    }\n  }\n  throw new Error('Could not find title input');\n})()\n"
+      },
+      {
+        "wait": 500
+      },
+      {
+        "evaluate": "(() => {\n  const content = ${{ JSON.stringify(args.content) }};\n  if (!content) throw new Error('Content is required');\n\n  const selectors = [\n    '[contenteditable=\"true\"][class*=\"content\"]',\n    '[contenteditable=\"true\"][class*=\"editor\"]',\n    '[contenteditable=\"true\"][placeholder*=\"描述\"]',\n    '[contenteditable=\"true\"][placeholder*=\"正文\"]',\n    '[contenteditable=\"true\"][placeholder*=\"内容\"]',\n    '.note-content [contenteditable=\"true\"]',\n    '.editor-content [contenteditable=\"true\"]',\n    '[contenteditable=\"true\"]:not([placeholder*=\"标题\"]):not([placeholder*=\"title\" i])',\n  ];\n\n  for (const sel of selectors) {\n    const candidates = document.querySelectorAll(sel);\n    for (const el of candidates) {\n      if (!el || el.offsetParent === null) continue;\n      el.focus();\n      el.textContent = '';\n      document.execCommand('selectAll', false);\n      document.execCommand('insertText', false, content);\n      el.dispatchEvent(new Event('input', { bubbles: true }));\n      return { ok: true };\n    }\n  }\n  throw new Error('Could not find content input');\n})()\n"
+      },
+      {
+        "wait": 500
+      },
+      {
+        "evaluate": "(async () => {\n  const topicsArg = ${{ JSON.stringify(args.topics || '') }};\n  if (!topicsArg) return { ok: true, skipped: true };\n\n  const topics = topicsArg.split(',').map(s => s.trim()).filter(Boolean);\n  for (const topic of topics) {\n    // Click add topic button\n    const candidates = document.querySelectorAll('*');\n    let btnClicked = false;\n    for (const el of candidates) {\n      const text = (el.innerText || el.textContent || '').trim();\n      if (\n        (text === '添加话题' || text === '# 话题' || text.startsWith('添加话题')) &&\n        el.offsetParent !== null &&\n        el.children.length === 0\n      ) {\n        el.click();\n        btnClicked = true;\n        break;\n      }\n    }\n    if (!btnClicked) {\n      const hashBtn = document.querySelector('[class*=\"topic\"][class*=\"btn\"], [class*=\"hashtag\"][class*=\"btn\"]');\n      if (hashBtn) { hashBtn.click(); btnClicked = true; }\n    }\n    if (!btnClicked) continue;\n\n    await new Promise(r => setTimeout(r, 1000));\n\n    // Type into topic search\n    const input = document.querySelector('[class*=\"topic\"] input, [class*=\"hashtag\"] input, input[placeholder*=\"搜索话题\"]');\n    if (!input || input.offsetParent === null) continue;\n    input.focus();\n    document.execCommand('insertText', false, topic);\n    input.dispatchEvent(new Event('input', { bubbles: true }));\n\n    await new Promise(r => setTimeout(r, 1500));\n\n    // Click first suggestion\n    const item = document.querySelector('[class*=\"topic-item\"], [class*=\"hashtag-item\"], [class*=\"suggest-item\"], [class*=\"suggestion\"] li');\n    if (item) item.click();\n\n    await new Promise(r => setTimeout(r, 500));\n  }\n  return { ok: true };\n})()\n"
+      },
+      {
+        "wait": 500
+      },
+      {
+        "evaluate": "(() => {\n  const isDraft = ${{ args.draft || false }};\n  const actionLabel = isDraft ? '存草稿' : '发布';\n\n  const buttons = document.querySelectorAll('button, [role=\"button\"]');\n  for (const btn of buttons) {\n    const text = (btn.innerText || btn.textContent || '').trim();\n    if (\n      (text === actionLabel || text.includes(actionLabel) || text === '发布笔记') &&\n      btn.offsetParent !== null &&\n      !btn.disabled\n    ) {\n      btn.click();\n      return { ok: true, action: actionLabel };\n    }\n  }\n  throw new Error('Could not find \"' + actionLabel + '\" button');\n})()\n"
+      },
+      {
+        "wait": 4000
+      },
+      {
+        "evaluate": "(() => {\n  const isDraft = ${{ args.draft || false }};\n  const title = ${{ JSON.stringify(args.title) }};\n\n  const finalUrl = location.href;\n  let successMsg = '';\n  for (const el of document.querySelectorAll('*')) {\n    const text = (el.innerText || '').trim();\n    if (\n      el.children.length === 0 &&\n      (text.includes('发布成功') || text.includes('草稿已保存') || text.includes('上传成功'))\n    ) {\n      successMsg = text;\n      break;\n    }\n  }\n\n  const navigatedAway = !finalUrl.includes('/publish/publish');\n  const isSuccess = successMsg.length > 0 || navigatedAway;\n  const verb = isDraft ? '草稿已保存' : '发布成功';\n\n  return [{\n    status: isSuccess ? verb : '操作完成，请在浏览器中确认',\n    detail: ['\"' + title + '\"', successMsg || finalUrl || ''].filter(Boolean).join(' · '),\n  }];\n})()\n"
+      }
+    ]
+  }
+}

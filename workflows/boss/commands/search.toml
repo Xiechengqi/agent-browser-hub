@@ -1,0 +1,38 @@
+name = "search"
+description = ""
+strategy = "COOKIE"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = "Search keyword"
+
+[[params]]
+name = "city"
+type = "string"
+required = false
+positional = false
+description = "City name or code (default 北京)"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "Page number (default 1)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of results (default 15)"
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = []

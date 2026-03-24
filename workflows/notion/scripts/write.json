@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "evaluate": "((text) => {\n  const editables = document.querySelectorAll('.notion-page-content [contenteditable=\"true\"], [class*=\"page-content\"] [contenteditable=\"true\"]');\n  let target = editables.length > 0 ? editables[editables.length - 1] : null;\n  if (!target) {\n    const all = document.querySelectorAll('[contenteditable=\"true\"]');\n    target = all.length > 0 ? all[all.length - 1] : null;\n  }\n  if (!target) throw new Error('Could not find editable area in Notion page');\n  target.focus();\n  const sel = window.getSelection();\n  sel.selectAllChildren(target);\n  sel.collapseToEnd();\n  document.execCommand('insertText', false, text);\n  return { status: 'success' };\n})('${{ args.text }}')"
+    },
+    {
+      "wait": 500
+    },
+    {
+      "evaluate": "(() => {\n  return [{ Status: 'Text appended successfully' }];\n})()"
+    }
+  ]
+}

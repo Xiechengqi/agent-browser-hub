@@ -1,0 +1,10 @@
+name = "economics"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/economics.json"
+
+[output]
+columns = []

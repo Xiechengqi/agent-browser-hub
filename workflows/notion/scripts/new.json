@@ -1,0 +1,26 @@
+{
+  "pipeline": {
+    "site": "notion",
+    "name": "new",
+    "strategy": "UI",
+    "browser": true,
+    "args": {
+      "title": {
+        "type": "str",
+        "required": false,
+        "description": "Page title (optional)"
+      }
+    },
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const isMac = navigator.platform.toLowerCase().includes('mac');\n  const key = isMac ? 'Meta' : 'Control';\n  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', [key.toLowerCase() + 'Key']: true, bubbles: true }));\n})()\n"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "((title) => {\n  if (title) {\n    const titleEl = document.querySelector('[placeholder=\"Untitled\"], [data-content-editable-leaf] [placeholder]');\n    if (titleEl) {\n      titleEl.focus();\n      document.execCommand('insertText', false, title);\n    }\n    return [{ Status: 'Created page: ' + title }];\n  }\n  return [{ Status: 'New blank page created' }];\n})(${{ args.title }})\n"
+      }
+    ]
+  }
+}

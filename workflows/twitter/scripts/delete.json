@@ -1,0 +1,33 @@
+{
+  "pipeline": {
+    "site": "twitter",
+    "name": "delete",
+    "description": "Delete a specific tweet by URL",
+    "domain": "x.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "url": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Tweet URL"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": {
+          "url": "${{ args.url }}",
+          "settleMs": 5000
+        }
+      },
+      {
+        "evaluate": "(async () => {\n  const moreMenu = document.querySelector('[aria-label=\"More\"]');\n  if (!moreMenu) return [{ status: 'failed', message: 'Could not find More menu' }];\n\n  moreMenu.click();\n  await new Promise(r => setTimeout(r, 1000));\n\n  const items = document.querySelectorAll('[role=\"menuitem\"]');\n  let deleteBtn = null;\n  for (const item of items) {\n    if (item.textContent.includes('Delete') && !item.textContent.includes('List')) {\n      deleteBtn = item;\n      break;\n    }\n  }\n\n  if (!deleteBtn) return [{ status: 'failed', message: 'Delete option not found (not your tweet)' }];\n\n  deleteBtn.click();\n  await new Promise(r => setTimeout(r, 1000));\n\n  const confirmBtn = document.querySelector('[data-testid=\"confirmationSheetConfirm\"]');\n  if (confirmBtn) {\n    confirmBtn.click();\n    await new Promise(r => setTimeout(r, 2000));\n    return [{ status: 'success', message: 'Tweet successfully deleted' }];\n  } else {\n    return [{ status: 'failed', message: 'Delete confirmation dialog did not appear' }];\n  }\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

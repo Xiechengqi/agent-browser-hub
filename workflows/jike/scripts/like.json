@@ -1,0 +1,30 @@
+{
+  "pipeline": {
+    "site": "jike",
+    "name": "like",
+    "description": "点赞即刻帖子",
+    "domain": "web.okjike.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "positional": true,
+        "description": "帖子 ID"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://web.okjike.com/originalPost/${{ args.id }}"
+      },
+      {
+        "evaluate": "(async () => {\n  try {\n    const likeBtn = document.querySelector('[class*=\"_likeButton_\"]');\n    if (!likeBtn) return { ok: false, message: '未找到点赞按钮' };\n    const cls = likeBtn.className || '';\n    if (cls.includes('_liked')) return { ok: true, message: '该帖子已赞过' };\n    const beforeCls = likeBtn.className;\n    likeBtn.click();\n    await new Promise(r => setTimeout(r, 1500));\n    const afterCls = likeBtn.className;\n    if (afterCls !== beforeCls) return { ok: true, message: '点赞成功' };\n    return { ok: false, message: '点赞状态未确认' };\n  } catch (e) {\n    return { ok: false, message: e.toString() };\n  }\n})()\n"
+      }
+    ],
+    "columns": [
+      "status",
+      "message"
+    ]
+  }
+}

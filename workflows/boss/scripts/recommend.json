@@ -1,0 +1,26 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "recommend",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "limit": {
+        "type": "int",
+        "required": false,
+        "description": "Number of results (default 20)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/chat/index"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const limit = ${{ args.limit }} || 20;\n  return new Promise((resolve, reject) => {\n    const xhr = new XMLHttpRequest();\n    xhr.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/greetRecSortList', true);\n    xhr.withCredentials = true;\n    xhr.timeout = 15000;\n    xhr.setRequestHeader('Accept', 'application/json');\n    xhr.onload = () => {\n      try {\n        const data = JSON.parse(xhr.responseText);\n        if (data.code !== 0) reject(new Error(data.message || 'API error'));\n        const friends = data.zpData?.friendList || [];\n        resolve(friends.slice(0, limit).map(f => ({\n          name: f.name || '',\n          job_name: f.jobName || '',\n          last_time: f.lastTime || '',\n          labels: (f.relationLabelList || []).join(', '),\n          encrypt_uid: f.encryptUid || '',\n          security_id: f.securityId || '',\n          encrypt_job_id: f.encryptJobId || ''\n        })));\n      } catch(e) { reject(e); }\n    };\n    xhr.onerror = () => reject(new Error('Network Error'));\n    xhr.ontimeout = () => reject(new Error('Timeout'));\n    xhr.send(null);\n  });\n})()\n"
+      }
+    ]
+  }
+}

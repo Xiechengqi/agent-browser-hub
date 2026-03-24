@@ -1,0 +1,25 @@
+name = "podcast-episodes"
+description = "List recent episodes of a Xiaoyuzhou podcast (up to 15, SSR limit)"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = false
+description = "Podcast ID (from xiaoyuzhoufm.com URL)"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max episodes to show (up to 15, SSR limit)"
+default = 15
+
+[execution]
+entry = "script"
+script = "scripts/podcast-episodes.json"
+
+[output]
+columns = ["eid", "title", "duration", "plays", "date"]

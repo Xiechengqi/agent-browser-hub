@@ -1,0 +1,17 @@
+name = "profile"
+description = "Get Instagram user profile info"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Instagram username"
+
+[execution]
+entry = "script"
+script = "scripts/profile.json"
+
+[output]
+columns = ["username", "name", "followers", "following", "posts", "verified", "bio"]

@@ -1,0 +1,31 @@
+{
+  "pipeline": {
+    "site": "instagram",
+    "name": "saved",
+    "description": "Get your saved Instagram posts",
+    "domain": "www.instagram.com",
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of saved posts"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.instagram.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const limit = ${{ args.limit }};\n  const res = await fetch(\n    'https://www.instagram.com/api/v1/feed/saved/posts/',\n    {\n      credentials: 'include',\n      headers: { 'X-IG-App-ID': '936619743392459' }\n    }\n  );\n  if (!res.ok) throw new Error('HTTP ' + res.status + ' - make sure you are logged in to Instagram');\n  const data = await res.json();\n  return (data?.items || []).slice(0, limit).map((item, i) => {\n    const m = item?.media;\n    return {\n      index: i + 1,\n      user: m?.user?.username || '',\n      caption: (m?.caption?.text || '').replace(/\\n/g, ' ').substring(0, 100),\n      likes: m?.like_count ?? 0,\n      comments: m?.comment_count ?? 0,\n      type: m?.media_type === 1 ? 'photo' : m?.media_type === 2 ? 'video' : 'carousel',\n    };\n  });\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "user",
+      "caption",
+      "likes",
+      "comments",
+      "type"
+    ]
+  }
+}

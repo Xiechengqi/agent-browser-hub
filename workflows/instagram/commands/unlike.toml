@@ -1,0 +1,25 @@
+name = "unlike"
+description = "Unlike an Instagram post"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Username of the post author"
+
+[[params]]
+name = "index"
+type = "int"
+required = false
+positional = false
+description = "Post index (1 = most recent)"
+default = 1
+
+[execution]
+entry = "script"
+script = "scripts/unlike.json"
+
+[output]
+columns = ["status", "user", "post"]

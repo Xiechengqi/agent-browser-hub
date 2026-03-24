@@ -1,0 +1,17 @@
+name = "create"
+description = "发布即刻动态"
+strategy = "COOKIE"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = true
+description = "动态正文内容"
+
+[execution]
+entry = "script"
+script = "scripts/create.json"
+
+[output]
+columns = ["status", "message"]

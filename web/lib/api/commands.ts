@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Command, ExecuteRequest, ExecuteResult } from '@/types/command';
+import { Command, ExecuteRequest, ExecuteResult, WorkflowSourceStatus } from '@/types/command';
 
 const api = axios.create({
   baseURL: '',
@@ -31,4 +31,5 @@ export const systemApi = {
   upgrade: () => api.post('/api/upgrade').then(r => r.data),
   upgradeComponent: (name: string) => api.post(`/api/upgrade/${name}`).then(r => r.data),
   logs: (limit = 200) => api.get(`/api/logs?limit=${limit}`).then(r => r.data),
+  workflowSources: () => api.get<WorkflowSourceStatus[]>('/api/workflow/sources').then(r => r.data),
 };

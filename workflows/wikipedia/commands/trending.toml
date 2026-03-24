@@ -1,0 +1,26 @@
+name = "trending"
+description = ""
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max results"
+default = 10
+
+[[params]]
+name = "lang"
+type = "string"
+required = false
+positional = false
+description = "Language code (e.g. en, zh, ja)"
+default = "en"
+
+[execution]
+entry = "script"
+script = "scripts/trending.json"
+
+[output]
+columns = []

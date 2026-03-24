@@ -1,0 +1,44 @@
+{
+  "pipeline": {
+    "site": "barchart",
+    "name": "flow",
+    "description": "Barchart unusual options activity / options flow",
+    "domain": "www.barchart.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "type": {
+        "type": "str",
+        "default": "all",
+        "description": "Filter: all, call, or put"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of results"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.barchart.com/options/unusual-activity/stocks"
+      },
+      {
+        "wait": 5000
+      },
+      {
+        "evaluate": "(async () => {\n  const limit = ${{ args.limit }};\n  const typeFilter = '${{ args.type }}'.toLowerCase();\n  let csrf = '';\n  for (let i = 0; i < 10; i++) {\n    csrf = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';\n    if (csrf) break;\n    await new Promise(r => setTimeout(r, 500));\n  }\n  if (!csrf) return [];\n  const fields = 'baseSymbol,strikePrice,expirationDate,optionType,lastPrice,volume,openInterest,volumeOpenInterestRatio,volatility'.split(',');\n  const fetchLimit = typeFilter !== 'all' ? limit * 3 : limit;\n  const lists = ['options.unusual_activity.stocks.us', 'options.mostActive.us'];\n  for (const list of lists) {\n    try {\n      const url = '/proxies/core-api/v1/options/get?list=' + list + '&fields=' + fields.join(',') + '&orderBy=volumeOpenInterestRatio&orderDir=desc&raw=1&limit=' + fetchLimit;\n      const resp = await fetch(url, { credentials: 'include', headers: { 'X-CSRF-TOKEN': csrf } });\n      if (!resp.ok) continue;\n      const d = await resp.json();\n      let items = d?.data || [];\n      if (!items.length) continue;\n      if (typeFilter !== 'all') {\n        items = items.filter(i => ((i.raw || i).optionType || '').toLowerCase() === typeFilter);\n      }\n      return items.slice(0, limit).map(i => {\n        const r = i.raw || i;\n        return {\n          symbol: r.baseSymbol || r.symbol,\n          type: r.optionType,\n          strike: r.strikePrice,\n          expiration: r.expirationDate,\n          last: r.lastPrice != null ? Number(r.lastPrice).toFixed(2) : null,\n          volume: r.volume,\n          openInterest: r.openInterest,\n          volOiRatio: r.volumeOpenInterestRatio != null ? Number(r.volumeOpenInterestRatio).toFixed(2) : null,\n          iv: r.volatility != null ? Number(r.volatility).toFixed(2) + '%' : null\n        };\n      });\n    } catch(e) {}\n  }\n  return [];\n})()\n"
+      }
+    ],
+    "columns": [
+      "symbol",
+      "type",
+      "strike",
+      "expiration",
+      "last",
+      "volume",
+      "openInterest",
+      "volOiRatio",
+      "iv"
+    ]
+  }
+}

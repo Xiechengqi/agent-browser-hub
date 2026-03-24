@@ -1,0 +1,17 @@
+name = "unfollow"
+description = "Unfollow an Instagram user"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Instagram username to unfollow"
+
+[execution]
+entry = "script"
+script = "scripts/unfollow.json"
+
+[output]
+columns = ["status", "username"]

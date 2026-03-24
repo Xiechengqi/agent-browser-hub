@@ -1,0 +1,39 @@
+{
+  "pipeline": {
+    "site": "douban",
+    "name": "subject",
+    "description": "获取电影详情",
+    "domain": "movie.douban.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "id": {
+        "positional": true,
+        "required": true,
+        "type": "str",
+        "description": "电影 ID"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://movie.douban.com/subject/${{ args.id }}"
+      },
+      {
+        "evaluate": "(async () => {\n  const id = '${{ args.id }}';\n  \n  // Wait for page to load\n  await new Promise(r => setTimeout(r, 2000));\n  \n  // Extract title\n  const titleEl = document.querySelector('span[property=\"v:itemreviewed\"]');\n  const title = titleEl?.textContent?.trim() || '';\n  \n  // Extract original title\n  const ogTitleEl = document.querySelector('span[property=\"v:originalTitle\"]');\n  const originalTitle = ogTitleEl?.textContent?.trim() || '';\n  \n  // Extract year\n  const yearEl = document.querySelector('.year');\n  const year = yearEl?.textContent?.trim() || '';\n  \n  // Extract rating\n  const ratingEl = document.querySelector('strong[property=\"v:average\"]');\n  const rating = parseFloat(ratingEl?.textContent || '0');\n  \n  // Extract rating count\n  const ratingCountEl = document.querySelector('span[property=\"v:votes\"]');\n  const ratingCount = parseInt(ratingCountEl?.textContent || '0', 10);\n  \n  // Extract genres\n  const genreEls = document.querySelectorAll('span[property=\"v:genre\"]');\n  const genres = Array.from(genreEls).map(el => el.textContent?.trim()).filter(Boolean).join(',');\n  \n  // Extract directors\n  const directorEls = document.querySelectorAll('a[rel=\"v:directedBy\"]');\n  const directors = Array.from(directorEls).map(el => el.textContent?.trim()).filter(Boolean).join(',');\n  \n  // Extract casts\n  const castEls = document.querySelectorAll('a[rel=\"v:starring\"]');\n  const casts = Array.from(castEls).slice(0, 5).map(el => el.textContent?.trim()).filter(Boolean).join(',');\n  \n  // Extract summary\n  const summaryEl = document.querySelector('span[property=\"v:summary\"]');\n  const summary = summaryEl?.textContent?.trim() || '';\n  \n  return [{\n    id,\n    title,\n    originalTitle,\n    year,\n    rating,\n    ratingCount,\n    genres,\n    directors,\n    casts,\n    summary: summary.substring(0, 200),\n    url: `https://movie.douban.com/subject/${id}`\n  }];\n})()\n"
+      }
+    ],
+    "columns": [
+      "id",
+      "title",
+      "originalTitle",
+      "year",
+      "rating",
+      "ratingCount",
+      "genres",
+      "directors",
+      "casts",
+      "summary",
+      "url"
+    ]
+  }
+}

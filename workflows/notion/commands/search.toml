@@ -1,0 +1,17 @@
+name = "search"
+description = ""
+strategy = "UI"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = "Search query"
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = []

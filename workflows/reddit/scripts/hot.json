@@ -1,0 +1,47 @@
+{
+  "pipeline": {
+    "site": "reddit",
+    "name": "hot",
+    "description": "Reddit 热门帖子",
+    "domain": "www.reddit.com",
+    "args": {
+      "subreddit": {
+        "type": "str",
+        "default": "",
+        "description": "Subreddit name (e.g. programming). Empty for frontpage"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Number of posts"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.reddit.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const sub = '${{ args.subreddit }}';\n  const path = sub ? '/r/' + sub + '/hot.json' : '/hot.json';\n  const limit = ${{ args.limit }};\n  const res = await fetch(path + '?limit=' + limit + '&raw_json=1', {\n    credentials: 'include'\n  });\n  const d = await res.json();\n  return (d?.data?.children || []).map(c => ({\n    title: c.data.title,\n    subreddit: c.data.subreddit_name_prefixed,\n    score: c.data.score,\n    comments: c.data.num_comments,\n    author: c.data.author,\n    url: 'https://www.reddit.com' + c.data.permalink,\n  }));\n})()\n"
+      },
+      {
+        "map": {
+          "rank": "${{ index + 1 }}",
+          "title": "${{ item.title }}",
+          "subreddit": "${{ item.subreddit }}",
+          "score": "${{ item.score }}",
+          "comments": "${{ item.comments }}"
+        }
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "subreddit",
+      "score",
+      "comments"
+    ]
+  }
+}

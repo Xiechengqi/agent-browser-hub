@@ -1,0 +1,37 @@
+{
+  "pipeline": {
+    "site": "sinablog",
+    "name": "article",
+    "description": "获取新浪博客单篇文章详情",
+    "domain": "blog.sina.com.cn",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "url": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "文章URL（如 https://blog.sina.com.cn/s/blog_xxx.html）"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "${{ args.url }}"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  await new Promise((resolve) => setTimeout(resolve, 1500));\n  const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const title = normalize(document.querySelector('.articalTitle h2, .title h2, h1, h2.titName')?.textContent);\n  const titleParts = normalize(document.title).split('_').map((part) => normalize(part)).filter(Boolean);\n  const author = titleParts[1] || title.split(/[：:]/)[0] || '';\n  const timeText = normalize(document.querySelector('.time, .articalInfo .time')?.textContent).replace(/[()]/g, '');\n  const date = timeText || normalize(document.body.innerText.match(/\\b\\d{4}-\\d{2}-\\d{2}(?:\\s+\\d{2}:\\d{2}:\\d{2})?\\b/)?.[0]);\n  const category = normalize(document.querySelector('.articalTag .blog_class a, .blog_class a')?.textContent);\n  const tags = Array.from(document.querySelectorAll('.blog_tag h3, .blog_tag a, .tag a, .artical_tag a'))\n    .map((node) => normalize(node.textContent))\n    .filter(Boolean);\n  const content = normalize(document.querySelector('.articalContent, .blog_content, .content, #sina_keyword_ad_area2')?.textContent).slice(0, 500);\n  const images = Array.from(document.querySelectorAll('.articalContent img, .blog_content img, .content img'))\n    .map((img) => img.getAttribute('src') || img.getAttribute('real_src') || '')\n    .filter((src) => src && !src.includes('icon'))\n    .slice(0, 5);\n  return {\n    title,\n    author,\n    date,\n    category,\n    tags: tags.join(', '),\n    readCount: '',\n    commentCount: '',\n    content: content + (content.length >= 500 ? '...' : ''),\n    images: images.join(', '),\n    url: '${{ args.url }}',\n  };\n})()\n"
+      }
+    ],
+    "columns": [
+      "title",
+      "author",
+      "date",
+      "category",
+      "readCount",
+      "commentCount"
+    ]
+  }
+}

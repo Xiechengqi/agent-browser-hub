@@ -1,0 +1,17 @@
+name = "block"
+description = "Block a Twitter user"
+strategy = "COOKIE"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Twitter screen name (without @)"
+
+[execution]
+entry = "script"
+script = "scripts/block.json"
+
+[output]
+columns = ["status", "message"]

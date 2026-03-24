@@ -1,0 +1,36 @@
+{
+  "pipeline": {
+    "site": "weread",
+    "name": "ranking",
+    "description": "WeRead book rankings by category",
+    "strategy": "PUBLIC",
+    "browser": true,
+    "args": {
+      "category": {
+        "type": "str",
+        "positional": true,
+        "default": "all",
+        "description": "Category: all (default), rising, or numeric category ID"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "Max results"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://weread.qq.com"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(async () => {\n  const cat = encodeURIComponent('${{ args.category }}');\n  const url = 'https://weread.qq.com/web/bookListInCategory/' + cat + '?rank=1';\n  const res = await fetch(url);\n  if (!res.ok) throw new Error('HTTP ' + res.status);\n  const data = await res.json();\n  const books = data.books || [];\n  return books.map((item, i) => {\n    const info = item.bookInfo || {};\n    return {\n      rank: i + 1,\n      title: info.title || '',\n      author: info.author || '',\n      category: info.category || '',\n      readingCount: item.readingCount || 0,\n      bookId: info.bookId || ''\n    };\n  });\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ]
+  }
+}

@@ -12,6 +12,10 @@ interface Props {
 
 export default function CommandGroup({ site, commands }: Props) {
   const [isOpen, setIsOpen] = useState(true);
+  const first = commands[0];
+  const effectiveSource = first?.source || 'yaml';
+  const fallbackActive = commands.some((cmd) => cmd.workflow_origin?.fallbackActive);
+  const originKind = commands.find((cmd) => cmd.workflow_origin?.kind)?.workflow_origin?.kind;
 
   return (
     <div id={`site-${site}`} className="border rounded-lg overflow-hidden scroll-mt-20">
@@ -23,6 +27,19 @@ export default function CommandGroup({ site, commands }: Props) {
           {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
           <span className="font-semibold text-lg capitalize">{site}</span>
           <span className="text-sm text-gray-500">({commands.length})</span>
+          <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 border border-slate-200">
+            {effectiveSource}
+          </span>
+          {originKind && (
+            <span className="rounded-full bg-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700">
+              {originKind}
+            </span>
+          )}
+          {fallbackActive && (
+            <span className="rounded-full bg-rose-100 px-2 py-1 text-[11px] font-semibold text-rose-700">
+              fallback
+            </span>
+          )}
         </div>
       </button>
       {isOpen && (

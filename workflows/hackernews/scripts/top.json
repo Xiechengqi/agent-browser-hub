@@ -1,0 +1,16 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://news.ycombinator.com/"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "evaluate": "(() => {\n  const items = [];\n  const rows = document.querySelectorAll('.athing');\n  rows.forEach(row => {\n    const titleEl = row.querySelector('.titleline > a');\n    const scoreEl = row.nextElementSibling?.querySelector('.score');\n    const authorEl = row.nextElementSibling?.querySelector('.hnuser');\n    if (titleEl) {\n      items.push({\n        title: titleEl.textContent,\n        url: titleEl.href,\n        score: scoreEl ? parseInt(scoreEl.textContent) : 0,\n        author: authorEl ? authorEl.textContent : ''\n      });\n    }\n  });\n  return items;\n})()\n"
+    },
+    {
+      "limit": "${{ args.limit }}"
+    }
+  ]
+}

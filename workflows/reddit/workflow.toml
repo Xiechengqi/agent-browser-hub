@@ -1,0 +1,24 @@
+schema_version = 1
+site = "reddit"
+display_name = "Reddit"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "standard"
+default_enabled = true
+
+[auth]
+strategy = "COOKIE"
+login_required = true
+domains = ["reddit.com", "www.reddit.com", "reddit"]
+
+[ui]
+tags = ["reddit"]
+
+[commands]
+include = ["comment", "frontpage", "hot", "popular", "read", "save", "saved", "search", "subreddit", "subscribe", "upvote", "upvoted", "user", "user-comments", "user-posts"]

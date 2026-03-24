@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://www.zhipin.com/web/chat/index"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "evaluate": "(() => {\n  const encryptUid = '${{ args.uid }}';\n  const page = ${{ args.page || 1 }};\n  return new Promise((resolve, reject) => {\n    const xhr1 = new XMLHttpRequest();\n    xhr1.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/getBossFriendListV2.json?page=1&status=0&jobId=0', true);\n    xhr1.withCredentials = true;\n    xhr1.timeout = 15000;\n    xhr1.setRequestHeader('Accept', 'application/json');\n    xhr1.onload = () => {\n      try {\n        const data1 = JSON.parse(xhr1.responseText);\n        if (data1.code !== 0) reject(new Error(data1.message || 'API error'));\n        const friends = data1.zpData?.friendList || [];\n        const friend = friends.find(f => f.encryptUid === encryptUid);\n        if (!friend) reject(new Error('Candidate not found'));\n        const gid = friend.uid;\n        const securityId = encodeURIComponent(friend.securityId);\n        const xhr2 = new XMLHttpRequest();\n        xhr2.open('GET', `https://www.zhipin.com/wapi/zpchat/boss/historyMsg?gid=${gid}&securityId=${securityId}&page=${page}&c=20&src=0`, true);\n        xhr2.withCredentials = true;\n        xhr2.timeout = 15000;\n        xhr2.setRequestHeader('Accept', 'application/json');\n        xhr2.onload = () => {\n          try {\n            const data2 = JSON.parse(xhr2.responseText);\n            if (data2.code !== 0) reject(new Error(data2.message || 'API error'));\n            const TYPE_MAP = { 1: '文本', 2: '图片', 3: '招呼', 4: '简历', 5: '系统', 6: '名片', 7: '语音', 8: '视频', 9: '表情' };\n            const messages = data2.zpData?.messages || data2.zpData?.historyMsgList || [];\n            resolve(messages.map(m => {\n              const fromObj = m.from || {};\n              const isSelf = typeof fromObj === 'object' ? fromObj.uid !== friend.uid : false;\n              return {\n                from: isSelf ? '我' : (typeof fromObj === 'object' ? fromObj.name : friend.name),\n                type: TYPE_MAP[m.type] || '其他(' + m.type + ')',\n                text: m.text || m.body?.text || '',\n                time: m.time ? new Date(m.time).toLocaleString('zh-CN') : ''\n              };\n            }));\n          } catch (e) {\n            reject(e);\n          }\n        };\n        xhr2.onerror = () => reject(new Error('Network Error'));\n        xhr2.ontimeout = () => reject(new Error('Timeout'));\n        xhr2.send(null);\n      } catch (e) {\n        reject(e);\n      }\n    };\n    xhr1.onerror = () => reject(new Error('Network Error'));\n    xhr1.ontimeout = () => reject(new Error('Timeout'));\n    xhr1.send(null);\n  });\n})()"
+    }
+  ]
+}

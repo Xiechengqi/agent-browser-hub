@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://arxiv.org/abs/${{ args.id | urlencode }}"
+    },
+    {
+      "wait": 2000
+    },
+    {
+      "evaluate": "(() => {\n  const titleEl = document.querySelector('.title');\n  const authorsEl = document.querySelector('.authors');\n  const abstractEl = document.querySelector('.abstract');\n  return {\n    title: titleEl ? titleEl.textContent.replace('Title:', '').trim() : '',\n    authors: authorsEl ? authorsEl.textContent.replace('Authors:', '').trim() : '',\n    abstract: abstractEl ? abstractEl.textContent.replace('Abstract:', '').trim() : '',\n    url: window.location.href\n  };\n})()"
+    }
+  ]
+}

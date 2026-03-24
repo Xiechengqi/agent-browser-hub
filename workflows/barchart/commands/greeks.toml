@@ -1,0 +1,32 @@
+name = "greeks"
+description = "Barchart options greeks overview (IV, delta, gamma, theta, vega)"
+strategy = "COOKIE"
+
+[[params]]
+name = "symbol"
+type = "string"
+required = true
+positional = false
+description = "Stock ticker (e.g. AAPL)"
+
+[[params]]
+name = "expiration"
+type = "string"
+required = false
+positional = false
+description = "Expiration date (YYYY-MM-DD). Defaults to nearest"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of near-the-money strikes per type"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/greeks.json"
+
+[output]
+columns = ["type", "strike", "last", "iv", "delta", "gamma", "theta", "vega", "rho", "volume", "openInterest", "expiration"]

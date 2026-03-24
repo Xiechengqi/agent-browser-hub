@@ -1,0 +1,44 @@
+{
+  "pipeline": {
+    "site": "xiaohongshu",
+    "name": "creator-notes-summary",
+    "description": "小红书最近笔记批量摘要 (列表 + 单篇关键数据汇总)",
+    "domain": "creator.xiaohongshu.com",
+    "strategy": "COOKIE",
+    "browser": true,
+    "timeout": 180,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 3,
+        "description": "Number of recent notes to summarize"
+      }
+    },
+    "columns": [
+      "rank",
+      "id",
+      "title",
+      "views",
+      "likes",
+      "collects",
+      "comments",
+      "shares",
+      "avg_view_time",
+      "rise_fans",
+      "top_source",
+      "top_interest",
+      "url"
+    ],
+    "pipeline": [
+      {
+        "navigate": "https://creator.xiaohongshu.com/statistics/data-analysis?type=0&page_size=20&page_num=1"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(async () => {\n  const limit = ${{ args.limit }} || 3;\n  const NOTE_DETAIL_PAGE_URL = 'https://creator.xiaohongshu.com/statistics/note-detail';\n\n  function buildNoteDetailUrl(noteId) {\n    return noteId ? NOTE_DETAIL_PAGE_URL + '?noteId=' + encodeURIComponent(noteId) : '';\n  }\n\n  function formatPostTime(ts) {\n    if (!ts) return '';\n    const date = new Date(ts + 8 * 3600000);\n    const pad = (v) => String(v).padStart(2, '0');\n    return date.getUTCFullYear() + '年' + pad(date.getUTCMonth() + 1) + '月' + pad(date.getUTCDate()) + '日 ' + pad(date.getUTCHours()) + ':' + pad(date.getUTCMinutes());\n  }\n\n  // Step 1: Fetch note list via API\n  const pageSize = Math.min(Math.max(limit, 10), 20);\n  const notes = [];\n  try {\n    const resp = await fetch('/api/galaxy/creator/datacenter/note/analyze/list?type=0&page_size=' + pageSize + '&page_num=1', { credentials: 'include' });\n    if (resp.ok) {\n      const json = await resp.json();\n      const items = json?.data?.note_infos ?? [];\n      for (const item of items) {\n        notes.push({\n          id: item.id ?? '',\n          title: item.title ?? '',\n          date: formatPostTime(item.post_time),\n          views: item.read_count ?? 0,\n          likes: item.like_count ?? 0,\n          collects: item.fav_count ?? 0,\n          comments: item.comment_count ?? 0,\n          url: buildNoteDetailUrl(item.id),\n        });\n      }\n    }\n  } catch {}\n\n  if (!notes.length) {\n    throw new Error('No notes found. Are you logged into creator.xiaohongshu.com?');\n  }\n\n  const toPercentString = (v) => v == null ? '' : v + '%';\n\n  // Step 2: For each note, fetch detail data\n  const results = [];\n  for (let i = 0; i < Math.min(notes.length, limit); i++) {\n    const note = notes[i];\n    if (!note.id) {\n      results.push({\n        rank: i + 1,\n        id: note.id,\n        title: note.title,\n        views: String(note.views),\n        likes: String(note.likes),\n        collects: String(note.collects),\n        comments: String(note.comments),\n        shares: '',\n        avg_view_time: '',\n        rise_fans: '',\n        top_source: '',\n        top_interest: '',\n        url: note.url,\n      });\n      continue;\n    }\n\n    // Fetch detail APIs\n    const detailRows = [];\n    const API_ENDPOINTS = [\n      '/api/galaxy/creator/datacenter/note/base',\n      '/api/galaxy/creator/datacenter/note/audience/source/detail',\n      '/api/galaxy/creator/datacenter/note/audience',\n    ];\n    const detailPayload = {};\n\n    for (const ep of API_ENDPOINTS) {\n      try {\n        const resp = await fetch(ep + '?note_id=' + note.id, { credentials: 'include' });\n        if (resp.ok) {\n          const json = await resp.json();\n          if (json.data) detailPayload[ep] = json.data;\n        }\n      } catch {}\n    }\n\n    // Extract key metrics from base data\n    // The base API returns noteBase with hour/day trend data containing totals\n    const baseData = detailPayload['/api/galaxy/creator/datacenter/note/base'];\n    const audienceSource = detailPayload['/api/galaxy/creator/datacenter/note/audience'];\n    const audienceDetail = detailPayload['/api/galaxy/creator/datacenter/note/audience/source/detail'];\n\n    // Find top source\n    let topSource = '';\n    let topSourcePct = '';\n    const sourceItems = audienceSource?.source ?? [];\n    if (sourceItems.length > 0) {\n      const sorted = [...sourceItems].sort((a, b) => (b.value_with_double ?? 0) - (a.value_with_double ?? 0));\n      topSource = sorted[0]?.title ?? '';\n      topSourcePct = toPercentString(sorted[0]?.value_with_double);\n    }\n\n    // Find top interest\n    let topInterest = '';\n    let topInterestPct = '';\n    const interestItems = audienceDetail?.interest ?? [];\n    if (interestItems.length > 0) {\n      const sorted = [...interestItems].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));\n      topInterest = sorted[0]?.title ?? '';\n      topInterestPct = toPercentString(sorted[0]?.value);\n    }\n\n    results.push({\n      rank: i + 1,\n      id: note.id,\n      title: note.title,\n      views: String(note.views),\n      likes: String(note.likes),\n      collects: String(note.collects),\n      comments: String(note.comments),\n      shares: '',\n      avg_view_time: '',\n      rise_fans: '',\n      top_source: topSource,\n      top_interest: topInterest,\n      url: note.url,\n    });\n  }\n\n  return results;\n})()\n"
+      }
+    ]
+  }
+}

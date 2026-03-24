@@ -1,0 +1,26 @@
+name = "feed"
+description = "获取雪球首页时间线（关注用户的动态）"
+strategy = "PUBLIC"
+
+[[params]]
+name = "page"
+type = "int"
+required = false
+positional = false
+description = "页码，默认 1"
+default = 1
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "每页数量，默认 20"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/feed.json"
+
+[output]
+columns = ["author", "text", "likes", "replies", "url"]

@@ -1,0 +1,17 @@
+name = "add-friend"
+description = "Send a friend request on Facebook"
+strategy = "PUBLIC"
+
+[[params]]
+name = "username"
+type = "string"
+required = true
+positional = true
+description = "Facebook username or profile URL"
+
+[execution]
+entry = "script"
+script = "scripts/add-friend.json"
+
+[output]
+columns = ["status", "username"]

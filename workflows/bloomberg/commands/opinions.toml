@@ -1,0 +1,10 @@
+name = "opinions"
+description = ""
+strategy = "PUBLIC"
+
+[execution]
+entry = "script"
+script = "scripts/opinions.json"
+
+[output]
+columns = []

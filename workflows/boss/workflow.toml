@@ -1,0 +1,24 @@
+schema_version = 1
+site = "boss"
+display_name = "Boss"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "standard"
+default_enabled = true
+
+[auth]
+strategy = "COOKIE"
+login_required = true
+domains = ["boss"]
+
+[ui]
+tags = ["boss"]
+
+[commands]
+include = ["batchgreet", "chatlist", "chatmsg", "detail", "exchange", "greet", "invite", "joblist", "mark", "recommend", "resume", "search", "send", "stats", "status"]

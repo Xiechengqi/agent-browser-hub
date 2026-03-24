@@ -1,0 +1,18 @@
+name = "unanswered"
+description = "Top voted unanswered questions on Stack Overflow"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Max number of results"
+default = 10
+
+[execution]
+entry = "script"
+script = "scripts/unanswered.json"
+
+[output]
+columns = ["title", "score", "answers", "url"]

@@ -1,0 +1,26 @@
+name = "notifications"
+description = "Get TikTok notifications (likes, comments, mentions, followers)"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of notifications"
+default = 15
+
+[[params]]
+name = "type"
+type = "string"
+required = false
+positional = false
+description = "Notification type"
+default = "all"
+
+[execution]
+entry = "script"
+script = "scripts/notifications.json"
+
+[output]
+columns = ["index", "text"]

@@ -1,0 +1,26 @@
+schema_version = 1
+site = "bilibili"
+display_name = "Bilibili"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "advanced"
+default_enabled = true
+
+[auth]
+strategy = "COOKIE"
+login_required = true
+domains = ["www.bilibili.com"]
+
+[ui]
+icon = "play-circle"
+category = "video"
+tags = ["video", "signed-api", "native"]
+
+[commands]
+include = ["dynamic", "favorite", "feed", "following", "history", "hot", "me", "ranking", "search", "subtitle", "user-videos"]

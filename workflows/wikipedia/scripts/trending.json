@@ -1,0 +1,42 @@
+{
+  "pipeline": {
+    "site": "wikipedia",
+    "name": "trending",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 10,
+        "description": "Max results"
+      },
+      "lang": {
+        "type": "string",
+        "default": "en",
+        "description": "Language code (e.g. en, zh, ja)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://${{ args.lang }}.wikipedia.org/api/rest_v1/feed/featured/2026/03/23"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "(() => {\n  const pre = document.querySelector('pre');\n  if (!pre) return [];\n  const data = JSON.parse(pre.textContent);\n  const articles = data?.mostread?.articles;\n  if (!articles || !articles.length) return [];\n  return articles;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      },
+      {
+        "map": {
+          "rank": "${{ index + 1 }}",
+          "title": "${{ item.title || '-' }}",
+          "description": "${{ (item.description || '-').slice(0, 80) }}",
+          "views": "${{ item.views || 0 }}"
+        }
+      }
+    ]
+  }
+}

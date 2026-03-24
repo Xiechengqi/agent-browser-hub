@@ -1,0 +1,18 @@
+name = "top"
+description = "Top DEV.to articles of the day"
+strategy = "PUBLIC"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of articles"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/top.json"
+
+[output]
+columns = ["rank", "title", "author", "reactions", "comments", "tags"]

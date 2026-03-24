@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://x.com"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "evaluate": "(async () => {\n  const limit = parseInt(${{ args.limit }});\n  const timelineType = ${{ args.type | json }};\n  const ct0 = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ct0='))?.split('=')[1];\n  if (!ct0) throw new Error('Not logged into x.com');\n  const bearer = 'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';\n  const headers = {\n    Authorization: 'Bearer ' + decodeURIComponent(bearer),\n    'X-Csrf-Token': ct0,\n    'X-Twitter-Auth-Type': 'OAuth2Session',\n    'X-Twitter-Active-User': 'yes'\n  };\n  const endpoint = timelineType === 'following' ? 'HomeLatestTimeline' : 'HomeTimeline';\n  const queryId = timelineType === 'following' ? 'BKB7oi212Fi7kQtCBGE4zA' : 'c-CzHF1LboFilMpsx4ZCrQ';\n  const method = timelineType === 'following' ? 'POST' : 'GET';\n  const variables = { count: Math.min(40, limit), includePromotedContent: false, latestControlAvailable: true };\n  const features = { responsive_web_graphql_timeline_navigation_enabled: true, view_counts_everywhere_api_enabled: true };\n  const apiUrl = `/i/api/graphql/${queryId}/${endpoint}?variables=${encodeURIComponent(JSON.stringify(variables))}&features=${encodeURIComponent(JSON.stringify(features))}`;\n  const resp = await fetch(apiUrl, { method, headers, credentials: 'include' });\n  if (!resp.ok) throw new Error('HTTP ' + resp.status);\n  const data = await resp.json();\n  const instructions = data?.data?.home?.home_timeline_urt?.instructions || [];\n  const results = [];\n  const seen = new Set();\n  for (const inst of instructions) {\n    for (const entry of inst.entries || []) {\n      const tw = entry.content?.itemContent?.tweet_results?.result;\n      if (!tw || !tw.rest_id || seen.has(tw.rest_id)) continue;\n      seen.add(tw.rest_id);\n      const legacy = tw.legacy || {};\n      const user = tw.core?.user_results?.result;\n      const screenName = user?.legacy?.screen_name || user?.core?.screen_name || 'unknown';\n      const noteText = tw.note_tweet?.note_tweet_results?.result?.text;\n      results.push({\n        id: tw.rest_id,\n        author: screenName,\n        text: noteText || legacy.full_text || '',\n        likes: legacy.favorite_count || 0,\n        retweets: legacy.retweet_count || 0,\n        url: `https://x.com/${screenName}/status/${tw.rest_id}`\n      });\n    }\n  }\n  return results.slice(0, limit);\n})()"
+    }
+  ]
+}

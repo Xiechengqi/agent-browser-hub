@@ -1,0 +1,56 @@
+{
+  "pipeline": {
+    "site": "sinablog",
+    "name": "search",
+    "description": "搜索新浪博客文章（通过新浪搜索）",
+    "domain": "blog.sina.com.cn",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "args": {
+      "keyword": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "搜索关键词"
+      },
+      "limit": {
+        "type": "int",
+        "default": 20,
+        "description": "返回的文章数量"
+      }
+    },
+    "pipeline": [
+      {
+        "fetch": {
+          "url": "https://search.sina.com.cn/api/search",
+          "params": {
+            "q": "${{ args.keyword }}",
+            "tp": "mix",
+            "sort": "0",
+            "page": "1",
+            "size": "${{ args.limit }}",
+            "from": "search_result"
+          },
+          "headers": {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+          }
+        }
+      },
+      {
+        "evaluate": "(() => {\n  const data = ${{ response }};\n  const list = Array.isArray(data?.data?.list) ? data.data.list : [];\n  const normalize = (value) => typeof value === 'string' ? value.replace(/\\s+/g, ' ').trim() : '';\n  const stripHtml = (value) => value.replace(/<[^>]+>/g, '');\n  return list\n    .filter((item) => normalize(item?.url).includes('blog.sina.com.cn/s/blog_'))\n    .slice(0, ${{ args.limit }})\n    .map((item, index) => ({\n      rank: index + 1,\n      title: normalize(stripHtml(item?.title || '')),\n      author: normalize(item?.media_show || item?.author),\n      date: normalize(item?.time || item?.dataTime),\n      description: normalize(item?.intro || item?.searchSummary).slice(0, 150),\n      url: normalize(item?.url),\n    }));\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "rank",
+      "title",
+      "author",
+      "date",
+      "description",
+      "url"
+    ]
+  }
+}

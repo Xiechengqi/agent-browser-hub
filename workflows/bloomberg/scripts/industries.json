@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "site": "bloomberg",
+    "name": "industries",
+    "strategy": "PUBLIC",
+    "browser": false,
+    "args": {
+      "limit": {
+        "type": "int",
+        "default": 1,
+        "description": "Number of feed items to return (max 20)"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://feeds.bloomberg.com/industries/news.rss"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const xml = document.body.textContent || document.documentElement.textContent;\n  const items = [];\n  const itemRegex = /<item\\b[^>]*>([\\s\\S]*?)<\\/item>/gi;\n  let match;\n\n  while ((match = itemRegex.exec(xml))) {\n    const block = match[1];\n    const title = extractTag(block, 'title');\n    const summary = extractTag(block, 'description');\n    const link = extractTag(block, 'link') || extractTag(block, 'guid');\n    const mediaLinks = extractMediaLinks(block);\n\n    if (title && link) {\n      items.push({ title, summary, link, mediaLinks: mediaLinks.join(', ') });\n    }\n  }\n\n  function extractTag(block, tag) {\n    const regex = new RegExp(`<${tag}(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)<\\\\/${tag}>`, 'i');\n    const m = block.match(regex);\n    if (!m) return '';\n    return stripHtml(decodeCdata(m[1])).trim();\n  }\n\n  function extractMediaLinks(block) {\n    const links = [];\n    const regex = /<(?:media:content|media:thumbnail|enclosure)\\b[^>]*\\burl=\"([^\"]+)\"[^>]*>/gi;\n    let m;\n    while ((m = regex.exec(block))) {\n      if (m[1]) links.push(decodeEntities(m[1]));\n    }\n    return links;\n  }\n\n  function decodeCdata(s) {\n    const m = s.match(/^<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>$/);\n    return m ? m[1] : s;\n  }\n\n  function stripHtml(s) {\n    return s.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ');\n  }\n\n  function decodeEntities(s) {\n    return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\");\n  }\n\n  return items;\n})()\n"
+      },
+      {
+        "limit": "${{ args.limit }}"
+      }
+    ],
+    "columns": [
+      "title",
+      "summary",
+      "link",
+      "mediaLinks"
+    ]
+  }
+}

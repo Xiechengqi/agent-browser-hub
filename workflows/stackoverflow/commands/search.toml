@@ -1,0 +1,17 @@
+name = "search"
+description = ""
+strategy = "PUBLIC"
+
+[[params]]
+name = "query"
+type = "string"
+required = true
+positional = false
+description = ""
+
+[execution]
+entry = "script"
+script = "scripts/search.json"
+
+[output]
+columns = []

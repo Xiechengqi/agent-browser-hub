@@ -1,0 +1,20 @@
+{
+  "pipeline": {
+    "site": "doubao",
+    "name": "status",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "navigate": "https://www.doubao.com/chat"
+      },
+      {
+        "wait": 1000
+      },
+      {
+        "evaluate": "(() => {\n  const routerData = window._ROUTER_DATA?.loaderData?.chat_layout;\n  const isLogin = typeof routerData?.userSetting?.data?.is_login === 'boolean' ? routerData.userSetting.data.is_login : null;\n  const loggedIn = isLogin === null ? 'Unknown' : isLogin ? 'Yes' : 'No';\n  const status = isLogin === false ? 'Login Required' : 'Connected';\n  return [{ Status: status, Login: loggedIn, Url: window.location.href, Title: document.title || 'Doubao' }];\n})()\n"
+      }
+    ]
+  }
+}

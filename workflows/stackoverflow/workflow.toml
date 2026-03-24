@@ -1,0 +1,24 @@
+schema_version = 1
+site = "stackoverflow"
+display_name = "Stackoverflow"
+version = "0.1.0"
+
+[runtime]
+workflow_api = "1"
+min_hub_version = "0.1.0"
+min_agent_browser_version = "0.1.0"
+
+[package]
+kind = "standard"
+default_enabled = true
+
+[auth]
+strategy = "PUBLIC"
+login_required = false
+domains = ["stackoverflow.com", "stackoverflow"]
+
+[ui]
+tags = ["stackoverflow"]
+
+[commands]
+include = ["bounties", "hot", "search", "tags", "unanswered"]

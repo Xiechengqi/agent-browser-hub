@@ -1,0 +1,17 @@
+name = "like"
+description = "Like a TikTok video"
+strategy = "PUBLIC"
+
+[[params]]
+name = "url"
+type = "string"
+required = true
+positional = true
+description = "TikTok video URL"
+
+[execution]
+entry = "script"
+script = "scripts/like.json"
+
+[output]
+columns = ["status", "likes", "url"]

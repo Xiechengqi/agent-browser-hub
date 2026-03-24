@@ -1,0 +1,25 @@
+name = "save"
+description = "Save or unsave a Reddit post"
+strategy = "COOKIE"
+
+[[params]]
+name = "post-id"
+type = "string"
+required = true
+positional = true
+description = "Post ID (e.g. 1abc123) or fullname (t3_xxx)"
+
+[[params]]
+name = "undo"
+type = "bool"
+required = false
+positional = false
+description = "Unsave instead of save"
+default = false
+
+[execution]
+entry = "script"
+script = "scripts/save.json"
+
+[output]
+columns = ["status", "message"]

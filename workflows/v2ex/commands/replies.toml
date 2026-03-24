@@ -1,0 +1,25 @@
+name = "replies"
+description = "V2EX 主题回复列表"
+strategy = "PUBLIC"
+
+[[params]]
+name = "id"
+type = "string"
+required = true
+positional = true
+description = "Topic ID"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "Number of replies"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/replies.json"
+
+[output]
+columns = ["floor", "author", "content"]

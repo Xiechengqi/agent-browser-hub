@@ -1,0 +1,13 @@
+{
+  "pipeline": [
+    {
+      "navigate": "https://en.wikipedia.org/w/api.php?action=opensearch&search=${{ args.query | urlencode }}&limit=${{ args.limit }}&format=json"
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "evaluate": "(() => {\n  const pre = document.querySelector('pre');\n  if (!pre) return [];\n  const data = JSON.parse(pre.textContent);\n  const results = [];\n  for (let i = 0; i < data[1].length; i++) {\n    results.push({\n      title: data[1][i],\n      description: data[2][i],\n      url: data[3][i]\n    });\n  }\n  return results;\n})()"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "pipeline": {
+    "site": "notion",
+    "name": "sidebar",
+    "strategy": "UI",
+    "browser": true,
+    "args": {},
+    "pipeline": [
+      {
+        "evaluate": "(() => {\n  const results = [];\n  const selectors = [\n    '[class*=\"sidebar\"] [role=\"treeitem\"]',\n    '[class*=\"sidebar\"] a',\n    '.notion-sidebar [role=\"button\"]',\n    'nav [role=\"treeitem\"]',\n  ];\n  for (const sel of selectors) {\n    const nodes = document.querySelectorAll(sel);\n    if (nodes.length > 0) {\n      nodes.forEach((n, i) => {\n        const text = (n.textContent || '').trim().substring(0, 100);\n        if (text && text.length > 1) results.push({ Index: i + 1, Title: text });\n      });\n      break;\n    }\n  }\n  return results.length > 0 ? results : [{ Index: 0, Title: 'No sidebar items found. Toggle the sidebar first.' }];\n})()\n"
+      }
+    ]
+  }
+}

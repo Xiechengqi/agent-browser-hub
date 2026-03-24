@@ -1,0 +1,37 @@
+{
+  "pipeline": {
+    "site": "instagram",
+    "name": "user",
+    "description": "Get recent posts from an Instagram user",
+    "domain": "www.instagram.com",
+    "args": {
+      "username": {
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "description": "Instagram username"
+      },
+      "limit": {
+        "type": "int",
+        "default": 12,
+        "description": "Number of posts"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.instagram.com"
+      },
+      {
+        "evaluate": "(async () => {\n  const username = '${{ args.username }}';\n  const limit = ${{ args.limit }};\n  const headers = { 'X-IG-App-ID': '936619743392459' };\n  const opts = { credentials: 'include', headers };\n\n  // Get user ID first\n  const r1 = await fetch(\n    'https://www.instagram.com/api/v1/users/web_profile_info/?username=' + encodeURIComponent(username),\n    opts\n  );\n  if (!r1.ok) throw new Error('HTTP ' + r1.status + ' - make sure you are logged in to Instagram');\n  const d1 = await r1.json();\n  const userId = d1?.data?.user?.id;\n  if (!userId) throw new Error('User not found: ' + username);\n\n  // Get user feed\n  const r2 = await fetch(\n    'https://www.instagram.com/api/v1/feed/user/' + userId + '/?count=' + limit,\n    opts\n  );\n  if (!r2.ok) throw new Error('Failed to fetch user feed: HTTP ' + r2.status);\n  const d2 = await r2.json();\n  return (d2?.items || []).slice(0, limit).map((p, i) => ({\n    index: i + 1,\n    caption: (p.caption?.text || '').replace(/\\n/g, ' ').substring(0, 100),\n    likes: p.like_count ?? 0,\n    comments: p.comment_count ?? 0,\n    type: p.media_type === 1 ? 'photo' : p.media_type === 2 ? 'video' : 'carousel',\n    date: p.taken_at ? new Date(p.taken_at * 1000).toLocaleDateString() : '',\n  }));\n})()\n"
+      }
+    ],
+    "columns": [
+      "index",
+      "caption",
+      "likes",
+      "comments",
+      "type",
+      "date"
+    ]
+  }
+}

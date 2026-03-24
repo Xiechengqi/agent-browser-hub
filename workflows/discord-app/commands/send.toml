@@ -1,0 +1,17 @@
+name = "send"
+description = "Send a message in the active Discord channel"
+strategy = "COOKIE"
+
+[[params]]
+name = "text"
+type = "string"
+required = true
+positional = true
+description = "Message to send"
+
+[execution]
+entry = "script"
+script = "scripts/send.json"
+
+[output]
+columns = ["Status"]

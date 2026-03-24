@@ -1,0 +1,56 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "greet",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "uid": {
+        "type": "str",
+        "required": true,
+        "description": "Encrypted UID of candidate"
+      },
+      "security-id": {
+        "type": "str",
+        "required": true,
+        "description": "Security ID of candidate"
+      },
+      "job-id": {
+        "type": "str",
+        "required": true,
+        "description": "Encrypted job ID"
+      },
+      "text": {
+        "type": "str",
+        "required": false,
+        "description": "Custom greeting message"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/chat/index"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(() => {\n  const uid = ${{ args.uid }}.replace(/[^0-9]/g, '');\n  const item = document.querySelector('#_' + uid + '-0') || document.querySelector('[id^=\"_' + uid + '\"]');\n  if (item) { item.click(); return true; }\n  const items = document.querySelectorAll('.geek-item');\n  for (const el of items) {\n    if (el.id && el.id.startsWith('_' + uid)) { el.click(); return true; }\n  }\n  throw new Error('Candidate not found');\n})()\n"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const text = ${{ args.text }} || '你好，请问您对这个职位感兴趣吗？';\n  const selectors = ['.chat-editor [contenteditable=\"true\"]', '.chat-input [contenteditable=\"true\"]', '[contenteditable=\"true\"]'];\n  for (const sel of selectors) {\n    const el = document.querySelector(sel);\n    if (el && el.offsetParent !== null) {\n      el.focus();\n      el.textContent = '';\n      document.execCommand('insertText', false, text);\n      el.dispatchEvent(new Event('input', { bubbles: true }));\n      return text;\n    }\n  }\n  throw new Error('Input not found');\n})()\n"
+      },
+      {
+        "wait": 500
+      },
+      {
+        "evaluate": "((msgText) => {\n  const btn = document.querySelector('.conversation-editor .submit') || document.querySelector('.submit-content .submit');\n  if (btn) { btn.click(); return [{ status: '✅ 招呼已发送', detail: '已发送: ' + msgText }]; }\n  throw new Error('Send button not found');\n})()\n"
+      },
+      {
+        "wait": 1000
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "pipeline": {
+    "site": "boss",
+    "name": "resume",
+    "strategy": "COOKIE",
+    "browser": true,
+    "args": {
+      "uid": {
+        "type": "str",
+        "required": true,
+        "description": "Encrypted UID of candidate"
+      }
+    },
+    "pipeline": [
+      {
+        "navigate": "https://www.zhipin.com/web/chat/index"
+      },
+      {
+        "wait": 3000
+      },
+      {
+        "evaluate": "(() => {\n  const uid = ${{ args.uid }}.replace(/[^0-9]/g, '');\n  const item = document.querySelector('#_' + uid + '-0') || document.querySelector('[id^=\"_' + uid + '\"]');\n  if (item) { item.click(); return true; }\n  const items = document.querySelectorAll('.geek-item');\n  for (const el of items) {\n    if (el.id && el.id.startsWith('_' + uid)) { el.click(); return true; }\n  }\n  throw new Error('Candidate not found');\n})()\n"
+      },
+      {
+        "wait": 2000
+      },
+      {
+        "evaluate": "(() => {\n  const container = document.querySelector('.base-info-single-container') || document.querySelector('.base-info-content');\n  if (!container) throw new Error('Resume panel not found');\n  const nameEl = container.querySelector('.base-name');\n  const name = nameEl ? nameEl.textContent.trim() : '';\n  let gender = '';\n  const detailDiv = container.querySelector('.base-info-single-detial');\n  if (detailDiv) {\n    const uses = detailDiv.querySelectorAll('use');\n    for (const u of uses) {\n      const href = u.getAttribute('xlink:href') || u.getAttribute('href') || '';\n      if (href.includes('icon-men')) { gender = '男'; break; }\n      if (href.includes('icon-women')) { gender = '女'; break; }\n    }\n  }\n  const activeEl = container.querySelector('.active-time');\n  const activeTime = activeEl ? activeEl.textContent.trim() : '';\n  let age = '', experience = '', degree = '';\n  if (detailDiv) {\n    for (const el of detailDiv.children) {\n      if (el.classList.contains('name-contet') || el.classList.contains('high-light-orange') || el.classList.contains('resume-btn-content') || el.classList.contains('label-remark-content') || el.classList.contains('base-info-item')) continue;\n      const text = el.textContent.trim();\n      if (!text) continue;\n      if (text.match(/\\d+岁/)) age = text;\n      else if (text.match(/年|经验|应届/)) experience = text;\n      else if (['博士', '硕士', '本科', '大专', '高中', '中专', '中技', '初中'].some(d => text.includes(d))) degree = text;\n    }\n  }\n  const workHistory = [], education = [];\n  const timeList = container.querySelector('.experience-content.time-list');\n  const detailList = container.querySelector('.experience-content.detail-list');\n  const workTimes = [], eduTimes = [], workDetails = [], eduDetails = [];\n  if (timeList) {\n    for (const li of timeList.querySelectorAll('li')) {\n      const useEl = li.querySelector('use');\n      const href = useEl ? (useEl.getAttribute('xlink:href') || useEl.getAttribute('href') || '') : '';\n      const timeText = li.querySelector('.time')?.textContent.trim() || li.textContent.trim();\n      if (href.includes('base-info-edu')) eduTimes.push(timeText);\n      else workTimes.push(timeText);\n    }\n  }\n  if (detailList) {\n    for (const li of detailList.querySelectorAll('li')) {\n      const useEl = li.querySelector('use');\n      const href = useEl ? (useEl.getAttribute('xlink:href') || useEl.getAttribute('href') || '') : '';\n      const valueText = li.querySelector('.value')?.textContent.trim() || li.textContent.trim();\n      if (href.includes('base-info-edu')) eduDetails.push(valueText);\n      else workDetails.push(valueText);\n    }\n  }\n  for (let i = 0; i < Math.max(workTimes.length, workDetails.length); i++) {\n    const parts = [];\n    if (workTimes[i]) parts.push(workTimes[i]);\n    if (workDetails[i]) parts.push(workDetails[i]);\n    if (parts.length) workHistory.push(parts.join('  '));\n  }\n  for (let i = 0; i < Math.max(eduTimes.length, eduDetails.length); i++) {\n    const parts = [];\n    if (eduTimes[i]) parts.push(eduTimes[i]);\n    if (eduDetails[i]) parts.push(eduDetails[i]);\n    if (parts.length) education.push(parts.join('  '));\n  }\n  const positionContent = container.querySelector('.position-content');\n  let jobChatting = '', expect = '';\n  if (positionContent) {\n    const posNameEl = positionContent.querySelector('.position-name');\n    if (posNameEl) jobChatting = posNameEl.textContent.trim();\n    const expectEl = positionContent.querySelector('.position-item.expect .value');\n    if (expectEl) expect = expectEl.textContent.trim();\n  }\n  return [{ name, gender, age, experience, degree, active_time: activeTime, work_history: workHistory.join('\\n') || '(未获取到)', education: education.join('\\n') || '(未获取到)', job_chatting: jobChatting, expect }];\n})()\n"
+      }
+    ]
+  }
+}

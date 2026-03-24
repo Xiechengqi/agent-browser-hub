@@ -1,0 +1,18 @@
+name = "hot"
+description = "获取新浪博客热门文章/推荐"
+strategy = "COOKIE"
+
+[[params]]
+name = "limit"
+type = "int"
+required = false
+positional = false
+description = "返回的文章数量"
+default = 20
+
+[execution]
+entry = "script"
+script = "scripts/hot.json"
+
+[output]
+columns = ["rank", "title", "author", "date", "readCount", "url"]
