@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/store/auth';
 import CommandSearch from '@/components/command/CommandSearch';
 import CommandList from '@/components/command/CommandList';
 import CommandOutline from '@/components/command/CommandOutline';
+import ScrollToTop from '@/components/layout/ScrollToTop';
 import LogViewer from '@/components/layout/LogViewer';
 import UpgradeDialog from '@/components/layout/UpgradeDialog';
 import VersionDialog from '@/components/layout/VersionDialog';
@@ -77,6 +78,7 @@ export default function Page() {
       <UpgradeDialog open={showUpgrade} onClose={() => setShowUpgrade(false)} />
       <VersionDialog open={showVersion} onClose={() => setShowVersion(false)} />
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+      <ScrollToTop />
     </div>
   );
 }
