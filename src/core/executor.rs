@@ -29,8 +29,14 @@ impl Executor {
         // Validate and coerce parameters
         validate_and_coerce(&config.params, &mut params)?;
 
-        // Strategy pre-navigation
-        if config.strategy.requires_pre_navigation() {
+        // Strategy pre-navigation (skip if pipeline starts with navigate)
+        let skip_pre_nav = config.pipeline.as_ref()
+            .and_then(|p| p.first())
+            .and_then(|step| step.as_object())
+            .map(|obj| obj.contains_key("navigate"))
+            .unwrap_or(false);
+
+        if !skip_pre_nav && config.strategy.requires_pre_navigation() {
             if let Some(url) = config.strategy.pre_navigation_url(&config.domain) {
                 let _ = self.browser.goto(&url).await;
                 self.browser.wait(2000).await?;
