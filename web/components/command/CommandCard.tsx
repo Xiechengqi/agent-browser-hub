@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Play, Lock } from 'lucide-react';
 import { Command } from '@/types/command';
+import { useDebug } from '@/lib/context/debug';
 import ExecuteDialog from '@/components/execute/ExecuteDialog';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 
 export default function CommandCard({ command }: Props) {
   const [showDialog, setShowDialog] = useState(false);
+  const { debugMode, vncUrl } = useDebug();
 
   const strategyColor: Record<string, string> = {
     PUBLIC: 'bg-emerald-100 text-emerald-700',
@@ -46,7 +48,7 @@ export default function CommandCard({ command }: Props) {
           </button>
         </div>
       </div>
-      <ExecuteDialog command={command} open={showDialog} onClose={() => setShowDialog(false)} />
+      <ExecuteDialog command={command} open={showDialog} onClose={() => setShowDialog(false)} debugMode={debugMode} vncUrl={vncUrl} />
     </>
   );
 }

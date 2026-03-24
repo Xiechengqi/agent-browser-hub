@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCommands } from '@/lib/hooks/useCommands';
 import { useCommandsStore } from '@/lib/store/commands';
 import { useAuth } from '@/lib/store/auth';
+import { DebugProvider, useDebug } from '@/lib/context/debug';
 import CommandSearch from '@/components/command/CommandSearch';
 import CommandList from '@/components/command/CommandList';
 import CommandOutline from '@/components/command/CommandOutline';
@@ -14,15 +15,18 @@ import UpgradeDialog from '@/components/layout/UpgradeDialog';
 import VersionDialog from '@/components/layout/VersionDialog';
 import SettingsDialog from '@/components/layout/SettingsDialog';
 
-export default function Page() {
+function PageContent() {
   const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const { data: commands, isLoading } = useCommands();
   const setCommands = useCommandsStore((state) => state.setCommands);
+  const { debugMode, setDebugMode } = useDebug();
   const [showLogs, setShowLogs] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showVersion, setShowVersion] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  const toggleDebug = () => setDebugMode(!debugMode);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -51,6 +55,9 @@ export default function Page() {
             Agent Browser Hub
           </h1>
           <nav className="flex items-center gap-2">
+            <button onClick={toggleDebug} className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${debugMode ? 'text-green-600 bg-green-50' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'}`}>
+              {debugMode ? '调试: 开' : '调试: 关'}
+            </button>
             <button onClick={() => setShowVersion(true)} className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all duration-200">版本</button>
             <button onClick={() => setShowLogs(true)} className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all duration-200">日志</button>
             <button onClick={() => setShowUpgrade(true)} className="px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-all duration-200">升级</button>
@@ -80,5 +87,13 @@ export default function Page() {
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
       <ScrollToTop />
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <DebugProvider>
+      <PageContent />
+    </DebugProvider>
   );
 }

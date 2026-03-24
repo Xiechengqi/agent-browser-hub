@@ -14,6 +14,8 @@ interface Props {
   command: Command;
   open: boolean;
   onClose: () => void;
+  debugMode?: boolean;
+  vncUrl?: string;
 }
 
 function buildCurlCommand(site: string, name: string, params: Record<string, any>, format: string): string {
@@ -23,7 +25,7 @@ function buildCurlCommand(site: string, name: string, params: Record<string, any
   return `curl -X POST '${origin}/api/execute/${site}/${name}' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -d '${body}'`;
 }
 
-export default function ExecuteDialog({ command, open, onClose }: Props) {
+export default function ExecuteDialog({ command, open, onClose, debugMode = false, vncUrl = 'http://localhost:6080' }: Props) {
   const [params, setParams] = useState<Record<string, any>>({});
   const [format, setFormat] = useState<'json' | 'yaml' | 'table' | 'csv' | 'md'>('json');
   const [curlCommand, setCurlCommand] = useState('');
@@ -63,6 +65,12 @@ export default function ExecuteDialog({ command, open, onClose }: Props) {
           <DialogTitle>执行命令: {command.site}/{command.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
+          {debugMode && (
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">VNC 调试窗口</div>
+              <iframe src={vncUrl} className="w-full h-96 border-0" />
+            </div>
+          )}
           <ParamForm params={command.params} values={params} onChange={setParams} />
           <FormatSelector value={format} onChange={setFormat} />
           <Button onClick={handleExecute} disabled={isPending} className="w-full">
