@@ -24,7 +24,7 @@ export default function CommandCard({ command }: Props) {
 
   return (
     <>
-      <Card className="p-4 hover:shadow-lg transition-shadow">
+      <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setShowDialog(true)}>
         <div className="flex items-start justify-between mb-2">
           <h3 className="font-semibold text-lg">{command.name}</h3>
           <Badge className={strategyColor[command.strategy] || 'bg-gray-100 text-gray-800'}>{command.strategy}</Badge>
@@ -35,7 +35,7 @@ export default function CommandCard({ command }: Props) {
             {command.strategy !== 'PUBLIC' && <Lock size={14} />}
             <span>{command.params.length} 个参数</span>
           </div>
-          <Button size="sm" onClick={() => setShowDialog(true)} className="gap-2">
+          <Button size="sm" onClick={(e) => { e.stopPropagation(); setShowDialog(true); }} className="gap-2">
             <Play size={16} />执行
           </Button>
         </div>
