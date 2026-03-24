@@ -606,12 +606,7 @@ async fn execute_script(
                 .unwrap_or_else(|_| serde_json::to_string_pretty(&result.result).unwrap_or_default());
             Json(serde_json::json!({
                 "success": true,
-                "data": {
-                    "execution_id": result.execution_id,
-                    "status": result.status,
-                    "duration_ms": result.duration_ms,
-                    "result": formatted,
-                }
+                "data": formatted
             }))
         }
         Err(e) => {
