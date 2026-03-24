@@ -69,7 +69,7 @@ export default function ExecuteDialog({ command, open, onClose, debugMode = fals
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={debugMode ? "max-w-7xl max-h-[90vh] overflow-y-auto" : "max-w-4xl max-h-[90vh] overflow-y-auto"}>
+      <DialogContent className={debugMode ? "w-[90vw] max-w-none max-h-[90vh] overflow-y-auto" : "max-w-4xl max-h-[90vh] overflow-y-auto"}>
         <DialogHeader>
           <DialogTitle>执行命令: {command.site}/{command.name}</DialogTitle>
         </DialogHeader>
