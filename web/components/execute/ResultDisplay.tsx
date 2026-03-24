@@ -7,12 +7,10 @@ import { Button } from '@/components/ui/button';
 interface Props {
   result: ExecuteResult;
   format: string;
-  curlCommand?: string;
 }
 
-export default function ResultDisplay({ result, format, curlCommand }: Props) {
+export default function ResultDisplay({ result, format }: Props) {
   const [copied, setCopied] = useState(false);
-  const [curlCopied, setCurlCopied] = useState(false);
 
   if (!result.success) {
     return (
@@ -31,40 +29,17 @@ export default function ResultDisplay({ result, format, curlCommand }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCopyCurl = () => {
-    if (curlCommand) {
-      navigator.clipboard.writeText(curlCommand);
-      setCurlCopied(true);
-      setTimeout(() => setCurlCopied(false), 2000);
-    }
-  };
-
   return (
-    <div className="space-y-4">
-      {curlCommand && (
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-sm text-gray-600">cURL 命令</h3>
-            <Button size="sm" onClick={handleCopyCurl}>
-              {curlCopied ? '已复制' : '复制'}
-            </Button>
-          </div>
-          <pre className="bg-gray-800 text-green-300 p-3 rounded border overflow-auto max-h-32 text-xs whitespace-pre-wrap break-all">
-            {curlCommand}
-          </pre>
-        </div>
-      )}
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-semibold">执行结果</h3>
-          <Button size="sm" onClick={handleCopy}>
-            {copied ? '已复制' : '复制'}
-          </Button>
-        </div>
-        <pre className="bg-gray-50 p-4 rounded border overflow-auto max-h-96 text-sm">
-          {content}
-        </pre>
+    <div>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-semibold">执行结果</h3>
+        <Button size="sm" onClick={handleCopy}>
+          {copied ? '已复制' : '复制'}
+        </Button>
       </div>
+      <pre className="bg-slate-50 p-4 rounded border border-slate-200 overflow-auto max-h-96 text-sm">
+        {content}
+      </pre>
     </div>
   );
 }

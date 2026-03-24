@@ -68,13 +68,19 @@ export default function ExecuteDialog({ command, open, onClose }: Props) {
           <Button onClick={handleExecute} disabled={isPending} className="w-full">
             {isPending ? '执行中...' : '执行'}
           </Button>
+          {curlCommand && (
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded">
+              <p className="text-slate-700 font-semibold mb-2">cURL 命令</p>
+              <pre className="text-xs text-slate-600 overflow-x-auto">{curlCommand}</pre>
+            </div>
+          )}
           {isError && (
             <div className="p-4 bg-red-50 border border-red-200 rounded">
               <p className="text-red-800 font-semibold">请求失败</p>
               <p className="text-red-600 text-sm mt-1">{getErrorMessage()}</p>
             </div>
           )}
-          {isSuccess && result && <ResultDisplay result={result} format={format} curlCommand={curlCommand} />}
+          {isSuccess && result && <ResultDisplay result={result} format={format} />}
         </div>
       </DialogContent>
     </Dialog>
