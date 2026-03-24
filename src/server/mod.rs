@@ -290,9 +290,17 @@ async fn upgrade() -> Json<ApiResponse<String>> {
         .send()
         .await
     {
-        Ok(r) => match r.json().await {
-            Ok(rel) => rel,
-            Err(e) => return Json(ApiResponse::error(format!("Failed to parse release info: {}", e))),
+        Ok(r) => {
+            let status = r.status();
+            let text = match r.text().await {
+                Ok(t) => t,
+                Err(e) => return Json(ApiResponse::error(format!("Failed to read response: {}", e))),
+            };
+            eprintln!("[upgrade] GitHub API response (status {}): {}", status, &text[..text.len().min(500)]);
+            match serde_json::from_str(&text) {
+                Ok(rel) => rel,
+                Err(e) => return Json(ApiResponse::error(format!("Failed to parse release info: {} (response: {})", e, &text[..text.len().min(200)]))),
+            }
         },
         Err(e) => return Json(ApiResponse::error(format!("Failed to fetch release info: {}", e))),
     };
