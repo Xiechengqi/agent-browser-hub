@@ -23,8 +23,8 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const keywords = ${{ args.query | json }}.split(',').map(k => k.trim()).filter(Boolean);
-        const maxAccepts = ${{ args.max }};
+        const keywords = '${{ args.query }}'.split(',').map(k => k.trim()).filter(Boolean);
+        const maxAccepts = parseInt('${{ args.max }}');
         const results = [];
         let acceptCount = 0;
 

@@ -23,7 +23,7 @@ pipeline:
 
   - evaluate: |
       (() => {
-        const searchUrl = `/search?q=${encodeURIComponent(${{ args.query | json }})}&f=top`;
+        const searchUrl = `/search?q=${encodeURIComponent('${{ args.query }}')}&f=top`;
         window.history.pushState({}, '', searchUrl);
         window.dispatchEvent(new PopStateEvent('popstate', { state:  }));
       })()

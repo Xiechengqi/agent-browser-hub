@@ -19,7 +19,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const username = ${{ args.username | json }};
+        const username = '${{ args.username }}';
         let attempts = 0;
 
         while (attempts < 20) {

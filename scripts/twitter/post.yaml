@@ -22,7 +22,7 @@ pipeline:
         const box = document.querySelector('[data-testid="tweetTextarea_0"]');
         if (box) {
           box.focus();
-          const textToInsert = ${{ args.text | json }};
+          const textToInsert = '${{ args.text }}';
           const dataTransfer = new DataTransfer();
           dataTransfer.setData('text/plain', textToInsert);
           box.dispatchEvent(new ClipboardEvent('paste', {

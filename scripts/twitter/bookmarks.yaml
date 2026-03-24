@@ -18,7 +18,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const limit = ${{ args.limit }};
+        const limit = parseInt('${{ args.limit }}');
         const ct0 = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ct0='))?.split('=')[1];
         if (!ct0) throw new Error('Not logged into x.com');
 

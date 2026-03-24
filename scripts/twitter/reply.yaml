@@ -24,7 +24,7 @@ pipeline:
 
   - evaluate: |
       (async () => {
-        const text = ${{ args.text | json }};
+        const text = '${{ args.text }}';
         const box = document.querySelector('[data-testid="tweetTextarea_0"]');
         if (box) {
           box.focus();

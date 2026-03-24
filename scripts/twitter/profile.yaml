@@ -13,12 +13,12 @@ args:
 
 pipeline:
   - navigate:
-      url: https://x.com/${{ args.username || 'home' }}
+      url: https://x.com/home
       settleMs: 3000
 
   - evaluate: |
       (async () => {
-        let username = ${{ args.username | json }};
+        let username = '${{ args.username }}';
 
         if (!username) {
           const link = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
