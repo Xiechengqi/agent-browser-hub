@@ -1,0 +1,69 @@
+site: twitter
+name: bookmarks
+description: Fetch Twitter/X bookmarks
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of bookmarks
+
+pipeline:
+  - navigate:
+      url: https://x.com
+      settleMs: 3000
+
+  - evaluate: |
+      (async () => {
+        const limit = ${{ args.limit }};
+        const ct0 = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('ct0='))?.split('=')[1];
+        if (!ct0) throw new Error('Not logged into x.com');
+
+        const bearer = 'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+        const queryId = 'Fy0QMy4q_aZCpkO0PnyLYw';
+        const headers = {
+          'Authorization': 'Bearer ' + decodeURIComponent(bearer),
+          'X-Csrf-Token': ct0,
+          'X-Twitter-Auth-Type': 'OAuth2Session',
+          'X-Twitter-Active-User': 'yes'
+        };
+
+        const variables = { count: Math.min(100, limit), includePromotedContent: false };
+        const features = { longform_notetweets_consumption_enabled: true, view_counts_everywhere_api_enabled: true };
+        const apiUrl = `/i/api/graphql/${queryId}/Bookmarks?variables=${encodeURIComponent(JSON.stringify(variables))}&features=${encodeURIComponent(JSON.stringify(features))}`;
+
+        const resp = await fetch(apiUrl, { headers, credentials: 'include' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        const instructions = data?.data?.bookmark_timeline_v2?.timeline?.instructions || data?.data?.bookmark_timeline?.timeline?.instructions || [];
+        const results = [];
+        const seen = new Set();
+
+        for (const inst of instructions) {
+          for (const entry of inst.entries || []) {
+            const tw = entry.content?.itemContent?.tweet_results?.result;
+            if (!tw || !tw.rest_id || seen.has(tw.rest_id)) continue;
+            seen.add(tw.rest_id);
+
+            const legacy = tw.legacy || {};
+            const user = tw.core?.user_results?.result;
+            const screenName = user?.legacy?.screen_name || user?.core?.screen_name || 'unknown';
+            const noteText = tw.note_tweet?.note_tweet_results?.result?.text;
+
+            results.push({
+              author: screenName,
+              text: noteText || legacy.full_text || '',
+              likes: legacy.favorite_count || 0,
+              url: `https://x.com/${screenName}/status/${tw.rest_id}`
+            });
+          }
+        }
+
+        return results.slice(0, limit);
+      })()
+
+columns: [author, text, likes, url]

@@ -1,0 +1,60 @@
+site: boss
+name: exchange
+strategy: COOKIE
+browser: true
+args:
+  uid:
+    type: str
+    required: true
+    description: Encrypted UID of candidate
+  type:
+    type: str
+    required: false
+    description: Exchange type (phone or wechat, default phone)
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const encryptUid = ${{ args.uid }};
+        const exchangeType = ${{ args.type }} || 'phone';
+        const typeId = exchangeType === 'wechat' ? 2 : 1;
+        return new Promise((resolve, reject) => {
+          const xhr1 = new XMLHttpRequest();
+          xhr1.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/getBossFriendListV2.json?page=1&status=0&jobId=0', true);
+          xhr1.withCredentials = true;
+          xhr1.timeout = 15000;
+          xhr1.setRequestHeader('Accept', 'application/json');
+          xhr1.onload = () => {
+            try {
+              const data1 = JSON.parse(xhr1.responseText);
+              if (data1.code !== 0) reject(new Error(data1.message || 'API error'));
+              const friends = data1.zpData?.friendList || [];
+              const friend = friends.find(f => f.encryptUid === encryptUid);
+              if (!friend) reject(new Error('Candidate not found'));
+              const params = new URLSearchParams({ type: String(typeId), securityId: friend.securityId || '', uniqueId: String(friend.uid), name: friend.name || '' });
+              const xhr2 = new XMLHttpRequest();
+              xhr2.open('POST', 'https://www.zhipin.com/wapi/zpchat/exchange/request', true);
+              xhr2.withCredentials = true;
+              xhr2.timeout = 15000;
+              xhr2.setRequestHeader('Accept', 'application/json');
+              xhr2.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+              xhr2.onload = () => {
+                try {
+                  const data2 = JSON.parse(xhr2.responseText);
+                  if (data2.code !== 0) reject(new Error(data2.message || 'API error'));
+                  const typeLabel = exchangeType === 'wechat' ? '微信' : '手机号';
+                  resolve([{ status: '✅ 交换请求已发送', detail: `已向 ${friend.name} 发送${typeLabel}交换请求` }]);
+                } catch(e) { reject(e); }
+              };
+              xhr2.onerror = () => reject(new Error('Network Error'));
+              xhr2.ontimeout = () => reject(new Error('Timeout'));
+              xhr2.send(params.toString());
+            } catch(e) { reject(e); }
+          };
+          xhr1.onerror = () => reject(new Error('Network Error'));
+          xhr1.ontimeout = () => reject(new Error('Timeout'));
+          xhr1.send(null);
+        });
+      })()

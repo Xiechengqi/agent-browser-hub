@@ -1,0 +1,61 @@
+site: boss
+name: greet
+strategy: COOKIE
+browser: true
+args:
+  uid:
+    type: str
+    required: true
+    description: Encrypted UID of candidate
+  security-id:
+    type: str
+    required: true
+    description: Security ID of candidate
+  job-id:
+    type: str
+    required: true
+    description: Encrypted job ID
+  text:
+    type: str
+    required: false
+    description: Custom greeting message
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 3000
+  - evaluate: |
+      (() => {
+        const uid = ${{ args.uid }}.replace(/[^0-9]/g, '');
+        const item = document.querySelector('#_' + uid + '-0') || document.querySelector('[id^="_' + uid + '"]');
+        if (item) { item.click(); return true; }
+        const items = document.querySelectorAll('.geek-item');
+        for (const el of items) {
+          if (el.id && el.id.startsWith('_' + uid)) { el.click(); return true; }
+        }
+        throw new Error('Candidate not found');
+      })()
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const text = ${{ args.text }} || '你好，请问您对这个职位感兴趣吗？';
+        const selectors = ['.chat-editor [contenteditable="true"]', '.chat-input [contenteditable="true"]', '[contenteditable="true"]'];
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el && el.offsetParent !== null) {
+            el.focus();
+            el.textContent = '';
+            document.execCommand('insertText', false, text);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            return text;
+          }
+        }
+        throw new Error('Input not found');
+      })()
+  - wait: 500
+  - evaluate: |
+      ((msgText) => {
+        const btn = document.querySelector('.conversation-editor .submit') || document.querySelector('.submit-content .submit');
+        if (btn) { btn.click(); return [{ status: '✅ 招呼已发送', detail: '已发送: ' + msgText }]; }
+        throw new Error('Send button not found');
+      })()
+  - wait: 1000

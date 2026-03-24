@@ -1,0 +1,76 @@
+site: twitter
+name: followers
+description: Get accounts following a Twitter/X user
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  user:
+    type: str
+    positional: true
+    description: Twitter username (leave empty for logged-in user)
+  limit:
+    type: int
+    default: 50
+    description: Number of followers
+
+pipeline:
+  - navigate:
+      url: https://x.com/${{ args.user || 'home' }}
+      settleMs: 3000
+
+  - evaluate: |
+      (() => {
+        let targetUser = ${{ args.user | json }};
+        if (!targetUser) {
+          const link = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
+          const href = link ? link.getAttribute('href') : null;
+          if (!href) throw new Error('Could not find logged-in user');
+          targetUser = href.replace('/', '');
+        }
+
+        const selectors = [
+          'a[href="/' + targetUser + '/verified_followers"]',
+          'a[href="/' + targetUser + '/followers"]'
+        ];
+        for (const sel of selectors) {
+          const link = document.querySelector(sel);
+          if (link) {
+            link.click();
+            return;
+          }
+        }
+        throw new Error('Could not find followers link');
+      })()
+
+  - wait: 5000
+
+  - evaluate: |
+      (() => {
+        const results = [];
+        const seen = new Set();
+        const cells = document.querySelectorAll('[data-testid="UserCell"]');
+
+        cells.forEach(cell => {
+          try {
+            const link = cell.querySelector('a[href^="/"]');
+            const username = link?.getAttribute('href')?.replace('/', '') || '';
+            if (!username || seen.has(username)) return;
+            seen.add(username);
+
+            const nameEl = cell.querySelector('[dir="ltr"]');
+            const name = nameEl ? nameEl.textContent : '';
+            const bioEl = cell.querySelector('[dir="auto"]');
+            const bio = bioEl ? bioEl.textContent.substring(0, 80) : '';
+
+            results.push({ screen_name: username, name, bio, followers: 0 });
+          } catch (e) {}
+        });
+
+        return results;
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [screen_name, name, bio, followers]

@@ -1,0 +1,57 @@
+site: youtube
+name: search
+description: Search YouTube videos
+domain: www.youtube.com
+strategy: COOKIE
+browser: true
+
+args:
+  query:
+    type: str
+    required: true
+    description: Search query
+  limit:
+    type: int
+    default: 20
+    description: Max results (max 50)
+
+pipeline:
+  - navigate: https://www.youtube.com
+  - wait: 2000
+  - evaluate: |
+      (async () => {
+        const query = '${{ args.query }}';
+        const limit = Math.min(${{ args.limit }}, 50);
+        const cfg = window.ytcfg?.data_ || {};
+        const apiKey = cfg.INNERTUBE_API_KEY;
+        const context = cfg.INNERTUBE_CONTEXT;
+        if (!apiKey || !context) return [];
+        const resp = await fetch('/youtubei/v1/search?key=' + apiKey + '&prettyPrint=false', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({context, query})
+        });
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        const contents = data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+        const videos = [];
+        for (const section of contents) {
+          for (const item of (section.itemSectionRenderer?.contents || [])) {
+            if (item.videoRenderer && videos.length < limit) {
+              const v = item.videoRenderer;
+              videos.push({
+                rank: videos.length + 1,
+                title: v.title?.runs?.[0]?.text || '',
+                channel: v.ownerText?.runs?.[0]?.text || '',
+                views: v.viewCountText?.simpleText || v.shortViewCountText?.simpleText || '',
+                duration: v.lengthText?.simpleText || 'LIVE',
+                url: 'https://www.youtube.com/watch?v=' + v.videoId
+              });
+            }
+          }
+        }
+        return videos;
+      })()
+
+columns: [rank, title, channel, views, duration, url]

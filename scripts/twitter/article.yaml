@@ -1,0 +1,93 @@
+site: twitter
+name: article
+description: Fetch a Twitter Article (long-form content) as Markdown
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  tweet-id:
+    type: str
+    required: true
+    positional: true
+    description: Tweet ID or URL
+
+pipeline:
+  - navigate:
+      url: https://x.com/i/status/${{ args['tweet-id'] }}
+      settleMs: 3000
+
+  - evaluate: |
+      (async () => {
+        let tweetId = ${{ args['tweet-id'] | json }};
+        const urlMatch = tweetId.match(/\/(?:status|article)\/(\d+)/);
+        if (urlMatch) tweetId = urlMatch[1];
+
+        const ct0 = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ct0='))?.split('=')[1];
+        if (!ct0) throw new Error('Not logged into x.com');
+
+        const bearer = 'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+        const headers = {
+          'Authorization': 'Bearer ' + decodeURIComponent(bearer),
+          'X-Csrf-Token': ct0,
+          'X-Twitter-Auth-Type': 'OAuth2Session',
+          'X-Twitter-Active-User': 'yes'
+        };
+
+        const variables = { tweetId, withCommunity: false, includePromotedContent: false };
+        const features = { longform_notetweets_consumption_enabled: true, longform_notetweets_rich_text_read_enabled: true };
+        const fieldToggles = { withArticleRichContentState: true, withArticlePlainText: true };
+
+        const queryId = '7xflPyRiUxGVbJd4uWmbfg';
+        const apiUrl = `/i/api/graphql/${queryId}/TweetResultByRestId?variables=${encodeURIComponent(JSON.stringify(variables))}&features=${encodeURIComponent(JSON.stringify(features))}&fieldToggles=${encodeURIComponent(JSON.stringify(fieldToggles))}`;
+
+        const resp = await fetch(apiUrl, {headers, credentials: 'include'});
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const d = await resp.json();
+
+        const result = d.data?.tweetResult?.result;
+        if (!result) throw new Error('Article not found');
+
+        const tw = result.tweet || result;
+        const user = tw.core?.user_results?.result;
+        const screenName = user?.legacy?.screen_name || user?.core?.screen_name || 'unknown';
+
+        const articleResults = tw.article?.article_results?.result;
+        if (!articleResults) {
+          const noteText = tw.note_tweet?.note_tweet_results?.result?.text;
+          if (noteText) {
+            return [{
+              title: '(Note Tweet)',
+              author: screenName,
+              content: noteText,
+              url: 'https://x.com/' + screenName + '/status/' + tweetId
+            }];
+          }
+          throw new Error('Tweet has no article content');
+        }
+
+        const title = articleResults.title || '(Untitled)';
+        const blocks = articleResults.content_state?.blocks || [];
+        const parts = [];
+
+        for (const block of blocks) {
+          const text = block.text || '';
+          if (!text || block.type === 'atomic') continue;
+
+          if (block.type === 'header-one') parts.push('# ' + text);
+          else if (block.type === 'header-two') parts.push('## ' + text);
+          else if (block.type === 'header-three') parts.push('### ' + text);
+          else if (block.type === 'blockquote') parts.push('> ' + text);
+          else if (block.type === 'unordered-list-item') parts.push('- ' + text);
+          else parts.push(text);
+        }
+
+        return [{
+          title,
+          author: screenName,
+          content: parts.join('\n\n'),
+          url: 'https://x.com/' + screenName + '/status/' + tweetId
+        }];
+      })()
+
+columns: [title, author, content, url]

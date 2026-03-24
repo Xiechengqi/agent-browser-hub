@@ -1,0 +1,59 @@
+site: boss
+name: send
+strategy: COOKIE
+browser: true
+args:
+  uid:
+    type: str
+    required: true
+    description: Encrypted UID of candidate
+  text:
+    type: str
+    required: true
+    description: Message text to send
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 3000
+  - evaluate: |
+      (() => {
+        const uid = ${{ args.uid }}.replace(/[^0-9]/g, '');
+        const item = document.querySelector('#_' + uid + '-0') || document.querySelector('[id^="_' + uid + '"]');
+        if (item) { item.click(); return true; }
+        const items = document.querySelectorAll('.geek-item');
+        for (const el of items) {
+          if (el.id && el.id.startsWith('_' + uid)) { el.click(); return true; }
+        }
+        throw new Error('Candidate not found in chat list');
+      })()
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const text = ${{ args.text }};
+        const selectors = ['.chat-editor [contenteditable="true"]', '.chat-input [contenteditable="true"]', '.message-editor [contenteditable="true"]', '[contenteditable="true"]', 'textarea'];
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el && el.offsetParent !== null) {
+            el.focus();
+            if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+              el.value = text;
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+              el.textContent = '';
+              el.focus();
+              document.execCommand('insertText', false, text);
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            return true;
+          }
+        }
+        throw new Error('Input not found');
+      })()
+  - wait: 500
+  - evaluate: |
+      (() => {
+        const btn = document.querySelector('.conversation-editor .submit') || document.querySelector('.submit-content .submit') || document.querySelector('.conversation-operate .submit');
+        if (btn) { btn.click(); return [{ status: '✅ 发送成功', detail: '已发送: ' + ${{ args.text }} }]; }
+        throw new Error('Send button not found');
+      })()
+  - wait: 1000

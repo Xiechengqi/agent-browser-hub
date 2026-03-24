@@ -1,0 +1,57 @@
+site: twitter
+name: notifications
+description: Get Twitter/X notifications
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  limit:
+    type: int
+    default: 20
+    description: Number of notifications
+
+pipeline:
+  - navigate:
+      url: https://x.com/home
+      settleMs: 3000
+
+  - evaluate: |
+      (() => {
+        window.history.pushState({}, '', '/notifications');
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      })()
+
+  - wait: 5000
+
+  - evaluate: |
+      (() => {
+        const results = [];
+        const seen = new Set();
+        const items = document.querySelectorAll('[data-testid^="notification"]');
+
+        items.forEach(item => {
+          try {
+            const text = item.textContent || '';
+            const link = item.querySelector('a[href*="/status/"]');
+            const url = link ? link.href : 'https://x.com/notifications';
+            const id = url.match(/\/status\/(\d+)/)?.[1] || Math.random().toString();
+
+            if (seen.has(id)) return;
+            seen.add(id);
+
+            results.push({
+              id,
+              action: 'Notification',
+              text: text.substring(0, 100),
+              url
+            });
+          } catch (e) {}
+        });
+
+        return results;
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [id, action, text, url]
