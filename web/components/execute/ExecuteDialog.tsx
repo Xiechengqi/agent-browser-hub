@@ -16,13 +16,22 @@ interface Props {
   onClose: () => void;
 }
 
+function buildCurlCommand(site: string, name: string, params: Record<string, any>, format: string): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3133';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('hub_token') || '<TOKEN>' : '<TOKEN>';
+  const body = JSON.stringify({ params, format });
+  return `curl -X POST '${origin}/api/execute/${site}/${name}' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -d '${body}'`;
+}
+
 export default function ExecuteDialog({ command, open, onClose }: Props) {
   const [params, setParams] = useState<Record<string, any>>({});
   const [format, setFormat] = useState<'json' | 'yaml' | 'table' | 'csv' | 'md'>('json');
+  const [curlCommand, setCurlCommand] = useState('');
   const { mutate: execute, data: result, isPending, isSuccess, isError, error, reset } = useExecute();
 
   const handleExecute = () => {
     reset();
+    setCurlCommand(buildCurlCommand(command.site, command.name, params, format));
     const request: ExecuteRequest = { params, format };
     execute({ site: command.site, name: command.name, request });
   };
@@ -30,6 +39,7 @@ export default function ExecuteDialog({ command, open, onClose }: Props) {
   const handleClose = () => {
     setParams({});
     setFormat('json');
+    setCurlCommand('');
     reset();
     onClose();
   };
@@ -64,7 +74,7 @@ export default function ExecuteDialog({ command, open, onClose }: Props) {
               <p className="text-red-600 text-sm mt-1">{getErrorMessage()}</p>
             </div>
           )}
-          {isSuccess && result && <ResultDisplay result={result} format={format} />}
+          {isSuccess && result && <ResultDisplay result={result} format={format} curlCommand={curlCommand} />}
         </div>
       </DialogContent>
     </Dialog>
