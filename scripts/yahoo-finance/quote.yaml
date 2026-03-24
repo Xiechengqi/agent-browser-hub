@@ -1,0 +1,50 @@
+site: yahoo-finance
+name: quote
+description: Yahoo Finance stock quote
+domain: finance.yahoo.com
+strategy: COOKIE
+browser: true
+
+args:
+  symbol:
+    type: str
+    required: true
+    description: Stock ticker (e.g. AAPL, MSFT, TSLA)
+
+pipeline:
+  - navigate: https://finance.yahoo.com/quote/${{ args.symbol }}/
+  - wait: 2000
+  - evaluate: |
+      (async () => {
+        const sym = '${{ args.symbol }}'.toUpperCase();
+        try {
+          const chartUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?interval=1d&range=1d';
+          const resp = await fetch(chartUrl);
+          if (resp.ok) {
+            const d = await resp.json();
+            const chart = d?.chart?.result?.[0];
+            if (chart) {
+              const meta = chart.meta || {};
+              const prevClose = meta.previousClose || meta.chartPreviousClose;
+              const price = meta.regularMarketPrice;
+              const change = price != null && prevClose != null ? (price - prevClose) : null;
+              const changePct = change != null && prevClose ? ((change / prevClose) * 100) : null;
+              return [{
+                symbol: meta.symbol || sym,
+                name: meta.shortName || meta.longName || sym,
+                price: price != null ? Number(price.toFixed(2)) : null,
+                change: change != null ? change.toFixed(2) : null,
+                changePercent: changePct != null ? changePct.toFixed(2) + '%' : null,
+                open: chart.indicators?.quote?.[0]?.open?.[0] || null,
+                high: meta.regularMarketDayHigh || null,
+                low: meta.regularMarketDayLow || null,
+                volume: meta.regularMarketVolume || null,
+                marketCap: null
+              }];
+            }
+          }
+        } catch(e) {}
+        return [];
+      })()
+
+columns: [symbol, name, price, change, changePercent, open, high, low, volume, marketCap]

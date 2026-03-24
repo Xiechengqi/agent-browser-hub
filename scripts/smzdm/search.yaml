@@ -1,0 +1,43 @@
+site: smzdm
+name: search
+description: Smzdm search deals
+domain: www.smzdm.com
+strategy: COOKIE
+browser: true
+
+args:
+  query:
+    type: str
+    required: true
+    description: Search keyword
+  limit:
+    type: int
+    default: 20
+    description: Number of results
+
+pipeline:
+  - navigate: https://search.smzdm.com/?c=home&s=${{ args.query }}&v=b
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const limit = ${{ args.limit }};
+        const items = document.querySelectorAll('li.feed-row-wide');
+        const results = [];
+        items.forEach((li) => {
+          if (results.length >= limit) return;
+          const titleEl = li.querySelector('h5.feed-block-title > a') || li.querySelector('h5 > a');
+          if (!titleEl) return;
+          const title = (titleEl.getAttribute('title') || titleEl.textContent || '').trim();
+          const url = titleEl.getAttribute('href') || titleEl.href || '';
+          const priceEl = li.querySelector('.z-highlight');
+          const price = priceEl ? priceEl.textContent.trim() : '';
+          const mallEl = li.querySelector('.z-feed-foot-r .feed-block-extras span') || li.querySelector('.z-feed-foot-r span');
+          const mall = mallEl ? mallEl.textContent.trim() : '';
+          const commentEl = li.querySelector('.feed-btn-comment');
+          const comments = commentEl ? parseInt(commentEl.textContent.trim()) || 0 : 0;
+          results.push({ rank: results.length + 1, title, price, mall, comments, url });
+        });
+        return results;
+      })()
+
+columns: [rank, title, price, mall, comments, url]

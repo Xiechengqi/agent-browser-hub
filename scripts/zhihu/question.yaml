@@ -1,0 +1,42 @@
+site: zhihu
+name: question
+description: Zhihu question details and answers
+domain: www.zhihu.com
+strategy: COOKIE
+browser: true
+
+args:
+  id:
+    type: str
+    required: true
+    description: Question ID (numeric)
+  limit:
+    type: int
+    default: 5
+    description: Number of answers
+
+pipeline:
+  - navigate: https://www.zhihu.com/question/${{ args.id }}
+  - wait: 2000
+  - evaluate: |
+      (async () => {
+        const id = '${{ args.id }}';
+        const limit = ${{ args.limit }};
+        const stripHtml = (html) => (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+        const [qResp, aResp] = await Promise.all([
+          fetch(`https://www.zhihu.com/api/v4/questions/${id}?include=data[*].detail,excerpt,answer_count,follower_count,visit_count`, {credentials: 'include'}),
+          fetch(`https://www.zhihu.com/api/v4/questions/${id}/answers?limit=${limit}&offset=0&sort_by=default&include=data[*].content,voteup_count,comment_count,author`, {credentials: 'include'})
+        ]);
+        if (!qResp.ok || !aResp.ok) return [];
+        const q = await qResp.json();
+        const a = await aResp.json();
+        const answers = (a.data || []).slice(0, limit).map((ans, i) => ({
+          rank: i + 1,
+          author: ans.author?.name || 'anonymous',
+          votes: ans.voteup_count || 0,
+          content: stripHtml(ans.content || '').slice(0, 200)
+        }));
+        return answers;
+      })()
+
+columns: [rank, author, votes, content]

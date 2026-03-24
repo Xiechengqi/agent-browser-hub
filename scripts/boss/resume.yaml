@@ -1,0 +1,98 @@
+site: boss
+name: resume
+strategy: COOKIE
+browser: true
+args:
+  uid:
+    type: str
+    required: true
+    description: Encrypted UID of candidate
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 3000
+  - evaluate: |
+      (() => {
+        const uid = ${{ args.uid }}.replace(/[^0-9]/g, '');
+        const item = document.querySelector('#_' + uid + '-0') || document.querySelector('[id^="_' + uid + '"]');
+        if (item) { item.click(); return true; }
+        const items = document.querySelectorAll('.geek-item');
+        for (const el of items) {
+          if (el.id && el.id.startsWith('_' + uid)) { el.click(); return true; }
+        }
+        throw new Error('Candidate not found');
+      })()
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const container = document.querySelector('.base-info-single-container') || document.querySelector('.base-info-content');
+        if (!container) throw new Error('Resume panel not found');
+        const nameEl = container.querySelector('.base-name');
+        const name = nameEl ? nameEl.textContent.trim() : '';
+        let gender = '';
+        const detailDiv = container.querySelector('.base-info-single-detial');
+        if (detailDiv) {
+          const uses = detailDiv.querySelectorAll('use');
+          for (const u of uses) {
+            const href = u.getAttribute('xlink:href') || u.getAttribute('href') || '';
+            if (href.includes('icon-men')) { gender = '男'; break; }
+            if (href.includes('icon-women')) { gender = '女'; break; }
+          }
+        }
+        const activeEl = container.querySelector('.active-time');
+        const activeTime = activeEl ? activeEl.textContent.trim() : '';
+        let age = '', experience = '', degree = '';
+        if (detailDiv) {
+          for (const el of detailDiv.children) {
+            if (el.classList.contains('name-contet') || el.classList.contains('high-light-orange') || el.classList.contains('resume-btn-content') || el.classList.contains('label-remark-content') || el.classList.contains('base-info-item')) continue;
+            const text = el.textContent.trim();
+            if (!text) continue;
+            if (text.match(/\d+岁/)) age = text;
+            else if (text.match(/年|经验|应届/)) experience = text;
+            else if (['博士', '硕士', '本科', '大专', '高中', '中专', '中技', '初中'].some(d => text.includes(d))) degree = text;
+          }
+        }
+        const workHistory = [], education = [];
+        const timeList = container.querySelector('.experience-content.time-list');
+        const detailList = container.querySelector('.experience-content.detail-list');
+        const workTimes = [], eduTimes = [], workDetails = [], eduDetails = [];
+        if (timeList) {
+          for (const li of timeList.querySelectorAll('li')) {
+            const useEl = li.querySelector('use');
+            const href = useEl ? (useEl.getAttribute('xlink:href') || useEl.getAttribute('href') || '') : '';
+            const timeText = li.querySelector('.time')?.textContent.trim() || li.textContent.trim();
+            if (href.includes('base-info-edu')) eduTimes.push(timeText);
+            else workTimes.push(timeText);
+          }
+        }
+        if (detailList) {
+          for (const li of detailList.querySelectorAll('li')) {
+            const useEl = li.querySelector('use');
+            const href = useEl ? (useEl.getAttribute('xlink:href') || useEl.getAttribute('href') || '') : '';
+            const valueText = li.querySelector('.value')?.textContent.trim() || li.textContent.trim();
+            if (href.includes('base-info-edu')) eduDetails.push(valueText);
+            else workDetails.push(valueText);
+          }
+        }
+        for (let i = 0; i < Math.max(workTimes.length, workDetails.length); i++) {
+          const parts = [];
+          if (workTimes[i]) parts.push(workTimes[i]);
+          if (workDetails[i]) parts.push(workDetails[i]);
+          if (parts.length) workHistory.push(parts.join('  '));
+        }
+        for (let i = 0; i < Math.max(eduTimes.length, eduDetails.length); i++) {
+          const parts = [];
+          if (eduTimes[i]) parts.push(eduTimes[i]);
+          if (eduDetails[i]) parts.push(eduDetails[i]);
+          if (parts.length) education.push(parts.join('  '));
+        }
+        const positionContent = container.querySelector('.position-content');
+        let jobChatting = '', expect = '';
+        if (positionContent) {
+          const posNameEl = positionContent.querySelector('.position-name');
+          if (posNameEl) jobChatting = posNameEl.textContent.trim();
+          const expectEl = positionContent.querySelector('.position-item.expect .value');
+          if (expectEl) expect = expectEl.textContent.trim();
+        }
+        return [{ name, gender, age, experience, degree, active_time: activeTime, work_history: workHistory.join('\n') || '(未获取到)', education: education.join('\n') || '(未获取到)', job_chatting: jobChatting, expect }];
+      })()

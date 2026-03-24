@@ -1,0 +1,67 @@
+site: twitter
+name: following
+description: Get accounts a Twitter/X user is following
+domain: x.com
+strategy: COOKIE
+browser: true
+
+args:
+  user:
+    type: str
+    positional: true
+    description: Twitter username (leave empty for logged-in user)
+  limit:
+    type: int
+    default: 50
+    description: Number of accounts
+
+pipeline:
+  - navigate:
+      url: https://x.com/${{ args.user || 'home' }}
+      settleMs: 3000
+
+  - evaluate: |
+      (() => {
+        let targetUser = ${{ args.user | json }};
+        if (!targetUser) {
+          const link = document.querySelector('a[data-testid="AppTabBar_Profile_Link"]');
+          const href = link ? link.getAttribute('href') : null;
+          if (!href) throw new Error('Could not find logged-in user');
+          targetUser = href.replace('/', '');
+        }
+
+        const link = document.querySelector('a[href="/' + targetUser + '/following"]');
+        if (!link) throw new Error('Could not find following link');
+        link.click();
+      })()
+
+  - wait: 5000
+
+  - evaluate: |
+      (() => {
+        const results = [];
+        const seen = new Set();
+        const cells = document.querySelectorAll('[data-testid="UserCell"]');
+
+        cells.forEach(cell => {
+          try {
+            const link = cell.querySelector('a[href^="/"]');
+            const username = link?.getAttribute('href')?.replace('/', '') || '';
+            if (!username || seen.has(username)) return;
+            seen.add(username);
+
+            const nameEl = cell.querySelector('[dir="ltr"]');
+            const name = nameEl ? nameEl.textContent : '';
+            const bioEl = cell.querySelector('[dir="auto"]');
+            const bio = bioEl ? bioEl.textContent.substring(0, 80) : '';
+
+            results.push({ screen_name: username, name, bio, followers: 0 });
+          } catch (e) {}
+        });
+
+        return results;
+      })()
+
+  - limit: ${{ args.limit }}
+
+columns: [screen_name, name, bio, followers]

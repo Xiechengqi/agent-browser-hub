@@ -1,0 +1,67 @@
+site: boss
+name: invite
+strategy: COOKIE
+browser: true
+args:
+  uid:
+    type: str
+    required: true
+    description: Encrypted UID of candidate
+  time:
+    type: str
+    required: true
+    description: Interview time (e.g. 2025-04-01 14:00)
+  address:
+    type: str
+    required: false
+    description: Interview address
+  contact:
+    type: str
+    required: false
+    description: Contact person name
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const encryptUid = ${{ args.uid }};
+        const timeStr = ${{ args.time }};
+        const address = ${{ args.address }} || '';
+        const contact = ${{ args.contact }} || '';
+        const interviewTime = new Date(timeStr).getTime();
+        if (isNaN(interviewTime)) throw new Error('Invalid time format: ' + timeStr);
+        return new Promise((resolve, reject) => {
+          const xhr1 = new XMLHttpRequest();
+          xhr1.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/getBossFriendListV2.json?page=1&status=0&jobId=0', true);
+          xhr1.withCredentials = true;
+          xhr1.timeout = 15000;
+          xhr1.setRequestHeader('Accept', 'application/json');
+          xhr1.onload = () => {
+            try {
+              const data1 = JSON.parse(xhr1.responseText);
+              if (data1.code !== 0) reject(new Error(data1.message));
+              const friend = data1.zpData?.friendList?.find(f => f.encryptUid === encryptUid);
+              if (!friend) reject(new Error('Candidate not found'));
+              const params = new URLSearchParams({ uid: String(friend.uid), securityId: friend.securityId || '', encryptJobId: friend.encryptJobId || '', interviewTime: String(interviewTime), contactId: '', contactName: contact, contactPhone: '', address: address, interviewType: '1' });
+              const xhr2 = new XMLHttpRequest();
+              xhr2.open('POST', 'https://www.zhipin.com/wapi/zpinterview/boss/interview/invite.json', true);
+              xhr2.withCredentials = true;
+              xhr2.timeout = 15000;
+              xhr2.setRequestHeader('Accept', 'application/json');
+              xhr2.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+              xhr2.onload = () => {
+                try {
+                  const data2 = JSON.parse(xhr2.responseText);
+                  if (data2.code !== 0) reject(new Error(data2.message));
+                  resolve([{ status: '✅ 面试邀请已发送', detail: `已向 ${friend.name} 发送面试邀请\n时间: ${timeStr}\n地点: ${address}\n联系人: ${contact}` }]);
+                } catch(e) { reject(e); }
+              };
+              xhr2.onerror = () => reject(new Error('Network Error'));
+              xhr2.send(params.toString());
+            } catch(e) { reject(e); }
+          };
+          xhr1.onerror = () => reject(new Error('Network Error'));
+          xhr1.send(null);
+        });
+      })()

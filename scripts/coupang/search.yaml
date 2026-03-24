@@ -1,0 +1,84 @@
+site: coupang
+name: search
+description: Search Coupang products with logged-in browser session
+domain: www.coupang.com
+strategy: COOKIE
+browser: true
+
+args:
+  query:
+    type: str
+    required: true
+    description: Search keyword
+  page:
+    type: int
+    default: 1
+    description: Search result page number
+  limit:
+    type: int
+    default: 20
+    description: Max results (max 50)
+
+pipeline:
+  - navigate: https://www.coupang.com/np/search?q=${{ args.query }}&channel=user&page=${{ args.page }}
+  - wait: 2000
+  - evaluate: |
+      (() => {
+        const times = 2;
+        const delayMs = 1500;
+        let scrolled = 0;
+        const interval = setInterval(() => {
+          window.scrollBy(0, window.innerHeight);
+          scrolled++;
+          if (scrolled >= times) clearInterval(interval);
+        }, delayMs);
+      })()
+  - wait: 3000
+  - evaluate: |
+      (async () => {
+        const limit = Math.min(${{ args.limit }}, 50);
+        const parseNum = (value) => {
+          const text = String(value || '').trim().replace(/[^\d.]/g, '');
+          if (!text) return null;
+          const num = Number(text);
+          return Number.isFinite(num) ? num : null;
+        };
+        const cards = Array.from(new Set([
+          ...document.querySelectorAll('li.search-product'),
+          ...document.querySelectorAll('[class*="search-product"]'),
+          ...document.querySelectorAll('[class*="ProductUnit_productUnit"]'),
+          ...document.querySelectorAll('[data-product-id]'),
+          ...document.querySelectorAll('a[href*="/vp/products/"]')
+        ])).slice(0, limit * 3);
+        const items = [];
+        for (const el of cards) {
+          const root = el.closest('li, div, article') || el;
+          const productId = root.getAttribute('data-product-id') || root.querySelector('a[href*="/vp/products/"]')?.getAttribute('href')?.match(/\/vp\/products\/(\d+)/)?.[1] || '';
+          const title = root.querySelector('[class*="productName"], .name, .title')?.textContent?.trim() || '';
+          const priceEl = root.querySelector('[class*="price"]');
+          const price = priceEl ? parseNum(priceEl.textContent) : null;
+          const rating = parseNum(root.querySelector('[class*="rating"]')?.textContent);
+          const reviewCount = parseNum(root.querySelector('[class*="review"]')?.textContent);
+          const rocket = root.querySelector('img[alt*="로켓"]') ? '로켓배송' : '';
+          const deliveryType = root.textContent.includes('무료배송') ? '무료배송' : '';
+          const deliveryPromise = root.textContent.match(/(오늘도착|내일도착|새벽도착)/)?.[1] || '';
+          const url = productId ? `https://www.coupang.com/vp/products/${productId}` : '';
+          if (title && url) {
+            items.push({
+              rank: items.length + 1,
+              title,
+              price,
+              unit_price: '',
+              rating,
+              review_count: reviewCount,
+              rocket,
+              delivery_type: deliveryType,
+              delivery_promise: deliveryPromise,
+              url
+            });
+          }
+        }
+        return items.slice(0, limit);
+      })()
+
+columns: [rank, title, price, unit_price, rating, review_count, rocket, delivery_type, delivery_promise, url]

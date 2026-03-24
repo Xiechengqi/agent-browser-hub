@@ -1,0 +1,47 @@
+site: boss
+name: batchgreet
+strategy: COOKIE
+browser: true
+args:
+  job-id:
+    type: str
+    required: false
+    description: Filter by encrypted job ID
+  limit:
+    type: int
+    required: false
+    description: Max candidates to greet (default 5)
+  text:
+    type: str
+    required: false
+    description: Custom greeting message
+
+pipeline:
+  - navigate: https://www.zhipin.com/web/chat/index
+  - wait: 3000
+  - evaluate: |
+      (() => {
+        const filterJobId = ${{ args.job-id }} || '';
+        const limit = ${{ args.limit }} || 5;
+        const text = ${{ args.text }} || '你好，请问您对这个职位感兴趣吗？';
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', 'https://www.zhipin.com/wapi/zprelation/friend/greetRecSortList', true);
+          xhr.withCredentials = true;
+          xhr.timeout = 15000;
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.onload = () => {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (data.code !== 0) reject(new Error(data.message));
+              let candidates = data.zpData?.friendList || [];
+              if (filterJobId) candidates = candidates.filter(f => f.encryptJobId === filterJobId);
+              candidates = candidates.slice(0, limit);
+              if (candidates.length === 0) resolve([{ name: '-', status: '⚠️ 无候选人', detail: '当前没有待招呼的推荐候选人' }]);
+              else resolve({ candidates, text });
+            } catch(e) { reject(e); }
+          };
+          xhr.onerror = () => reject(new Error('Network Error'));
+          xhr.send(null);
+        });
+      })()
