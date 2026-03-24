@@ -18,3 +18,15 @@ export const commandsApi = {
   execute: (site: string, name: string, req: ExecuteRequest) =>
     api.post<ExecuteResult>(`/api/execute/${site}/${name}`, req).then(r => r.data),
 };
+
+export const authApi = {
+  login: (password: string) =>
+    api.post('/api/login', { password }).then(r => r.data),
+  changePassword: (password: string) =>
+    api.post('/api/password', { password }).then(r => r.data),
+};
+
+export const systemApi = {
+  version: () => api.get('/api/version').then(r => r.data),
+  upgrade: () => api.post('/api/upgrade').then(r => r.data),
+};
