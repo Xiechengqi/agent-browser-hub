@@ -1,7 +1,7 @@
 {
   "pipeline": [
     {
-      "navigate": "https://x.com/compose/tweet"
+      "navigate": "https://x.com/home"
     },
     {
       "wait": 3000
